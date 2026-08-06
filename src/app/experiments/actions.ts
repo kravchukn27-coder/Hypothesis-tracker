@@ -96,6 +96,28 @@ export async function updateExperiment(
   redirect(`/experiments/${id}`);
 }
 
+const stageSchema = z.enum([
+  "DISCOVERY",
+  "DESIGN",
+  "DEVELOPMENT",
+  "EXPERIMENTATION",
+  "ANALYSIS",
+  "DONE",
+]);
+
+export async function updateExperimentStage(id: string, stage: string) {
+  const parsed = stageSchema.safeParse(stage);
+  if (!parsed.success) return;
+
+  await prisma.experiment.update({
+    where: { id },
+    data: { stage: parsed.data },
+  });
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${id}`);
+}
+
 export async function deleteExperiment(id: string): Promise<{ error?: string }> {
   const experiment = await prisma.experiment.findUnique({
     where: { id },

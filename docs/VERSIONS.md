@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [PROD-008] Added an Автор filter to the Experiments list, same
+  pattern as Segment (PROD-004) — a `<select>` of distinct existing
+  `author` values, not a free-text search. Also fixed the filter bar
+  to always show the Status filter (it was previously gated behind
+  `segmentOptions.length > 0`, hiding Status too when no experiment had
+  a segment set — a side effect of touching this code for Author, not
+  a separate task). Verified in the browser: Автор filter narrowed 3
+  experiments to 1 matching the selected author.
+
+- [PROD-009] Experiments list's Status column is now inline-editable —
+  a colored dropdown right in the row (new `StageCell` component,
+  mirrors Backlog's `StatusCell`), updating `Experiment.stage`
+  immediately via a new `updateExperimentStage` action, no navigation
+  to `/experiments/[id]` needed. No "convert to X" prompt logic here —
+  that's specific to Hypothesis status. Verified in the browser:
+  changed an experiment's status from the list, badge color/label
+  updated in place.
+
 - [PROD-011] Backlog row action is now conditional instead of always
   routing to "create a new experiment": hypotheses with no experiments
   yet keep that behavior ("Создать эксперимент"); hypotheses that

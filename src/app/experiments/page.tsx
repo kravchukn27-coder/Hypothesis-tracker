@@ -1,28 +1,30 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import {
-  STAGE_BADGE_CLASSES,
-  STAGE_LABELS,
-  STAGE_ORDER,
-  formatDateRange,
-} from "@/lib/experiment";
+import { STAGE_LABELS, STAGE_ORDER, formatDateRange } from "@/lib/experiment";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
+import { StageCell } from "./StageCell";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 export default async function ExperimentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stage?: string; segment?: string; hypothesisId?: string }>;
+  searchParams: Promise<{
+    stage?: string;
+    segment?: string;
+    author?: string;
+    hypothesisId?: string;
+  }>;
 }) {
-  const { stage, segment, hypothesisId } = await searchParams;
+  const { stage, segment, author, hypothesisId } = await searchParams;
 
-  const [experiments, segmentRows] = await Promise.all([
+  const [experiments, segmentRows, authorRows] = await Promise.all([
     prisma.experiment.findMany({
       where: {
         ...(stage ? { stage: stage as ExperimentStage } : {}),
         ...(segment ? { segment } : {}),
+        ...(author ? { author } : {}),
       },
       include: { hypothesis: true },
       orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
@@ -33,6 +35,12 @@ export default async function ExperimentsPage({
       distinct: ["segment"],
       orderBy: { segment: "asc" },
     }),
+    prisma.experiment.findMany({
+      where: { author: { not: null } },
+      select: { author: true },
+      distinct: ["author"],
+      orderBy: { author: "asc" },
+    }),
   ]);
 
   const segmentOptions = segmentRows
@@ -40,7 +48,12 @@ export default async function ExperimentsPage({
     .filter((s): s is string => Boolean(s))
     .map((s) => ({ value: s, label: s }));
 
-  const isFiltered = Boolean(stage || segment);
+  const authorOptions = authorRows
+    .map((r) => r.author)
+    .filter((a): a is string => Boolean(a))
+    .map((a) => ({ value: a, label: a }));
+
+  const isFiltered = Boolean(stage || segment || author);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -53,20 +66,23 @@ export default async function ExperimentsPage({
         </p>
       </div>
 
-      {segmentOptions.length > 0 && (
-        <Suspense fallback={null}>
-          <FilterBar
-            fields={[
-              {
-                name: "stage",
-                label: "Status",
-                options: STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
-              },
-              { name: "segment", label: "Segment", options: segmentOptions },
-            ]}
-          />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <FilterBar
+          fields={[
+            {
+              name: "stage",
+              label: "Status",
+              options: STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
+            },
+            ...(segmentOptions.length > 0
+              ? [{ name: "segment", label: "Segment", options: segmentOptions }]
+              : []),
+            ...(authorOptions.length > 0
+              ? [{ name: "author", label: "Автор", options: authorOptions }]
+              : []),
+          ]}
+        />
+      </Suspense>
 
       {experiments.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
@@ -113,11 +129,7 @@ export default async function ExperimentsPage({
                     <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesis.name}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${STAGE_BADGE_CLASSES[e.stage]}`}
-                    >
-                      {STAGE_LABELS[e.stage]}
-                    </span>
+                    <StageCell experimentId={e.id} stage={e.stage} />
                   </td>
                   <td className="px-4 py-3 text-zinc-600">{e.author || "—"}</td>
                   <td className="max-w-xs truncate px-4 py-3 text-zinc-500">

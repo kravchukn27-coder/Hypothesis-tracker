@@ -19,3 +19,10 @@
 - Added `Hypothesis.name` (short title, not in source data) and made
   `Hypothesis.effort` a fixed 1–5 scale (same widget as Impact) instead
   of a free number, per user direction on the Backlog screen design.
+- [PROD-001] Backlog screen shipped: `/backlog` list (Name, Status,
+  Score, Comment, sorted by Score desc), `/backlog/new` and
+  `/backlog/[id]` create/edit form (Score computed live client-side,
+  Funnel Level as a native-datalist combobox that upserts new tags,
+  Impact/Effort as matching 1–5 button groups, Conversion as a 3-way
+  segmented control). Verified end-to-end in the browser: create →
+  live score → save → list.

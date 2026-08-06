@@ -1,0 +1,121 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const hypothesisFormSchema = z.object({
+  name: z.string().trim().min(1, "Название обязательно"),
+  text: z.string().trim().min(1, "Текст гипотезы обязателен"),
+  funnelLevel: z.string().trim().optional(),
+  conversion: z.enum(["CR", "LTV", "CR_LTV"]),
+  impact: z.coerce.number().int().min(1).max(5),
+  effort: z.coerce.number().int().min(1).max(5),
+  reach: z.coerce.number().min(0).max(100),
+  confidence: z.coerce.number().min(0).max(100),
+  status: z.enum(["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD", "DONE"]),
+  result: z.string().trim().optional(),
+  comment: z.string().trim().optional(),
+  modeling: z.string().trim().optional(),
+  sampleSize: z.string().trim().optional(),
+  taskUrl: z.string().trim().optional(),
+});
+
+export type HypothesisFormState = {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+async function resolveFunnelLevelId(name: string | undefined) {
+  const trimmed = name?.trim();
+  if (!trimmed) return null;
+  const level = await prisma.funnelLevel.upsert({
+    where: { name: trimmed },
+    update: {},
+    create: { name: trimmed, isCustom: true },
+  });
+  return level.id;
+}
+
+function parseForm(formData: FormData) {
+  const raw = Object.fromEntries(formData.entries());
+  // reach/confidence are entered as 0-100 in the UI, stored as 0-1 fractions.
+  const parsed = hypothesisFormSchema.safeParse(raw);
+  return parsed;
+}
+
+export async function createHypothesis(
+  _prevState: HypothesisFormState,
+  formData: FormData,
+): Promise<HypothesisFormState> {
+  const parsed = parseForm(formData);
+  if (!parsed.success) {
+    return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
+  }
+  const data = parsed.data;
+  const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
+
+  const hypothesis = await prisma.hypothesis.create({
+    data: {
+      name: data.name,
+      text: data.text,
+      funnelLevelId,
+      conversion: data.conversion,
+      impact: data.impact,
+      effort: data.effort,
+      reach: data.reach / 100,
+      confidence: data.confidence / 100,
+      status: data.status,
+      result: data.result || null,
+      comment: data.comment || null,
+      modeling: data.modeling || null,
+      sampleSize: data.sampleSize || null,
+      taskUrl: data.taskUrl || null,
+    },
+  });
+
+  revalidatePath("/backlog");
+  redirect(`/backlog/${hypothesis.id}`);
+}
+
+export async function updateHypothesis(
+  id: string,
+  _prevState: HypothesisFormState,
+  formData: FormData,
+): Promise<HypothesisFormState> {
+  const parsed = parseForm(formData);
+  if (!parsed.success) {
+    return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
+  }
+  const data = parsed.data;
+  const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
+
+  await prisma.hypothesis.update({
+    where: { id },
+    data: {
+      name: data.name,
+      text: data.text,
+      funnelLevelId,
+      conversion: data.conversion,
+      impact: data.impact,
+      effort: data.effort,
+      reach: data.reach / 100,
+      confidence: data.confidence / 100,
+      status: data.status,
+      result: data.result || null,
+      comment: data.comment || null,
+      modeling: data.modeling || null,
+      sampleSize: data.sampleSize || null,
+      taskUrl: data.taskUrl || null,
+    },
+  });
+
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${id}`);
+  redirect(`/backlog/${id}`);
+}
+
+export async function getFunnelLevels() {
+  return prisma.funnelLevel.findMany({ orderBy: { name: "asc" } });
+}

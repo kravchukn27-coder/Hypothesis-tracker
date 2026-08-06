@@ -88,6 +88,14 @@ land.
 `Email step ideas` sheet was not migrated (unrelated link list, per user
 confirmation to skip it unless told otherwise).
 
+## Local Development
+
+Database is a local `npx prisma dev` Postgres instance (not Docker, not
+cloud) — zero-config, runs in-process. It is **not persistent across
+machine restarts as a service**: if `DATABASE_URL` connection fails,
+run `npx prisma dev` again (it reuses the same local data). Connection
+strings live in `.env` (gitignored).
+
 ## Documentation Map
 
 - `docs/PROJECT_CONTEXT.md` (this file) — project map, read first.

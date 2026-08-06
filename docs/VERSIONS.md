@@ -9,3 +9,9 @@
 - Documentation structure set up (`docs/PROJECT_CONTEXT.md`,
   `docs/backlog/`, this file), mirroring the Battery Pricing App's
   approach.
+- `Experiment.hypothesisId` made required — every experiment must
+  belong to a hypothesis, with a click-through from the Experiments
+  screen to the Backlog card (TECH decision, see `docs/PROJECT_CONTEXT.md`).
+- [TECH-001] Local Postgres provisioned via `npx prisma dev`; initial
+  migration `20260806094509_init` applied (`FunnelLevel`, `Hypothesis`,
+  `Experiment` tables).

@@ -20,13 +20,16 @@ Source of truth for the original data model: a Google Sheet exported as
 
 1. **Backlog** ✅ — list/create/edit hypotheses, auto-computed Score,
    status. `/backlog`, `/backlog/new`, `/backlog/[id]`.
-2. **Experiments** — list/create/edit experiments (status, author,
-   targeting, segment, dates, stage).
+2. **Experiments** ✅ — list/create/edit experiments (status, author,
+   targeting, segment, dates, stage). `/experiments`,
+   `/experiments/new`, `/experiments/[id]`. Experiment name in the list
+   links to its parent hypothesis's `/backlog/[id]` card (not to its
+   own edit page — that's the separate "Изменить" link).
 3. **Calendar** — timeline/Gantt view of experiments driven by
    `startDate`/`endDate`/`stage`, replacing the Excel week-column hack.
 4. **Extras** — custom funnel-level tags, filters/sorting.
 
-Screens 2–4 not built yet; this file will be updated as they land.
+Screens 3–4 not built yet; this file will be updated as they land.
 
 ## Core Data Rules
 

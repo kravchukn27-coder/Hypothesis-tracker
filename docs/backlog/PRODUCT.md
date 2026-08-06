@@ -1,27 +1,5 @@
 # Product Backlog
 
-## PROD-002 — Experiments screen
-
-**Status:** TODO
-**Priority:** MEDIUM
-**Summary:** List/create/edit experiments (status, author, targeting,
-segment, dates, stage).
-
-**Description:** Port the `График экспериментов` sheet's non-calendar
-columns. Calendar rendering itself is PROD-003. Every experiment must
-be created from an existing hypothesis (`hypothesisId` is required —
-see `docs/PROJECT_CONTEXT.md`).
-
-**Acceptance Criteria:**
-- List view of experiments with status, author, targeting, segment.
-- Create/edit form including `startDate`, `endDate`, `stage`.
-- Creating an experiment requires picking its parent hypothesis (no
-  orphan experiments).
-- Experiment name in the list is a link that opens that experiment's
-  parent hypothesis's Backlog card (PROD-001 detail/edit view).
-
----
-
 ## PROD-003 — Calendar screen
 
 **Status:** TODO

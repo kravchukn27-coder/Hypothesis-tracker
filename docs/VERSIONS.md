@@ -26,3 +26,12 @@
   Impact/Effort as matching 1–5 button groups, Conversion as a 3-way
   segmented control). Verified end-to-end in the browser: create →
   live score → save → list.
+- [PROD-002] Experiments screen shipped: `/experiments` list
+  (Эксперимент, Status, Stage, Автор, Таргетинг/Segment, Даты),
+  `/experiments/new` and `/experiments/[id]` create/edit form. Creating
+  an experiment requires picking an existing hypothesis (blocked with a
+  "create a hypothesis first" message if none exist); the experiment
+  name in the list links to `/backlog/[hypothesisId]`, a separate
+  "Изменить" link opens the experiment's own edit page. Added top nav
+  (Backlog / Experiments) with active-route highlighting. Verified
+  end-to-end in the browser.

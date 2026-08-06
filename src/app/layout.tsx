@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NavLinks } from "./NavLinks";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,9 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <span className="text-sm font-semibold tracking-tight text-zinc-900">
               Hypothesis Tracker
             </span>
-            <nav className="flex gap-4 text-sm text-zinc-500">
-              <span className="font-medium text-zinc-900">Backlog</span>
-            </nav>
+            <NavLinks />
           </div>
         </header>
         <div className="flex flex-1 flex-col">{children}</div>

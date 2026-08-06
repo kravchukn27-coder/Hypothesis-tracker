@@ -60,36 +60,6 @@ changes:
 
 ---
 
-## UI-006 — Hypothesis detail card: "Создать эксперимент" button should say "Показать эксперимент" when one already exists
-
-**Status:** TODO
-**Priority:** MEDIUM
-**Summary:** On `/backlog/[id]`, the experiment button always says
-"Создать эксперимент" and always links to the create flow, regardless
-of whether the hypothesis already has experiments. It should mirror
-the conditional behavior already shipped on the Backlog *list*
-(PROD-011): no experiments yet → "Создать эксперимент"; has
-experiments → "Показать эксперимент", linking to
-`/experiments?hypothesisId=...` (same highlight-all-matching-rows
-behavior as the list's "→ Эксперимент" link).
-
-**Description:** Source: user direction 2026-08-06. This is the same
-branch PROD-011 already added to `src/app/backlog/page.tsx` — just
-missing from the detail page
-(`src/app/backlog/[id]/page.tsx`), which still unconditionally renders
-the create-flow button. The detail page's Prisma query doesn't
-currently select `_count.experiments`, needed to decide which label to
-show.
-
-**Acceptance Criteria:**
-- `/backlog/[id]`: no experiments → button reads "Создать эксперимент",
-  links to `/experiments/new?hypothesisId=...` (unchanged).
-- Has experiments → button reads "Показать эксперимент", links to
-  `/experiments?hypothesisId=...` (highlights matching rows there, per
-  PROD-011).
-
----
-
 ## UI-010 — Breadcrumb navigation on detail pages
 
 **Status:** TODO

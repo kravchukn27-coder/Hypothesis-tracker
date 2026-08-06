@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- [UI-006] `/backlog/[id]`'s experiment button now mirrors the Backlog
+  list's PROD-011 conditional: no experiments yet → "Создать
+  эксперимент" (unchanged, `/experiments/new?hypothesisId=...`); has
+  experiments → "Показать эксперимент", linking to
+  `/experiments?hypothesisId=...` (highlights matching rows there, same
+  as the list). Added `_count: { select: { experiments: true } }` to
+  the detail page's Prisma query to decide which label to show.
+  Verified in the browser on both a hypothesis with experiments and
+  one without.
+
 - [UI-007] Автор on the Experiment create/edit form is now a select of
   existing author names + "+ Добавить нового..." (new `AuthorField` in
   `ExperimentForm.tsx`, mirrors `FunnelLevelField`'s select+add

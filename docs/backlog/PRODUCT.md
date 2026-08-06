@@ -19,6 +19,9 @@ form UI. Score is computed, never entered.
 - Score updates live as Impact/Effort/Reach/Confidence change in the
   form, before saving.
 - New hypothesis defaults to status `NEW`.
+- Each hypothesis has a stable detail/edit route (e.g. `/backlog/[id]`)
+  so PROD-002 can deep-link from an experiment to its parent
+  hypothesis.
 
 ---
 
@@ -30,14 +33,17 @@ form UI. Score is computed, never entered.
 segment, dates, stage).
 
 **Description:** Port the `График экспериментов` sheet's non-calendar
-columns. Calendar rendering itself is PROD-003.
+columns. Calendar rendering itself is PROD-003. Every experiment must
+be created from an existing hypothesis (`hypothesisId` is required —
+see `docs/PROJECT_CONTEXT.md`).
 
 **Acceptance Criteria:**
 - List view of experiments with status, author, targeting, segment.
 - Create/edit form including `startDate`, `endDate`, `stage`.
-- Optional link to a hypothesis (see `docs/PROJECT_CONTEXT.md` note on
-  `hypothesisId` — confirm this is wanted before making it required
-  anywhere).
+- Creating an experiment requires picking its parent hypothesis (no
+  orphan experiments).
+- Experiment name in the list is a link that opens that experiment's
+  parent hypothesis's Backlog card (PROD-001 detail/edit view).
 
 ---
 

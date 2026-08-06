@@ -39,11 +39,13 @@ land.
   data already contains free-form/inconsistent values (typos like
   "пейвол", ad-hoc levels like "новая воронка") and the user wants to
   add custom tags over time.
-- `Experiment.hypothesisId` is an **optional** link from an experiment
+- `Experiment.hypothesisId` is a **required** link from an experiment
   back to the hypothesis it tests. The original spreadsheet has no such
-  link (the two sheets are independent lists) — this is an added
-  relation, not a migrated field. Confirm with the user before treating
-  it as required anywhere in the UI.
+  link (the two sheets were independent lists) — this is an added
+  relation, not a migrated field, confirmed required by the user: every
+  experiment must be created from a hypothesis, and the Experiments
+  screen must let you click through from an experiment's name to its
+  Backlog card (see PROD-002).
 - Experiment stage/date model replaces the spreadsheet's "one column per
   week, stage name as cell value" layout with real `startDate`,
   `endDate`, and a `stage` enum (Discovery/Design/Development/
@@ -81,6 +83,7 @@ land.
 | Таргетинг | `targeting` | |
 | Segment | `segment` | |
 | (week columns F..AF, stage as cell value) | `startDate`, `endDate`, `stage` | replaced with real dates + a stage enum, see Core Data Rules |
+| *(none — added)* | `hypothesisId` (required) | every experiment must belong to a hypothesis; see Core Data Rules |
 
 `Email step ideas` sheet was not migrated (unrelated link list, per user
 confirmation to skip it unless told otherwise).

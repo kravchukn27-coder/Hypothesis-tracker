@@ -80,8 +80,8 @@ model Experiment {
   startDate    DateTime?
   endDate      DateTime?
   stage        ExperimentStage?
-  hypothesis   Hypothesis?       @relation(fields: [hypothesisId], references: [id])
-  hypothesisId String?
+  hypothesis   Hypothesis        @relation(fields: [hypothesisId], references: [id])
+  hypothesisId String
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }

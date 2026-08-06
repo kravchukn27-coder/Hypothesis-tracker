@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
-import { STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -79,13 +80,7 @@ export function ExperimentForm({
       </div>
 
       <Field label="Status" htmlFor="stage">
-        <select id="stage" name="stage" defaultValue={values.stage} className={inputClass}>
-          {STAGE_ORDER.map((s) => (
-            <option key={s} value={s}>
-              {STAGE_LABELS[s]}
-            </option>
-          ))}
-        </select>
+        <StageField defaultValue={values.stage} />
       </Field>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -143,6 +138,25 @@ export function ExperimentForm({
 
 const inputClass =
   "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900";
+
+function StageField({ defaultValue }: { defaultValue: ExperimentStage }) {
+  const [stage, setStage] = useState(defaultValue);
+  return (
+    <select
+      id="stage"
+      name="stage"
+      value={stage}
+      onChange={(e) => setStage(e.target.value as ExperimentStage)}
+      className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none ${STAGE_BADGE_CLASSES[stage]}`}
+    >
+      {STAGE_ORDER.map((s) => (
+        <option key={s} value={s}>
+          {STAGE_LABELS[s]}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function Field({
   label,

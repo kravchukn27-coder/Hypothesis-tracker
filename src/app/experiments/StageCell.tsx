@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateExperimentStage } from "./actions";
 import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 export function StageCell({
@@ -31,7 +32,7 @@ export function StageCell({
       disabled={pending}
       onChange={(e) => handleChange(e.target.value as ExperimentStage)}
       onClick={(e) => e.stopPropagation()}
-      className={`cursor-pointer rounded-full border-0 px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset outline-none disabled:opacity-60 ${STAGE_BADGE_CLASSES[current]}`}
+      className={`${BADGE_BASE_CLASSES} cursor-pointer border-0 outline-none disabled:opacity-60 ${STAGE_BADGE_CLASSES[current]}`}
     >
       {STAGE_ORDER.map((s) => (
         <option key={s} value={s}>

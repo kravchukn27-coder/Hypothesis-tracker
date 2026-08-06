@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- [UI-011] Unified badge/tag visual system: new shared `Badge`
+  component (`src/components/Badge.tsx`) exporting `BADGE_BASE_CLASSES`
+  (shape/padding/typography) and a `NEUTRAL_BADGE_COLOR` for tags with
+  no per-value color mapping. Per-value color logic (`STATUS_BADGE_CLASSES`,
+  `STAGE_BADGE_CLASSES`) is unchanged — only how it's applied is now
+  centralized. Applied to: `StatusCell`/`StageCell` (list inline-edit
+  pills, now built from the shared base class instead of duplicated
+  Tailwind strings), the Backlog list's Funnel Level (previously plain
+  text, now a neutral badge), and the Status/Stage `<select>`s on the
+  Hypothesis/Experiment detail and create forms (previously styled as
+  plain inputs, now the same colored pill as the list — added a small
+  `StageField` client component in `ExperimentForm.tsx` mirroring the
+  existing controlled-select pattern in `HypothesisForm.tsx`). Verified
+  in the browser: Backlog list, Experiments list, hypothesis detail
+  page, experiment detail page, and the hypothesis create form all show
+  matching pill styling.
+
 - [UI-003] `/backlog/[id]` now shows the hypothesis's creation date
   ("Создана DD месяц YYYY г.") as read-only info under the title —
   display-only, `Hypothesis.createdAt` already existed and has been

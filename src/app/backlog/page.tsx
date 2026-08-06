@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { StatusCell } from "./StatusCell";
+import { Badge } from "@/components/Badge";
 import { FilterBar } from "@/components/FilterBar";
 import { SortableHeader, type SortDir } from "@/components/SortableHeader";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
@@ -145,7 +146,9 @@ export default async function BacklogPage({
                       {h.name}
                     </Link>
                     {h.funnelLevel && (
-                      <p className="mt-0.5 text-xs text-zinc-400">{h.funnelLevel.name}</p>
+                      <div className="mt-1">
+                        <Badge>{h.funnelLevel.name}</Badge>
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3">

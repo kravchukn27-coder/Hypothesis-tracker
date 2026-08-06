@@ -234,29 +234,3 @@ navigation.
 **Acceptance Criteria:**
 - `/backlog/[id]` and `/experiments/[id]` show a breadcrumb (list name
   / current item name) instead of a plain "← Back" link.
-
----
-
-## UI-011 — Unified badge/tag design system
-
-**Status:** TODO
-**Priority:** MEDIUM
-**Summary:** Make every "tag-like" element in the app — Funnel Level,
-Hypothesis Status, Experiment Status/Stage — visually one consistent
-system (shape, padding, font size, color logic), instead of each
-having been styled independently as it was built. Source: design
-research on GrowthBook/Statsig, 2026-08-06.
-
-**Description:** This is a foundational/shared-component task —
-likely produces a single `Badge` component other redesign tasks
-(UI-008's status icon+color, UI-009's sectioned forms) end up
-consuming, so it's worth doing as its own scoped piece rather than
-inline inside those.
-
-**Acceptance Criteria:**
-- One shared badge/tag component used everywhere a status, stage, or
-  funnel-level tag is rendered (list rows and detail pages, both
-  Hypothesis and Experiment).
-- Visually consistent shape/padding/typography across all of them;
-  color-coding logic stays per-value as today (just unified in how
-  it's applied).

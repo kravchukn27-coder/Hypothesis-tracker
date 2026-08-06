@@ -1,7 +1,15 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { computeScore, CONVERSION_LABELS, SCALE_VALUES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
+import {
+  computeScore,
+  CONVERSION_LABELS,
+  SCALE_VALUES,
+  STATUS_BADGE_CLASSES,
+  STATUS_LABELS,
+  STATUS_ORDER,
+} from "@/lib/hypothesis";
+import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import type { HypothesisFormState } from "./actions";
 import type { ConversionMetric, HypothesisStatus } from "@/generated/prisma/enums";
 import type { FunnelLevel } from "@/generated/prisma/client";
@@ -112,7 +120,7 @@ export function HypothesisForm({
             name="status"
             value={status}
             onChange={(e) => setStatus(e.target.value as HypothesisStatus)}
-            className={inputClass}
+            className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none ${STATUS_BADGE_CLASSES[status]}`}
           >
             {STATUS_ORDER.map((s) => (
               <option key={s} value={s}>

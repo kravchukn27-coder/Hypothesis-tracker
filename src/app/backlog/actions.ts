@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { shouldPromptExperimentConversion } from "@/lib/hypothesis";
 
 const hypothesisFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно"),
@@ -91,6 +92,11 @@ export async function updateHypothesis(
   const data = parsed.data;
   const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
 
+  const before = await prisma.hypothesis.findUnique({
+    where: { id },
+    select: { status: true, _count: { select: { experiments: true } } },
+  });
+
   await prisma.hypothesis.update({
     where: { id },
     data: {
@@ -113,7 +119,14 @@ export async function updateHypothesis(
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
-  redirect(`/backlog/${id}`);
+
+  const statusChanged = before !== null && before.status !== data.status;
+  const shouldPrompt =
+    statusChanged &&
+    before !== null &&
+    shouldPromptExperimentConversion(data.status, before._count.experiments > 0);
+
+  redirect(shouldPrompt ? `/backlog/${id}?promptExperiment=1` : `/backlog/${id}`);
 }
 
 export async function getFunnelLevels() {

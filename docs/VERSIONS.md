@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- [BUG-001] Fixed "convert to experiment?" prompt inconsistency: it now
+  fires the same way from the Backlog list's inline status dropdown
+  and from the full edit form on `/backlog/[id]` (previously only the
+  list triggered it). Also tightened the trigger rule to exclude
+  `HOLD` and `DONE` in addition to `NEW` — only `PLANNED`,
+  `IN_PROGRESS`, `ACCEPTED` prompt now. The rule itself lives in one
+  place (`shouldPromptExperimentConversion` in `src/lib/hypothesis.ts`)
+  and the modal markup was extracted into a shared
+  `ConvertToExperimentModal` component used by both `StatusCell` (list)
+  and a new `ExperimentPromptGate` (detail page, driven by a
+  `?promptExperiment=1` redirect flag that gets stripped from the URL
+  after showing). Caught and fixed an inverted condition during manual
+  verification (`experiments === 0` was passed where `experiments > 0`
+  was meant) — worth remembering: verify the *actual* browser behavior
+  for both the positive and negative case, not just that the code
+  compiles/lints clean.
+
 - Project scaffolded: Next.js (App Router) + TypeScript + Tailwind +
   Prisma/PostgreSQL.
 - Data model defined for `Hypothesis` and `Experiment`, derived from

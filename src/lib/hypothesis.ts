@@ -44,3 +44,18 @@ export const CONVERSION_LABELS: Record<ConversionMetric, string> = {
 };
 
 export const SCALE_VALUES = [1, 2, 3, 4, 5] as const;
+
+/**
+ * Single source of truth for the "convert to experiment?" prompt rule
+ * (BUG-001): only for the "moving forward" statuses, and only while the
+ * hypothesis has no experiments yet. Used from both the Backlog list's
+ * inline status editor and the hypothesis detail form.
+ */
+const PROMPT_WORTHY_STATUSES: HypothesisStatus[] = ["PLANNED", "IN_PROGRESS", "ACCEPTED"];
+
+export function shouldPromptExperimentConversion(
+  status: HypothesisStatus,
+  hasExperiments: boolean,
+): boolean {
+  return !hasExperiments && PROMPT_WORTHY_STATUSES.includes(status);
+}

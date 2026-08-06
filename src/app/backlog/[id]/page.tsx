@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getFunnelLevels, updateHypothesis } from "../actions";
 import { HypothesisForm } from "../HypothesisForm";
+import { ExperimentPromptGate } from "../ExperimentPromptGate";
 
 export default async function HypothesisDetailPage({
   params,
@@ -38,6 +40,14 @@ export default async function HypothesisDetailPage({
           Создать эксперимент
         </Link>
       </div>
+
+      <Suspense fallback={null}>
+        <ExperimentPromptGate
+          hypothesisId={hypothesis.id}
+          hypothesisName={hypothesis.name}
+          status={hypothesis.status}
+        />
+      </Suspense>
 
       <HypothesisForm
         action={action}

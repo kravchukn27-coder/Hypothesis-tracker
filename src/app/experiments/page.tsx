@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { STAGE_BADGE_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
+import { deleteExperiment } from "./actions";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 
 export default async function ExperimentsPage() {
   const experiments = await prisma.experiment.findMany({
@@ -70,13 +72,20 @@ export default async function ExperimentsPage() {
                   <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
                     {formatDateRange(e.startDate, e.endDate)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/experiments/${e.id}`}
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
-                    >
-                      Изменить
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`/experiments/${e.id}`}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                      >
+                        Изменить
+                      </Link>
+                      <ConfirmDeleteButton
+                        onConfirm={deleteExperiment.bind(null, e.id)}
+                        confirmTitle="Удалить эксперимент?"
+                        confirmMessage={`«${e.name}» будет удалён без возможности восстановления.`}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

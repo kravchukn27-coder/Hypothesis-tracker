@@ -95,3 +95,18 @@ export async function updateExperiment(
   revalidatePath(`/experiments/${id}`);
   redirect(`/experiments/${id}`);
 }
+
+export async function deleteExperiment(id: string): Promise<{ error?: string }> {
+  const experiment = await prisma.experiment.findUnique({
+    where: { id },
+    select: { hypothesisId: true },
+  });
+  if (!experiment) return {};
+
+  await prisma.experiment.delete({ where: { id } });
+
+  revalidatePath("/experiments");
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${experiment.hypothesisId}`);
+  redirect("/experiments");
+}

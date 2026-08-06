@@ -148,3 +148,21 @@ export async function updateHypothesisStatus(id: string, status: string) {
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
 }
+
+export async function deleteHypothesis(id: string): Promise<{ error?: string }> {
+  const hypothesis = await prisma.hypothesis.findUnique({
+    where: { id },
+    select: { name: true, _count: { select: { experiments: true } } },
+  });
+  if (!hypothesis) return {};
+
+  if (hypothesis._count.experiments > 0) {
+    return {
+      error: `Нельзя удалить «${hypothesis.name}» — с ней связан${hypothesis._count.experiments === 1 ? "" : "о"} экспериментов: ${hypothesis._count.experiments}. Сначала удали эти эксперименты.`,
+    };
+  }
+
+  await prisma.hypothesis.delete({ where: { id } });
+  revalidatePath("/backlog");
+  redirect("/backlog");
+}

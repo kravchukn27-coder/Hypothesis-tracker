@@ -61,7 +61,12 @@ changes shape things.
   relation, not a migrated field, confirmed required by the user: every
   experiment must be created from a hypothesis, and the Experiments
   screen must let you click through from an experiment's name to its
-  Backlog card (see PROD-002).
+  Backlog card (see PROD-002). Consequence for delete (PROD-005,
+  2026-08-06): deleting a hypothesis is **blocked** while it still has
+  experiments, with an explicit error message stating the count and
+  telling the user to delete those experiments first — no cascade,
+  since that could silently destroy experiment data. Deleting an
+  experiment has no such restriction.
 - Experiment date model replaces the spreadsheet's "one column per
   week, stage name as cell value" layout with real `startDate`,
   `endDate`, so the Calendar screen can be computed instead of

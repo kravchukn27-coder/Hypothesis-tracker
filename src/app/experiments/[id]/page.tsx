@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { updateExperiment } from "../actions";
+import { deleteExperiment, updateExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -26,11 +27,20 @@ export default async function ExperimentDetailPage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
-      <div>
-        <Link href="/experiments" className="text-sm text-zinc-500 hover:text-zinc-900">
-          ← Experiments
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{experiment.name}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/experiments" className="text-sm text-zinc-500 hover:text-zinc-900">
+            ← Experiments
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{experiment.name}</h1>
+        </div>
+        <ConfirmDeleteButton
+          onConfirm={deleteExperiment.bind(null, experiment.id)}
+          confirmTitle="Удалить эксперимент?"
+          confirmMessage={`«${experiment.name}» будет удалён без возможности восстановления.`}
+          triggerLabel="Удалить"
+          triggerClassName="shrink-0 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+        />
       </div>
 
       <ExperimentForm

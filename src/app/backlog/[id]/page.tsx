@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getFunnelLevels, updateHypothesis } from "../actions";
+import { deleteHypothesis, getFunnelLevels, updateHypothesis } from "../actions";
 import { HypothesisForm } from "../HypothesisForm";
 import { ExperimentPromptGate } from "../ExperimentPromptGate";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 
 export default async function HypothesisDetailPage({
   params,
@@ -33,12 +34,21 @@ export default async function HypothesisDetailPage({
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{hypothesis.name}</h1>
         </div>
-        <Link
-          href={`/experiments/new?hypothesisId=${hypothesis.id}`}
-          className="shrink-0 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-        >
-          Создать эксперимент
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <Link
+            href={`/experiments/new?hypothesisId=${hypothesis.id}`}
+            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            Создать эксперимент
+          </Link>
+          <ConfirmDeleteButton
+            onConfirm={deleteHypothesis.bind(null, hypothesis.id)}
+            confirmTitle="Удалить гипотезу?"
+            confirmMessage={`«${hypothesis.name}» будет удалена без возможности восстановления.`}
+            triggerLabel="Удалить"
+            triggerClassName="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          />
+        </div>
       </div>
 
       <Suspense fallback={null}>

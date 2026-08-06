@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- [PROD-005] Added delete for hypotheses and experiments, both gated
+  behind a confirmation modal (new shared `ConfirmDeleteButton` in
+  `src/components/`). Deleting a hypothesis is **blocked** while it
+  still has experiments — the modal shows the exact count and tells
+  the user to delete those first, instead of silently cascading (the
+  user's explicit call, since cascade risked losing experiment data
+  without warning). Deleting an experiment has no such restriction.
+  Buttons live on both list rows and detail pages for Backlog and
+  Experiments. Verified end-to-end in the browser: delete an
+  experiment, attempt to delete a hypothesis with experiments (blocked
+  with the count-specific message), delete a hypothesis with none
+  (succeeds, redirects to the list).
+
 - [UI-001] Backlog form: moved the Score card down to sit right after
   Impact/Effort/Reach/Confidence instead of pinned above Name/
   Hypothesis text — numbers and result now live together. Changed

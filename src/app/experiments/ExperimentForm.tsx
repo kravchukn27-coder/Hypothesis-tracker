@@ -50,16 +50,22 @@ export function ExperimentForm({
         </p>
       )}
 
-      <Field label="Название эксперимента" htmlFor="name">
-        <input
-          id="name"
-          name="name"
-          defaultValue={values.name}
-          required
-          placeholder="web-funnel-v4_2"
-          className={inputClass}
-        />
-      </Field>
+      {initial ? (
+        <Field label="Название эксперимента" htmlFor="name">
+          <input
+            id="name"
+            name="name"
+            defaultValue={values.name}
+            required
+            className={inputClass}
+          />
+        </Field>
+      ) : (
+        <p className="text-sm text-zinc-500">
+          Название будет таким же, как у гипотезы (с номером, если у неё уже есть
+          эксперименты) — задать его можно будет позже, на карточке эксперимента.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-zinc-700">Гипотеза</span>

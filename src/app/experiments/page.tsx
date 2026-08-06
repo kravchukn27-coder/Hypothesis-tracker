@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { STAGE_LABELS, STAGE_ORDER, formatDateRange } from "@/lib/experiment";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
+import { SortableHeader, type SortDir } from "@/components/SortableHeader";
 import { StageCell } from "./StageCell";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -15,9 +16,12 @@ export default async function ExperimentsPage({
     segment?: string;
     author?: string;
     hypothesisId?: string;
+    sortBy?: string;
+    dir?: string;
   }>;
 }) {
-  const { stage, segment, author, hypothesisId } = await searchParams;
+  const { stage, segment, author, hypothesisId, sortBy = "startDate", dir } = await searchParams;
+  const currentDir: SortDir = dir === "desc" ? "desc" : "asc";
 
   const [experiments, segmentRows, authorRows] = await Promise.all([
     prisma.experiment.findMany({
@@ -27,7 +31,6 @@ export default async function ExperimentsPage({
         ...(author ? { author } : {}),
       },
       include: { hypothesis: true },
-      orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
     }),
     prisma.experiment.findMany({
       where: { segment: { not: null } },
@@ -52,6 +55,30 @@ export default async function ExperimentsPage({
     .map((r) => r.author)
     .filter((a): a is string => Boolean(a))
     .map((a) => ({ value: a, label: a }));
+
+  experiments.sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === "name") cmp = a.name.localeCompare(b.name, "ru");
+    else if (sortBy === "stage") cmp = STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage);
+    else if (sortBy === "author") cmp = (a.author ?? "").localeCompare(b.author ?? "", "ru");
+    else {
+      const at = a.startDate ? a.startDate.getTime() : Infinity;
+      const bt = b.startDate ? b.startDate.getTime() : Infinity;
+      cmp = at - bt;
+    }
+    return currentDir === "asc" ? cmp : -cmp;
+  });
+
+  function sortHref(field: string, nextDir: SortDir) {
+    const params = new URLSearchParams();
+    if (stage) params.set("stage", stage);
+    if (segment) params.set("segment", segment);
+    if (author) params.set("author", author);
+    if (hypothesisId) params.set("hypothesisId", hypothesisId);
+    params.set("sortBy", field);
+    params.set("dir", nextDir);
+    return `/experiments?${params.toString()}`;
+  }
 
   const isFiltered = Boolean(stage || segment || author);
 
@@ -103,11 +130,43 @@ export default async function ExperimentsPage({
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="px-4 py-3">Эксперимент</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Автор</th>
+                <th className="px-4 py-3">
+                  <SortableHeader
+                    label="Эксперимент"
+                    active={sortBy === "name"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("name", d)}
+                  />
+                </th>
+                <th className="px-4 py-3">
+                  <SortableHeader
+                    label="Status"
+                    active={sortBy === "stage"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("stage", d)}
+                  />
+                </th>
+                <th className="px-4 py-3">
+                  <SortableHeader
+                    label="Автор"
+                    active={sortBy === "author"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("author", d)}
+                  />
+                </th>
                 <th className="px-4 py-3">Таргетинг / Segment</th>
-                <th className="px-4 py-3">Даты</th>
+                <th className="px-4 py-3">
+                  <SortableHeader
+                    label="Даты"
+                    active={sortBy === "startDate"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("startDate", d)}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">

@@ -41,31 +41,47 @@ Source of truth for the original data model: a Google Sheet exported as
    Experiments screen; both read the same fields so they stay in sync.
 4. **Extras** ✅ — custom funnel-level tags (already supported via the
    Backlog form's Funnel Level select+add, UI-001), and list
-   filter/sort on Backlog and Experiments (PROD-004), see below.
+   filter/sort on Backlog and Experiments (PROD-004, PROD-007,
+   PROD-008), see below.
 
 All planned screens/mechanics are now built. Delete (PROD-005) also
 shipped. Remaining work is the visual design pass — see "Current
 phase" below.
 
-### List filter/sort (PROD-004)
+### List filter/sort (PROD-004, PROD-007, PROD-008)
 
 Both `/backlog` and `/experiments` read filter/sort state from **URL
 query params**, not client state — shareable/bookmarkable links, and
 the list itself is still a Server Component doing a normal Prisma
-query with the params folded into `where`/sort. The `FilterBar`
-client component (`src/components/FilterBar.tsx`) only handles reading
-the current params and pushing new ones via `router.push`; it holds no
-filter state of its own.
+query (filters) + in-memory `.sort()` (sort) with the params folded
+in. Filtering (`FilterBar`, `src/components/FilterBar.tsx`, a client
+component) and sorting (`SortableHeader`,
+`src/components/SortableHeader.tsx`, plain server-rendered links, no
+JS) are two separate, deliberately non-overlapping mechanisms — see
+below for why Backlog only has one of each.
 
-- Backlog: `?sort=score|status|name` (default `score`), `?funnelLevel=<id>`,
-  `?status=<HypothesisStatus>`.
-- Experiments: `?stage=<ExperimentStage>` (labeled "Status" in the UI,
-  same merged field as everywhere else post-TECH-002), `?segment=<value>`
-  — Segment is a free-text DB column, but the filter is a `<select>` of
-  the *distinct existing values* in the data, not a text search box,
-  matching how Funnel Level already works.
-- A "Сбросить" link appears once any field differs from its default and
-  clears the query entirely.
+- Backlog: sort via clickable column headers — `?sort=score|status|name`
+  (default `score`, default direction `desc`), `?dir=asc|desc`.
+  Filters via `FilterBar`: `?funnelLevel=<id>`, `?status=<HypothesisStatus>`.
+  **No sort dropdown** — PROD-004 originally added one to `FilterBar`,
+  but PROD-007 (2026-08-06) replaced it with header clicks per the
+  user's explicit choice: one sort mechanism, not two driving the same
+  state out of sync.
+- Experiments: sort via clickable column headers —
+  `?sortBy=name|stage|author|startDate` (default `startDate`, default
+  direction `asc`), `?dir=asc|desc`. Filters via `FilterBar`:
+  `?stage=<ExperimentStage>` (labeled "Status" in the UI, same merged
+  field as everywhere else post-TECH-002), `?segment=<value>`,
+  `?author=<value>` — Segment and Автор are free-text DB columns, but
+  each filter is a `<select>` of the *distinct existing values* in the
+  data, not a text search box, matching how Funnel Level already
+  works. Experiments never had a sort dropdown, so PROD-007 didn't
+  need to remove anything there — just added headers and switched the
+  Prisma `orderBy` to the same in-memory sort so there's one code path.
+- A "Сбросить" link (from `FilterBar`) appears once any *filter* field
+  differs from its default and clears the query entirely — sort state
+  is separate from this and represented by the active `SortableHeader`
+  arrow, not the reset link.
 
 **Current phase: mechanics, not visual design.** All three core screens
 exist but styling is intentionally a plain Tailwind/zinc placeholder —
@@ -208,7 +224,7 @@ list you add to; they're something you spin off *from* a hypothesis:
 
 | Excel column | Prisma field | Notes |
 |---|---|---|
-| Эксперимент | `name` | |
+| Эксперимент | `name` | auto-generated on create (PROD-006, 2026-08-06): hypothesis name, +" N" for the Nth+1 experiment off the same hypothesis; editable afterward on `/experiments/[id]` |
 | Статус | `stage` | merged with the week-column stage into one field, see Core Data Rules (TECH-002) |
 | Автор | `author` | |
 | Таргетинг | `targeting` | |

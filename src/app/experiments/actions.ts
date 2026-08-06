@@ -5,8 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const experimentFormSchema = z.object({
-  name: z.string().trim().min(1, "Название обязательно"),
+const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
   author: z.string().trim().optional(),
   targeting: z.string().trim().optional(),
@@ -14,6 +13,16 @@ const experimentFormSchema = z.object({
   stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"]),
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
+};
+
+// Create: name is auto-generated server-side (PROD-006), never submitted.
+const createExperimentSchema = z.object(baseExperimentFields);
+
+// Update: name is user-editable (confirmed by user 2026-08-06) once the
+// experiment exists.
+const updateExperimentSchema = z.object({
+  ...baseExperimentFields,
+  name: z.string().trim().min(1, "Название обязательно"),
 });
 
 export type ExperimentFormState = {
@@ -26,24 +35,36 @@ function toDate(value: string | undefined) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function parseForm(formData: FormData) {
-  const raw = Object.fromEntries(formData.entries());
-  return experimentFormSchema.safeParse(raw);
+/**
+ * PROD-006: an experiment created from a hypothesis is named exactly
+ * after it. If the hypothesis already has experiments, the name gets
+ * a " N" suffix (N = existing count + 1) so multiple experiments off
+ * the same hypothesis stay distinguishable.
+ */
+async function computeExperimentName(hypothesisId: string): Promise<string> {
+  const [hypothesis, existingCount] = await Promise.all([
+    prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { name: true } }),
+    prisma.experiment.count({ where: { hypothesisId } }),
+  ]);
+  if (!hypothesis) throw new Error("Hypothesis not found");
+  return existingCount === 0 ? hypothesis.name : `${hypothesis.name} ${existingCount + 1}`;
 }
 
 export async function createExperiment(
   _prevState: ExperimentFormState,
   formData: FormData,
 ): Promise<ExperimentFormState> {
-  const parsed = parseForm(formData);
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = createExperimentSchema.safeParse(raw);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверь поля формы" };
   }
   const data = parsed.data;
+  const name = await computeExperimentName(data.hypothesisId);
 
   const experiment = await prisma.experiment.create({
     data: {
-      name: data.name,
+      name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
       targeting: data.targeting || null,
@@ -71,7 +92,8 @@ export async function updateExperiment(
   _prevState: ExperimentFormState,
   formData: FormData,
 ): Promise<ExperimentFormState> {
-  const parsed = parseForm(formData);
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = updateExperimentSchema.safeParse(raw);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверь поля формы" };
   }

@@ -4,20 +4,21 @@ import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { StatusCell } from "./StatusCell";
 import { FilterBar } from "@/components/FilterBar";
+import { SortableHeader, type SortDir } from "@/components/SortableHeader";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
-
-const SORT_OPTIONS = [
-  { value: "score", label: "Score" },
-  { value: "status", label: "Status" },
-  { value: "name", label: "Name" },
-];
 
 export default async function BacklogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; funnelLevel?: string; status?: string }>;
+  searchParams: Promise<{
+    sort?: string;
+    dir?: string;
+    funnelLevel?: string;
+    status?: string;
+  }>;
 }) {
-  const { sort = "score", funnelLevel, status } = await searchParams;
+  const { sort = "score", dir, funnelLevel, status } = await searchParams;
+  const currentDir: SortDir = dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" ? "desc" : "asc";
 
   const [hypotheses, funnelLevels] = await Promise.all([
     prisma.hypothesis.findMany({
@@ -32,10 +33,21 @@ export default async function BacklogPage({
 
   const rows = hypotheses.map((h) => ({ ...h, score: computeScore(h) }));
   rows.sort((a, b) => {
-    if (sort === "status") return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
-    if (sort === "name") return a.name.localeCompare(b.name, "ru");
-    return b.score - a.score;
+    let cmp = 0;
+    if (sort === "status") cmp = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+    else if (sort === "name") cmp = a.name.localeCompare(b.name, "ru");
+    else cmp = a.score - b.score;
+    return currentDir === "asc" ? cmp : -cmp;
   });
+
+  function sortHref(field: string, nextDir: SortDir) {
+    const params = new URLSearchParams();
+    if (funnelLevel) params.set("funnelLevel", funnelLevel);
+    if (status) params.set("status", status);
+    params.set("sort", field);
+    params.set("dir", nextDir);
+    return `/backlog?${params.toString()}`;
+  }
 
   const isFiltered = Boolean(funnelLevel || status);
 
@@ -60,7 +72,6 @@ export default async function BacklogPage({
       <Suspense fallback={null}>
         <FilterBar
           fields={[
-            { name: "sort", label: "Сортировка", defaultValue: "score", options: SORT_OPTIONS },
             {
               name: "funnelLevel",
               label: "Funnel Level",
@@ -92,9 +103,33 @@ export default async function BacklogPage({
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Score</th>
+                <th className="px-4 py-3">
+                  <SortableHeader
+                    label="Name"
+                    active={sort === "name"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("name", d)}
+                  />
+                </th>
+                <th className="px-4 py-3">
+                  <SortableHeader
+                    label="Status"
+                    active={sort === "status"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("status", d)}
+                  />
+                </th>
+                <th className="px-4 py-3 text-right">
+                  <SortableHeader
+                    label="Score"
+                    active={sort === "score"}
+                    dir={currentDir}
+                    defaultDir="desc"
+                    href={(d) => sortHref("score", d)}
+                  />
+                </th>
                 <th className="px-4 py-3">Comment</th>
                 <th className="px-4 py-3" />
               </tr>

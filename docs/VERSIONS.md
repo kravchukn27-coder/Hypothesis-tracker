@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- [PROD-007] Added click-to-sort column headers on both tables (new
+  shared `SortableHeader` component, plain server-rendered links, no
+  JS) — clicking toggles direction, active column shows an arrow.
+  Backlog: Name/Status/Score, default Score desc. Experiments:
+  Эксперимент(Name)/Status/Автор/Даты, default Даты asc. Per the
+  user's decision, **removed** the "Сортировка" dropdown from
+  Backlog's `FilterBar` (PROD-004) instead of keeping both controls —
+  one sort mechanism, not two competing ones. Experiments never had a
+  sort dropdown, so no removal needed there; its Prisma `orderBy` was
+  replaced with the same in-memory sort used for the header logic, for
+  one consistent code path. Verified in the browser: Backlog sorted by
+  Name asc/desc via header clicks; Experiments sorted by Name via
+  header click, filters stayed applied alongside.
+
+- [PROD-006] Experiments created from a hypothesis are now named
+  automatically after it, instead of taking a free-typed name: first
+  experiment = hypothesis name exactly, second = hypothesis name + " 2",
+  third + " 3", etc. (based on existing experiment count for that
+  hypothesis, computed server-side in `computeExperimentName`). The
+  create form no longer shows a Name field, just an explanatory note.
+  Confirmed by the user: the name **is** editable afterward on
+  `/experiments/[id]` — split `createExperimentSchema` (no `name`) from
+  `updateExperimentSchema` (`name` required) in
+  `src/app/experiments/actions.ts` to reflect that. Verified in the
+  browser: first experiment for a hypothesis named exactly like it,
+  second one got " 2" appended, and renaming on the edit form saved
+  correctly.
+
 - [PROD-008] Added an Автор filter to the Experiments list, same
   pattern as Segment (PROD-004) — a `<select>` of distinct existing
   `author` values, not a free-text search. Also fixed the filter bar

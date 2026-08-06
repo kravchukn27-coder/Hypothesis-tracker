@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- [PROD-004] Added sort and filter to the Backlog and Experiments
+  lists, both driven by URL query params (shareable/bookmarkable, no
+  client state) via a new shared `FilterBar` component. Backlog: sort
+  by Score (default)/Status/Name, filter by Funnel Level and/or
+  Status. Experiments: filter by Status (the merged status/stage field
+  from TECH-002 — this card predates that merge and originally said
+  "Status/Stage", now the same filter) and Segment (a `<select>` of
+  distinct existing segment values in the data, not a free-text
+  search, consistent with how Funnel Level already works). A
+  "Сбросить" link appears once any field differs from its default and
+  clears the query entirely. Verified end-to-end in the browser: sort
+  by Name, filter Backlog by Status, filter Experiments by Segment,
+  reset.
+
 - [PROD-005] Added delete for hypotheses and experiments, both gated
   behind a confirmation modal (new shared `ConfirmDeleteButton` in
   `src/components/`). Deleting a hypothesis is **blocked** while it

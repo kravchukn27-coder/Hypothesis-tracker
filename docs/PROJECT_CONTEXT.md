@@ -33,9 +33,33 @@ Source of truth for the original data model: a Google Sheet exported as
    experiment (`/experiments/[id]`) and its hypothesis
    (`/backlog/[id]`). No drag/resize — dates are edited on the
    Experiments screen; both read the same fields so they stay in sync.
-4. **Extras** — custom funnel-level tags, filters/sorting.
+4. **Extras** ✅ — custom funnel-level tags (already supported via the
+   Backlog form's Funnel Level select+add, UI-001), and list
+   filter/sort on Backlog and Experiments (PROD-004), see below.
 
-Screen 4 not built yet.
+All planned screens/mechanics are now built. Delete (PROD-005) also
+shipped. Remaining work is the visual design pass — see "Current
+phase" below.
+
+### List filter/sort (PROD-004)
+
+Both `/backlog` and `/experiments` read filter/sort state from **URL
+query params**, not client state — shareable/bookmarkable links, and
+the list itself is still a Server Component doing a normal Prisma
+query with the params folded into `where`/sort. The `FilterBar`
+client component (`src/components/FilterBar.tsx`) only handles reading
+the current params and pushing new ones via `router.push`; it holds no
+filter state of its own.
+
+- Backlog: `?sort=score|status|name` (default `score`), `?funnelLevel=<id>`,
+  `?status=<HypothesisStatus>`.
+- Experiments: `?stage=<ExperimentStage>` (labeled "Status" in the UI,
+  same merged field as everywhere else post-TECH-002), `?segment=<value>`
+  — Segment is a free-text DB column, but the filter is a `<select>` of
+  the *distinct existing values* in the data, not a text search box,
+  matching how Funnel Level already works.
+- A "Сбросить" link appears once any field differs from its default and
+  clears the query entirely.
 
 **Current phase: mechanics, not visual design.** All three core screens
 exist but styling is intentionally a plain Tailwind/zinc placeholder —

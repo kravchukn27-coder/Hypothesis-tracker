@@ -1,18 +1,45 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { computeScore } from "@/lib/hypothesis";
+import { computeScore, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { StatusCell } from "./StatusCell";
 import { deleteHypothesis } from "./actions";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { FilterBar } from "@/components/FilterBar";
+import type { HypothesisStatus } from "@/generated/prisma/enums";
 
-export default async function BacklogPage() {
-  const hypotheses = await prisma.hypothesis.findMany({
-    include: { funnelLevel: true, _count: { select: { experiments: true } } },
+const SORT_OPTIONS = [
+  { value: "score", label: "Score" },
+  { value: "status", label: "Status" },
+  { value: "name", label: "Name" },
+];
+
+export default async function BacklogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string; funnelLevel?: string; status?: string }>;
+}) {
+  const { sort = "score", funnelLevel, status } = await searchParams;
+
+  const [hypotheses, funnelLevels] = await Promise.all([
+    prisma.hypothesis.findMany({
+      where: {
+        ...(funnelLevel ? { funnelLevelId: funnelLevel } : {}),
+        ...(status ? { status: status as HypothesisStatus } : {}),
+      },
+      include: { funnelLevel: true, _count: { select: { experiments: true } } },
+    }),
+    prisma.funnelLevel.findMany({ orderBy: { name: "asc" } }),
+  ]);
+
+  const rows = hypotheses.map((h) => ({ ...h, score: computeScore(h) }));
+  rows.sort((a, b) => {
+    if (sort === "status") return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+    if (sort === "name") return a.name.localeCompare(b.name, "ru");
+    return b.score - a.score;
   });
 
-  const rows = hypotheses
-    .map((h) => ({ ...h, score: computeScore(h) }))
-    .sort((a, b) => b.score - a.score);
+  const isFiltered = Boolean(funnelLevel || status);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
@@ -20,7 +47,8 @@ export default async function BacklogPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Backlog</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {rows.length} {rows.length === 1 ? "гипотеза" : "гипотез"}, отсортировано по Score
+            {rows.length} {rows.length === 1 ? "гипотеза" : "гипотез"}
+            {isFiltered ? " (с фильтром)" : ""}
           </p>
         </div>
         <Link
@@ -31,9 +59,29 @@ export default async function BacklogPage() {
         </Link>
       </div>
 
+      <Suspense fallback={null}>
+        <FilterBar
+          fields={[
+            { name: "sort", label: "Сортировка", defaultValue: "score", options: SORT_OPTIONS },
+            {
+              name: "funnelLevel",
+              label: "Funnel Level",
+              options: funnelLevels.map((f) => ({ value: f.id, label: f.name })),
+            },
+            {
+              name: "status",
+              label: "Status",
+              options: STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
+            },
+          ]}
+        />
+      </Suspense>
+
       {rows.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
-          <p className="text-sm text-zinc-500">Пока нет ни одной гипотезы.</p>
+          <p className="text-sm text-zinc-500">
+            {isFiltered ? "Нет гипотез под текущий фильтр." : "Пока нет ни одной гипотезы."}
+          </p>
           <Link
             href="/backlog/new"
             className="text-sm font-medium text-zinc-900 underline underline-offset-4"

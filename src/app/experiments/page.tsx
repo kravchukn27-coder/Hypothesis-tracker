@@ -1,14 +1,47 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { STAGE_BADGE_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
+import {
+  STAGE_BADGE_CLASSES,
+  STAGE_LABELS,
+  STAGE_ORDER,
+  formatDateRange,
+} from "@/lib/experiment";
 import { deleteExperiment } from "./actions";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { FilterBar } from "@/components/FilterBar";
+import type { ExperimentStage } from "@/generated/prisma/enums";
 
-export default async function ExperimentsPage() {
-  const experiments = await prisma.experiment.findMany({
-    include: { hypothesis: true },
-    orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
-  });
+export default async function ExperimentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ stage?: string; segment?: string }>;
+}) {
+  const { stage, segment } = await searchParams;
+
+  const [experiments, segmentRows] = await Promise.all([
+    prisma.experiment.findMany({
+      where: {
+        ...(stage ? { stage: stage as ExperimentStage } : {}),
+        ...(segment ? { segment } : {}),
+      },
+      include: { hypothesis: true },
+      orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
+    }),
+    prisma.experiment.findMany({
+      where: { segment: { not: null } },
+      select: { segment: true },
+      distinct: ["segment"],
+      orderBy: { segment: "asc" },
+    }),
+  ]);
+
+  const segmentOptions = segmentRows
+    .map((r) => r.segment)
+    .filter((s): s is string => Boolean(s))
+    .map((s) => ({ value: s, label: s }));
+
+  const isFiltered = Boolean(stage || segment);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -16,14 +49,31 @@ export default async function ExperimentsPage() {
         <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
         <p className="mt-1 text-sm text-zinc-500">
           {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
+          {isFiltered ? " (с фильтром)" : ""}
         </p>
       </div>
+
+      {segmentOptions.length > 0 && (
+        <Suspense fallback={null}>
+          <FilterBar
+            fields={[
+              {
+                name: "stage",
+                label: "Status",
+                options: STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
+              },
+              { name: "segment", label: "Segment", options: segmentOptions },
+            ]}
+          />
+        </Suspense>
+      )}
 
       {experiments.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
           <p className="text-sm text-zinc-500">
-            Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в
-            Backlog.
+            {isFiltered
+              ? "Нет экспериментов под текущий фильтр."
+              : "Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в Backlog."}
           </p>
           <Link
             href="/backlog"

@@ -51,12 +51,13 @@ model FunnelLevel {
 
 model Hypothesis {
   id            String            @id @default(cuid())
+  name          String
   text          String
   funnelLevel   FunnelLevel?      @relation(fields: [funnelLevelId], references: [id])
   funnelLevelId String?
   conversion    ConversionMetric  @default(CR)
   impact        Int
-  effort        Float
+  effort        Int
   reach         Float
   confidence    Float
   status        HypothesisStatus  @default(NEW)

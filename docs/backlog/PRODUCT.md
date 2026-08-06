@@ -12,16 +12,23 @@ auto-computed Score, create/edit form, status changes.
 form UI. Score is computed, never entered.
 
 **Acceptance Criteria:**
-- List view shows all hypotheses sortable by Score (desc by default).
-- Create/edit form covers all `Hypothesis` fields from the schema.
+- List view: table sorted by Score desc. Columns: Name, Status, Score,
+  Comment (see `docs/PROJECT_CONTEXT.md` → Backlog screen layout).
+- Clicking a row's Name navigates (full page) to `/backlog/[id]`.
+- Create/edit form covers all `Hypothesis` fields from the schema, laid
+  out close to the original Excel row (all fields visible/labeled, not
+  a minimal redesigned card) — see `docs/PROJECT_CONTEXT.md` → Backlog
+  form field types for which fields are fixed-choice vs free text vs
+  computed.
+- Impact and Effort are both 1–5 button groups (not free number
+  inputs) — Effort matches Impact's widget.
 - Funnel Level is a searchable/creatable select (existing tags + add
   new), not a fixed dropdown.
 - Score updates live as Impact/Effort/Reach/Confidence change in the
   form, before saving.
 - New hypothesis defaults to status `NEW`.
-- Each hypothesis has a stable detail/edit route (e.g. `/backlog/[id]`)
-  so PROD-002 can deep-link from an experiment to its parent
-  hypothesis.
+- Each hypothesis has a stable detail/edit route (`/backlog/[id]`) so
+  PROD-002 can deep-link from an experiment to its parent hypothesis.
 
 ---
 

@@ -12,6 +12,10 @@
 - `Experiment.hypothesisId` made required — every experiment must
   belong to a hypothesis, with a click-through from the Experiments
   screen to the Backlog card (TECH decision, see `docs/PROJECT_CONTEXT.md`).
-- [TECH-001] Local Postgres provisioned via `npx prisma dev`; initial
-  migration `20260806094509_init` applied (`FunnelLevel`, `Hypothesis`,
-  `Experiment` tables).
+- [TECH-001] Local Postgres provisioned via `npx prisma dev`; schema
+  synced with `prisma db push` (`FunnelLevel`, `Hypothesis`,
+  `Experiment` tables) — see `docs/PROJECT_CONTEXT.md` → Local
+  Development for why `db push` instead of `migrate dev` for now.
+- Added `Hypothesis.name` (short title, not in source data) and made
+  `Hypothesis.effort` a fixed 1–5 scale (same widget as Impact) instead
+  of a free number, per user direction on the Backlog screen design.

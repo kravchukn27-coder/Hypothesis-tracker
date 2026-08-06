@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- [UI-009] Redesigned `HypothesisForm`/`ExperimentForm` (and their
+  detail/create pages) from one flat field list into labeled sections:
+  Hypothesis — "Основное" (Name, Hypothesis text, Funnel Level,
+  Status), "Оценка" (Conversion, Impact, Effort, Reach, Confidence,
+  Score), "Дополнительно" (Result if Done, Comment, Моделирование,
+  Выборка, Task); Experiment — "Основное" (Name/hypothesis link,
+  Status), "Таргетинг" (Автор, Segment, Таргетинг), "Расписание"
+  (dates). New shared components: `src/components/Field.tsx` (label +
+  control wrapper), `src/components/Input.tsx` (`FIELD_CLASSES` +
+  `Input`/`Textarea`/`Select`), `src/components/FormSection.tsx`
+  (titled section grouping) — replacing the duplicated local `Field`
+  and `inputClass` definitions previously hand-rolled in each form.
+  Bespoke value-specific widgets (ScaleButtons, SegmentedControl,
+  FunnelLevelField, the Status/Stage pill-selects from UI-011) were
+  kept as-is, not forced into the generic primitives. Score keeps its
+  distinct stat-card treatment, just repositioned inside "Оценка".
+  Verified in the browser: both create forms, both detail forms with
+  existing data, the Done-status conditional Result field, and a save
+  round-trip on the Experiment form (Автор change persisted after
+  reload, then reverted).
+
 - [UI-011] Unified badge/tag visual system: new shared `Badge`
   component (`src/components/Badge.tsx`) exporting `BADGE_BASE_CLASSES`
   (shape/padding/typography) and a `NEUTRAL_BADGE_COLOR` for tags with

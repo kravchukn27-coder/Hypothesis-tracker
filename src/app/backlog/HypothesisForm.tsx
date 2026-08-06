@@ -10,6 +10,9 @@ import {
   STATUS_ORDER,
 } from "@/lib/hypothesis";
 import { BADGE_BASE_CLASSES } from "@/components/Badge";
+import { Field } from "@/components/Field";
+import { FormSection } from "@/components/FormSection";
+import { FIELD_CLASSES, Input, Select, Textarea } from "@/components/Input";
 import type { HypothesisFormState } from "./actions";
 import type { ConversionMetric, HypothesisStatus } from "@/generated/prisma/enums";
 import type { FunnelLevel } from "@/generated/prisma/client";
@@ -83,151 +86,126 @@ export function HypothesisForm({
         </p>
       )}
 
-      <Field label="Название" htmlFor="name">
-        <input
-          id="name"
-          name="name"
-          defaultValue={values.name}
-          required
-          placeholder="Короткое название гипотезы"
-          className={inputClass}
-        />
-      </Field>
-
-      <Field label="Гипотеза" htmlFor="text">
-        <textarea
-          id="text"
-          name="text"
-          defaultValue={values.text}
-          required
-          rows={6}
-          placeholder="Если мы сделаем X, то метрика Y вырастет, потому что..."
-          className={inputClass}
-        />
-      </Field>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Funnel Level">
-          <FunnelLevelField
-            funnelLevels={funnelLevels}
-            defaultValue={values.funnelLevelName}
+      <FormSection title="Основное">
+        <Field label="Название" htmlFor="name">
+          <Input
+            id="name"
+            name="name"
+            defaultValue={values.name}
+            required
+            placeholder="Короткое название гипотезы"
           />
         </Field>
 
-        <Field label="Status" htmlFor="status">
-          <select
-            id="status"
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as HypothesisStatus)}
-            className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none ${STATUS_BADGE_CLASSES[status]}`}
-          >
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      <Field label="Conversion">
-        <SegmentedControl name="conversion" defaultValue={values.conversion} />
-      </Field>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Impact">
-          <ScaleButtons name="impact" value={impact} onChange={setImpact} />
-        </Field>
-        <Field label="Effort">
-          <ScaleButtons name="effort" value={effort} onChange={setEffort} />
-        </Field>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="% Traffic (Reach)" htmlFor="reach">
-          <PercentInput
-            id="reach"
-            name="reach"
-            value={reachPct}
-            onChange={setReachPct}
+        <Field label="Гипотеза" htmlFor="text">
+          <Textarea
+            id="text"
+            name="text"
+            defaultValue={values.text}
+            required
+            rows={6}
+            placeholder="Если мы сделаем X, то метрика Y вырастет, потому что..."
           />
         </Field>
-        <Field label="Confidence" htmlFor="confidence">
-          <PercentInput
-            id="confidence"
-            name="confidence"
-            value={confidencePct}
-            onChange={setConfidencePct}
-          />
-        </Field>
-      </div>
 
-      <div className="flex items-start justify-between gap-6 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">Score</p>
-          <p className="text-4xl font-semibold tabular-nums text-zinc-900">
-            {score.toFixed(2)}
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">
-            Impact × Confidence × Reach ÷ Effort — считается автоматически
-          </p>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Funnel Level">
+            <FunnelLevelField funnelLevels={funnelLevels} defaultValue={values.funnelLevelName} />
+          </Field>
+
+          <Field label="Status" htmlFor="status">
+            <select
+              id="status"
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as HypothesisStatus)}
+              className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none ${STATUS_BADGE_CLASSES[status]}`}
+            >
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
-      </div>
+      </FormSection>
 
-      {status === "DONE" && (
-        <Field label="Result" htmlFor="result">
-          <textarea
-            id="result"
-            name="result"
-            defaultValue={values.result}
-            rows={3}
-            placeholder="Что получилось по факту"
-            className={inputClass}
+      <FormSection title="Оценка">
+        <Field label="Conversion">
+          <SegmentedControl name="conversion" defaultValue={values.conversion} />
+        </Field>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Impact">
+            <ScaleButtons name="impact" value={impact} onChange={setImpact} />
+          </Field>
+          <Field label="Effort">
+            <ScaleButtons name="effort" value={effort} onChange={setEffort} />
+          </Field>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="% Traffic (Reach)" htmlFor="reach">
+            <PercentInput id="reach" name="reach" value={reachPct} onChange={setReachPct} />
+          </Field>
+          <Field label="Confidence" htmlFor="confidence">
+            <PercentInput
+              id="confidence"
+              name="confidence"
+              value={confidencePct}
+              onChange={setConfidencePct}
+            />
+          </Field>
+        </div>
+
+        <div className="flex items-start justify-between gap-6 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+          <div>
+            <p className="text-sm font-medium text-zinc-500">Score</p>
+            <p className="text-4xl font-semibold tabular-nums text-zinc-900">{score.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Impact × Confidence × Reach ÷ Effort — считается автоматически
+            </p>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Дополнительно">
+        {status === "DONE" && (
+          <Field label="Result" htmlFor="result">
+            <Textarea
+              id="result"
+              name="result"
+              defaultValue={values.result}
+              rows={3}
+              placeholder="Что получилось по факту"
+            />
+          </Field>
+        )}
+
+        <Field label="Comment" htmlFor="comment">
+          <Textarea id="comment" name="comment" defaultValue={values.comment} rows={3} />
+        </Field>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Моделирование" htmlFor="modeling">
+            <Textarea id="modeling" name="modeling" defaultValue={values.modeling} rows={3} />
+          </Field>
+          <Field label="Выборка (users)" htmlFor="sampleSize">
+            <Input id="sampleSize" name="sampleSize" defaultValue={values.sampleSize} />
+          </Field>
+        </div>
+
+        <Field label="Task (ссылка)" htmlFor="taskUrl">
+          <Input
+            id="taskUrl"
+            name="taskUrl"
+            type="url"
+            defaultValue={values.taskUrl}
+            placeholder="https://linear.app/..."
           />
         </Field>
-      )}
-
-      <Field label="Comment" htmlFor="comment">
-        <textarea
-          id="comment"
-          name="comment"
-          defaultValue={values.comment}
-          rows={3}
-          className={inputClass}
-        />
-      </Field>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Моделирование" htmlFor="modeling">
-          <textarea
-            id="modeling"
-            name="modeling"
-            defaultValue={values.modeling}
-            rows={3}
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Выборка (users)" htmlFor="sampleSize">
-          <input
-            id="sampleSize"
-            name="sampleSize"
-            defaultValue={values.sampleSize}
-            className={inputClass}
-          />
-        </Field>
-      </div>
-
-      <Field label="Task (ссылка)" htmlFor="taskUrl">
-        <input
-          id="taskUrl"
-          name="taskUrl"
-          type="url"
-          defaultValue={values.taskUrl}
-          placeholder="https://linear.app/..."
-          className={inputClass}
-        />
-      </Field>
+      </FormSection>
 
       <div className="flex justify-end gap-3 border-t border-zinc-200 pt-6">
         <button
@@ -239,28 +217,6 @@ export function HypothesisForm({
         </button>
       </div>
     </form>
-  );
-}
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900";
-
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-zinc-700">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }
 
@@ -283,13 +239,12 @@ function FunnelLevelField({
   if (mode === "new") {
     return (
       <div className="flex gap-2">
-        <input
+        <Input
           name="funnelLevel"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Новый Funnel Level"
           autoFocus
-          className={inputClass}
         />
         {names.length > 0 && (
           <button
@@ -305,7 +260,7 @@ function FunnelLevelField({
   }
 
   return (
-    <select
+    <Select
       name="funnelLevel"
       value={selected}
       onChange={(e) => {
@@ -315,7 +270,6 @@ function FunnelLevelField({
           setSelected(e.target.value);
         }
       }}
-      className={inputClass}
     >
       <option value="">—</option>
       {names.map((name) => (
@@ -324,7 +278,7 @@ function FunnelLevelField({
         </option>
       ))}
       <option value={NEW_FUNNEL_LEVEL_OPTION}>+ Добавить новый...</option>
-    </select>
+    </Select>
   );
 }
 
@@ -410,7 +364,7 @@ function PercentInput({
         max={100}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={`${inputClass} pr-8`}
+        className={`${FIELD_CLASSES} pr-8`}
       />
       <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-400">
         %

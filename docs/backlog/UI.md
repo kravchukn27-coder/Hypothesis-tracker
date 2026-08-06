@@ -174,49 +174,6 @@ from the Statsig/GrowthBook research pass:
 
 ---
 
-## UI-009 — Redesign detail cards into sectioned layout with shared field components
-
-**Status:** TODO
-**Priority:** HIGH
-**Summary:** Redesign `/backlog/[id]` (and the create form) and
-`/experiments/[id]` (and its create form) from one flat vertical list
-of fields into named, visually separated sections — plus a shared set
-of Field/Input/Select components used by both forms instead of each
-form hand-rolling its own. Source: user direction ("выглядит как
-каша... неинформативно"), design research on GrowthBook/Statsig,
-2026-08-06.
-
-**Description:** GrowthBook's own detail pages (the "Overview" page
-you land on after a minimal create) group fields into clearly labeled
-sections rather than one long stack — same shape our
-`HypothesisForm`/`ExperimentForm` should move to. Concretely:
-- Group hypothesis fields into sections, e.g. "Основное" (Name,
-  Hypothesis text, Funnel Level), "Оценка" (Impact, Effort, Reach,
-  Confidence, Score), "Дополнительно" (Comment, Моделирование,
-  Выборка, Task).
-- Group experiment fields similarly, e.g. "Основное" (Name/hypothesis
-  link, Status), "Таргетинг" (Автор, Segment, Таргетинг), "Расписание"
-  (dates).
-- Extract one shared set of form primitives (`Field`, text `Input`,
-  `Select`) into `src/components/` and use them from both
-  `HypothesisForm.tsx` and `ExperimentForm.tsx` instead of each
-  defining its own — this is *why* the two forms currently look
-  inconsistent with each other.
-- Score keeps its distinct "stat card" treatment (large number, small
-  label) it already has today — just restyled to match the new
-  section system, not replaced with a chart/visualization (explicitly
-  out of scope, per the user).
-
-**Acceptance Criteria:**
-- Hypothesis and Experiment detail/create forms are organized into
-  clearly labeled sections instead of one flat field list.
-- Both forms use the same shared Field/Input/Select components —
-  consistent height, border-radius, spacing, and focus state across
-  both.
-- Score remains a plain large-number stat display (no chart/graph).
-
----
-
 ## UI-010 — Breadcrumb navigation on detail pages
 
 **Status:** TODO

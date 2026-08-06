@@ -4,6 +4,9 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import { BADGE_BASE_CLASSES } from "@/components/Badge";
+import { Field } from "@/components/Field";
+import { FormSection } from "@/components/FormSection";
+import { Input } from "@/components/Input";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -51,77 +54,64 @@ export function ExperimentForm({
         </p>
       )}
 
-      {initial ? (
-        <Field label="Название эксперимента" htmlFor="name">
-          <input
-            id="name"
-            name="name"
-            defaultValue={values.name}
-            required
-            className={inputClass}
+      <FormSection title="Основное">
+        {initial ? (
+          <Field label="Название эксперимента" htmlFor="name">
+            <Input id="name" name="name" defaultValue={values.name} required />
+          </Field>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Название будет таким же, как у гипотезы (с номером, если у неё уже есть
+            эксперименты) — задать его можно будет позже, на карточке эксперимента.
+          </p>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-zinc-700">Гипотеза</span>
+          <input type="hidden" name="hypothesisId" value={hypothesis.id} />
+          <Link
+            href={`/backlog/${hypothesis.id}`}
+            className="w-fit text-sm text-zinc-900 underline underline-offset-4"
+          >
+            {hypothesis.name}
+          </Link>
+        </div>
+
+        <Field label="Status" htmlFor="stage">
+          <StageField defaultValue={values.stage} />
+        </Field>
+      </FormSection>
+
+      <FormSection title="Таргетинг">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Автор" htmlFor="author">
+            <Input id="author" name="author" defaultValue={values.author} />
+          </Field>
+          <Field label="Segment" htmlFor="segment">
+            <Input id="segment" name="segment" defaultValue={values.segment} />
+          </Field>
+        </div>
+
+        <Field label="Таргетинг" htmlFor="targeting">
+          <Input
+            id="targeting"
+            name="targeting"
+            defaultValue={values.targeting}
+            placeholder="GW, квиз"
           />
         </Field>
-      ) : (
-        <p className="text-sm text-zinc-500">
-          Название будет таким же, как у гипотезы (с номером, если у неё уже есть
-          эксперименты) — задать его можно будет позже, на карточке эксперимента.
-        </p>
-      )}
+      </FormSection>
 
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-zinc-700">Гипотеза</span>
-        <input type="hidden" name="hypothesisId" value={hypothesis.id} />
-        <Link
-          href={`/backlog/${hypothesis.id}`}
-          className="w-fit text-sm text-zinc-900 underline underline-offset-4"
-        >
-          {hypothesis.name}
-        </Link>
-      </div>
-
-      <Field label="Status" htmlFor="stage">
-        <StageField defaultValue={values.stage} />
-      </Field>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Автор" htmlFor="author">
-          <input id="author" name="author" defaultValue={values.author} className={inputClass} />
-        </Field>
-        <Field label="Segment" htmlFor="segment">
-          <input id="segment" name="segment" defaultValue={values.segment} className={inputClass} />
-        </Field>
-      </div>
-
-      <Field label="Таргетинг" htmlFor="targeting">
-        <input
-          id="targeting"
-          name="targeting"
-          defaultValue={values.targeting}
-          placeholder="GW, квиз"
-          className={inputClass}
-        />
-      </Field>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Дата начала" htmlFor="startDate">
-          <input
-            id="startDate"
-            name="startDate"
-            type="date"
-            defaultValue={values.startDate}
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Дата окончания" htmlFor="endDate">
-          <input
-            id="endDate"
-            name="endDate"
-            type="date"
-            defaultValue={values.endDate}
-            className={inputClass}
-          />
-        </Field>
-      </div>
+      <FormSection title="Расписание">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Дата начала" htmlFor="startDate">
+            <Input id="startDate" name="startDate" type="date" defaultValue={values.startDate} />
+          </Field>
+          <Field label="Дата окончания" htmlFor="endDate">
+            <Input id="endDate" name="endDate" type="date" defaultValue={values.endDate} />
+          </Field>
+        </div>
+      </FormSection>
 
       <div className="flex justify-end gap-3 border-t border-zinc-200 pt-6">
         <button
@@ -135,9 +125,6 @@ export function ExperimentForm({
     </form>
   );
 }
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900";
 
 function StageField({ defaultValue }: { defaultValue: ExperimentStage }) {
   const [stage, setStage] = useState(defaultValue);
@@ -155,24 +142,5 @@ function StageField({ defaultValue }: { defaultValue: ExperimentStage }) {
         </option>
       ))}
     </select>
-  );
-}
-
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-zinc-700">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }

@@ -56,7 +56,15 @@ export async function createExperiment(
     },
   });
 
+  // Converting a hypothesis into an experiment means testing has started.
+  await prisma.hypothesis.update({
+    where: { id: data.hypothesisId },
+    data: { status: "IN_PROGRESS" },
+  });
+
   revalidatePath("/experiments");
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${data.hypothesisId}`);
   redirect(`/experiments/${experiment.id}`);
 }
 
@@ -89,11 +97,4 @@ export async function updateExperiment(
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
   redirect(`/experiments/${id}`);
-}
-
-export async function getHypothesesForPicker() {
-  return prisma.hypothesis.findMany({
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
 }

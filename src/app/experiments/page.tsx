@@ -16,29 +16,24 @@ export default async function ExperimentsPage() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
-          </p>
-        </div>
-        <Link
-          href="/experiments/new"
-          className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-        >
-          + Новый эксперимент
-        </Link>
+      <div>
+        <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
+        </p>
       </div>
 
       {experiments.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
-          <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
+          <p className="text-sm text-zinc-500">
+            Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в
+            Backlog.
+          </p>
           <Link
-            href="/experiments/new"
+            href="/backlog"
             className="text-sm font-medium text-zinc-900 underline underline-offset-4"
           >
-            Добавить первый
+            Перейти в Backlog
           </Link>
         </div>
       ) : (

@@ -50,3 +50,30 @@
 - User decided: finish remaining mechanics across all three screens
   before doing a real visual design pass — current styling (plain
   zinc/Tailwind defaults) is intentionally a placeholder, not final.
+- Reworked the Backlog → Experiment workflow per user direction (see
+  `docs/PROJECT_CONTEXT.md` → Hypothesis ↔ Experiment workflow):
+  - Creating a hypothesis now redirects to the `/backlog` list, not to
+    its own detail page.
+  - Backlog list's Status column is inline-editable (`StatusCell`, a
+    dropdown right in the row) instead of requiring a trip into the
+    detail page.
+  - Removed the standalone "+ Новый эксперимент" entry point from
+    `/experiments`; `/experiments/new` now requires
+    `?hypothesisId=...` and redirects to `/backlog` without one. The
+    hypothesis picker dropdown in `ExperimentForm` was replaced with a
+    fixed hypothesis (shown as a link, submitted as a hidden field).
+  - Added entry points into experiment creation: a "→ Эксперимент" link
+    per Backlog row, a "Создать эксперимент" button on
+    `/backlog/[id]`, and a modal prompt that appears when a
+    hypothesis's status changes (via the inline dropdown) to anything
+    other than `NEW` while it still has zero experiments — "Перевести
+    в эксперимент?" with a direct link into the pre-filled create form.
+  - Creating an experiment now also sets its parent hypothesis's status
+    to `IN_PROGRESS` automatically (`createExperiment` in
+    `src/app/experiments/actions.ts`).
+  - Verified end-to-end in the browser: create hypothesis → redirected
+    to list → change status inline → prompt appears → create experiment
+    from prompt → hypothesis status auto-flips to In progress → prompt
+    no longer appears on further status changes for that hypothesis →
+    direct hit on `/experiments/new` (no query param) redirects to
+    `/backlog` → `/experiments` has no create button.

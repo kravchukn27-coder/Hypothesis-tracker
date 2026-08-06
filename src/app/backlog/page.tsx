@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { computeScore, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
+import { computeScore } from "@/lib/hypothesis";
+import { StatusCell } from "./StatusCell";
 
 export default async function BacklogPage() {
   const hypotheses = await prisma.hypothesis.findMany({
-    include: { funnelLevel: true },
+    include: { funnelLevel: true, _count: { select: { experiments: true } } },
   });
 
   const rows = hypotheses
@@ -47,6 +48,7 @@ export default async function BacklogPage() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Score</th>
                 <th className="px-4 py-3">Comment</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -64,17 +66,26 @@ export default async function BacklogPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_BADGE_CLASSES[h.status]}`}
-                    >
-                      {STATUS_LABELS[h.status]}
-                    </span>
+                    <StatusCell
+                      hypothesisId={h.id}
+                      hypothesisName={h.name}
+                      status={h.status}
+                      hasExperiments={h._count.experiments > 0}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right font-medium tabular-nums text-zinc-900">
                     {h.score.toFixed(2)}
                   </td>
                   <td className="max-w-sm truncate px-4 py-3 text-zinc-500">
                     {h.comment || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/experiments/new?hypothesisId=${h.id}`}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                    >
+                      → Эксперимент
+                    </Link>
                   </td>
                 </tr>
               ))}

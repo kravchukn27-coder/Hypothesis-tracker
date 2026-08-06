@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getHypothesesForPicker, updateExperiment } from "../actions";
+import { updateExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 
 function toDateInputValue(date: Date | null): string {
@@ -15,10 +15,10 @@ export default async function ExperimentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [experiment, hypotheses] = await Promise.all([
-    prisma.experiment.findUnique({ where: { id }, include: { hypothesis: true } }),
-    getHypothesesForPicker(),
-  ]);
+  const experiment = await prisma.experiment.findUnique({
+    where: { id },
+    include: { hypothesis: true },
+  });
 
   if (!experiment) notFound();
 
@@ -31,21 +31,14 @@ export default async function ExperimentDetailPage({
           ← Experiments
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{experiment.name}</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Гипотеза:{" "}
-          <Link href={`/backlog/${experiment.hypothesisId}`} className="underline underline-offset-4">
-            {experiment.hypothesis.name}
-          </Link>
-        </p>
       </div>
 
       <ExperimentForm
         action={action}
-        hypotheses={hypotheses}
+        hypothesis={{ id: experiment.hypothesisId, name: experiment.hypothesis.name }}
         submitLabel="Сохранить"
         initial={{
           name: experiment.name,
-          hypothesisId: experiment.hypothesisId,
           status: experiment.status,
           author: experiment.author ?? "",
           targeting: experiment.targeting ?? "",

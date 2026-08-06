@@ -56,7 +56,7 @@ export async function createHypothesis(
   const data = parsed.data;
   const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
 
-  const hypothesis = await prisma.hypothesis.create({
+  await prisma.hypothesis.create({
     data: {
       name: data.name,
       text: data.text,
@@ -76,7 +76,7 @@ export async function createHypothesis(
   });
 
   revalidatePath("/backlog");
-  redirect(`/backlog/${hypothesis.id}`);
+  redirect("/backlog");
 }
 
 export async function updateHypothesis(
@@ -118,4 +118,20 @@ export async function updateHypothesis(
 
 export async function getFunnelLevels() {
   return prisma.funnelLevel.findMany({ orderBy: { name: "asc" } });
+}
+
+const HYPOTHESIS_STATUSES = ["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD", "DONE"] as const;
+const statusSchema = z.enum(HYPOTHESIS_STATUSES);
+
+export async function updateHypothesisStatus(id: string, status: string) {
+  const parsed = statusSchema.safeParse(status);
+  if (!parsed.success) return;
+
+  await prisma.hypothesis.update({
+    where: { id },
+    data: { status: parsed.data },
+  });
+
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${id}`);
 }

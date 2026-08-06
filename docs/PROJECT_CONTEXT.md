@@ -20,11 +20,13 @@ Source of truth for the original data model: a Google Sheet exported as
 
 1. **Backlog** ✅ — list/create/edit hypotheses, auto-computed Score,
    status. `/backlog`, `/backlog/new`, `/backlog/[id]`.
-2. **Experiments** ✅ — list/create/edit experiments (status, author,
-   targeting, segment, dates, stage). `/experiments`,
-   `/experiments/new`, `/experiments/[id]`. Experiment name in the list
-   links to its parent hypothesis's `/backlog/[id]` card (not to its
-   own edit page — that's the separate "Изменить" link).
+2. **Experiments** ✅ — list/edit experiments (status, author,
+   targeting, segment, dates, stage). `/experiments`, `/experiments/[id]`.
+   No standalone "create" entry point on this screen — `/experiments/new`
+   requires a `?hypothesisId=` query param and redirects to `/backlog`
+   without one; see "Hypothesis ↔ Experiment workflow" below. Experiment
+   name in the list links to its parent hypothesis's `/backlog/[id]`
+   card (not to its own edit page — that's the separate "Изменить" link).
 3. **Calendar** ✅ — `/calendar`, week-granularity timeline computed
    from experiment dates, bars colored by Stage, links to both the
    experiment (`/experiments/[id]`) and its hypothesis
@@ -65,6 +67,34 @@ changes shape things.
   Experimentation/Analysis), so the Calendar screen can be computed
   instead of hand-shifted between columns.
 
+### Hypothesis ↔ Experiment workflow
+
+Confirmed by the user 2026-08-06 — experiments are not a standalone
+list you add to; they're something you spin off *from* a hypothesis:
+
+- Creating a hypothesis redirects back to the `/backlog` **list**, not
+  to the new hypothesis's detail page — the list is the home base.
+- Status is edited **inline in the Backlog list** (a dropdown right in
+  the row, `StatusCell`), not only via the full edit form.
+- There is no "+ New experiment" button on `/experiments` at all.
+  `/experiments/new` only works with a `?hypothesisId=` query param
+  (redirects to `/backlog` otherwise) and the hypothesis is fixed in
+  that form (shown as a link, submitted as a hidden field) — not a
+  picker. Entry points into it: the "→ Эксперимент" link on each
+  Backlog row, the "Создать эксперимент" button on a hypothesis's
+  `/backlog/[id]` page, and the status-change prompt below.
+- Whenever a hypothesis's status changes via the list's inline
+  dropdown, and that hypothesis has **no experiments yet**, and the new
+  status isn't `NEW`, a modal prompts "Перевести в эксперимент?" with a
+  direct link into `/experiments/new?hypothesisId=...`. This is a
+  suggestion, not automatic — dismissible, and only fires once per
+  status change (not repeated nagging once an experiment exists).
+- Creating an experiment from a hypothesis automatically sets that
+  hypothesis's status to `IN_PROGRESS` (`createExperiment` in
+  `src/app/experiments/actions.ts` also updates the `Hypothesis` row) —
+  the reciprocal link the user asked for: converting to an experiment
+  is itself a status transition, not just a side effect.
+
 ## Origin Data Model (Excel → Prisma mapping)
 
 ### `Backlog` sheet → `Hypothesis`
@@ -100,12 +130,15 @@ changes shape things.
 
 ### Backlog screen layout
 
-- List view: table sorted by Score desc. Columns: **Name, Status,
-  Score, Comment**.
+- List view: table sorted by Score desc. Columns: **Name, Status
+  (inline-editable), Score, Comment**, plus a "→ Эксперимент" row
+  action. See "Hypothesis ↔ Experiment workflow" above.
 - Clicking a row's Name navigates (full page, not a panel) to
   `/backlog/[id]`, a detail view laid out close to the original Excel
   row — all fields visible and labeled, not redesigned into a minimal
-  card.
+  card. That page also has a persistent "Создать эксперимент" button.
+- Creating a hypothesis redirects to the `/backlog` list, not to the
+  new hypothesis's own detail page.
 
 ### `График экспериментов` sheet → `Experiment`
 

@@ -11,11 +11,10 @@ import {
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage, ExperimentStatus } from "@/generated/prisma/enums";
 
-type HypothesisOption = { id: string; name: string };
+type Hypothesis = { id: string; name: string };
 
 type Initial = {
   name: string;
-  hypothesisId: string;
   status: ExperimentStatus;
   author: string;
   targeting: string;
@@ -27,7 +26,6 @@ type Initial = {
 
 const emptyInitial: Initial = {
   name: "",
-  hypothesisId: "",
   status: "DEV",
   author: "",
   targeting: "",
@@ -39,35 +37,18 @@ const emptyInitial: Initial = {
 
 export function ExperimentForm({
   action,
-  hypotheses,
+  hypothesis,
   initial,
   submitLabel,
 }: {
   action: (state: ExperimentFormState, formData: FormData) => Promise<ExperimentFormState>;
-  hypotheses: HypothesisOption[];
+  hypothesis: Hypothesis;
   initial?: Partial<Initial>;
   submitLabel: string;
 }) {
   const values = { ...emptyInitial, ...initial };
   const [state, formAction, pending] = useActionState(action, {});
   const [status, setStatus] = useState<ExperimentStatus>(values.status);
-
-  if (hypotheses.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-zinc-300 px-5 py-10 text-center">
-        <p className="text-sm text-zinc-500">
-          Сначала нужна хотя бы одна гипотеза — эксперимент не может существовать
-          без гипотезы, которую он проверяет.
-        </p>
-        <Link
-          href="/backlog/new"
-          className="mt-3 inline-block text-sm font-medium text-zinc-900 underline underline-offset-4"
-        >
-          Создать гипотезу
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
@@ -88,24 +69,16 @@ export function ExperimentForm({
         />
       </Field>
 
-      <Field label="Гипотеза" htmlFor="hypothesisId">
-        <select
-          id="hypothesisId"
-          name="hypothesisId"
-          defaultValue={values.hypothesisId}
-          required
-          className={inputClass}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-zinc-700">Гипотеза</span>
+        <input type="hidden" name="hypothesisId" value={hypothesis.id} />
+        <Link
+          href={`/backlog/${hypothesis.id}`}
+          className="w-fit text-sm text-zinc-900 underline underline-offset-4"
         >
-          <option value="" disabled>
-            Выбери гипотезу...
-          </option>
-          {hypotheses.map((h) => (
-            <option key={h.id} value={h.id}>
-              {h.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+          {hypothesis.name}
+        </Link>
+      </div>
 
       <Field label="Status">
         <SegmentedControl

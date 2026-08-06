@@ -26,8 +26,14 @@ Source of truth for the original data model: a Google Sheet exported as
    No standalone "create" entry point on this screen — `/experiments/new`
    requires a `?hypothesisId=` query param and redirects to `/backlog`
    without one; see "Hypothesis ↔ Experiment workflow" below. Experiment
-   name in the list links to its parent hypothesis's `/backlog/[id]`
-   card (not to its own edit page — that's the separate "Изменить" link).
+   name in the list opens the experiment's own detail/edit page
+   (`/experiments/[id]`) — reversed from the original PROD-002 design
+   per PROD-010 (2026-08-06): the "Изменить" list link was removed
+   since the name click now does the same thing. The path to the
+   parent hypothesis is a second step, reached from inside
+   `/experiments/[id]` (its "Гипотеза" field links to
+   `/backlog/[hypothesisId]`), not the list's primary click target
+   anymore.
 3. **Calendar** ✅ — `/calendar`, week-granularity timeline computed
    from experiment dates, bars colored by Stage, links to both the
    experiment (`/experiments/[id]`) and its hypothesis
@@ -119,9 +125,18 @@ list you add to; they're something you spin off *from* a hypothesis:
   `/experiments/new` only works with a `?hypothesisId=` query param
   (redirects to `/backlog` otherwise) and the hypothesis is fixed in
   that form (shown as a link, submitted as a hidden field) — not a
-  picker. Entry points into it: the "→ Эксперимент" link on each
-  Backlog row, the "Создать эксперимент" button on a hypothesis's
-  `/backlog/[id]` page, and the status-change prompt below.
+  picker. Entry points into it: the "Создать эксперимент" button on a
+  hypothesis's `/backlog/[id]` page, and the status-change prompt
+  below.
+- Backlog row action (PROD-011, 2026-08-06) is conditional on whether
+  the hypothesis already has experiments: none yet → "Создать
+  эксперимент" link into the create flow above; has experiments →
+  "→ Эксперимент" link into `/experiments?hypothesisId=...`, which
+  highlights (amber background, `data-highlighted="true"`) **every**
+  experiment belonging to that hypothesis (not just one — a hypothesis
+  can have several, see PROD-006) and auto-scrolls the first one into
+  view (`ScrollToHighlighted` client component). No filtering — the
+  full list stays visible, just visually pointing at the relevant rows.
 - Whenever a hypothesis's status changes via the list's inline
   dropdown, and that hypothesis has **no experiments yet**, and the new
   status isn't `NEW`, a modal prompts "Перевести в эксперимент?" with a

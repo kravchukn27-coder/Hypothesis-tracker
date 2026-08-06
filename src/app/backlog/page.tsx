@@ -128,12 +128,21 @@ export default async function BacklogPage({
                     {h.comment || "—"}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/experiments/new?hypothesisId=${h.id}`}
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
-                    >
-                      → Эксперимент
-                    </Link>
+                    {h._count.experiments > 0 ? (
+                      <Link
+                        href={`/experiments?hypothesisId=${h.id}`}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                      >
+                        → Эксперимент
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/experiments/new?hypothesisId=${h.id}`}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                      >
+                        Создать эксперимент
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

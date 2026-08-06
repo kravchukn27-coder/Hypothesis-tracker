@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- [PROD-011] Backlog row action is now conditional instead of always
+  routing to "create a new experiment": hypotheses with no experiments
+  yet keep that behavior ("Создать эксперимент"); hypotheses that
+  already have experiments instead link to `/experiments?hypothesisId=...`,
+  which highlights (amber background) every experiment belonging to
+  that hypothesis — not just one, since a hypothesis can have several
+  (PROD-006) — and auto-scrolls the first into view (new
+  `ScrollToHighlighted` client component). Verified in the browser: a
+  hypothesis with two experiments highlighted both matching rows on
+  `/experiments` and left the unrelated third row unhighlighted; a
+  hypothesis with none still went to the create flow.
+
+- [PROD-010] Experiments list: clicking an experiment's name now opens
+  its own detail/edit page (`/experiments/[id]`) instead of its parent
+  hypothesis's Backlog card — reverses the original PROD-002 default.
+  Removed the now-redundant "Изменить" list link. The path to the
+  hypothesis is unchanged as a second step: `/experiments/[id]`
+  already links to `/backlog/[hypothesisId]` via its "Гипотеза" field.
+  Verified in the browser: experiment name links to `/experiments/[id]`,
+  and that page still links through to the hypothesis.
+
 - [UI-002] Removed the "Удалить" (delete) button from Backlog and
   Experiments list rows — it now lives only on the detail pages
   (`/backlog/[id]`, `/experiments/[id]`), same confirmation modal and

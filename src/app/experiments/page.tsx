@@ -8,14 +8,15 @@ import {
   formatDateRange,
 } from "@/lib/experiment";
 import { FilterBar } from "@/components/FilterBar";
+import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 export default async function ExperimentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stage?: string; segment?: string }>;
+  searchParams: Promise<{ stage?: string; segment?: string; hypothesisId?: string }>;
 }) {
-  const { stage, segment } = await searchParams;
+  const { stage, segment, hypothesisId } = await searchParams;
 
   const [experiments, segmentRows] = await Promise.all([
     prisma.experiment.findMany({
@@ -43,6 +44,7 @@ export default async function ExperimentsPage({
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+      {hypothesisId && <ScrollToHighlighted />}
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
         <p className="mt-1 text-sm text-zinc-500">
@@ -90,16 +92,20 @@ export default async function ExperimentsPage({
                 <th className="px-4 py-3">Автор</th>
                 <th className="px-4 py-3">Таргетинг / Segment</th>
                 <th className="px-4 py-3">Даты</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {experiments.map((e) => (
-                <tr key={e.id} className="transition-colors hover:bg-zinc-50">
+              {experiments.map((e) => {
+                const isHighlighted = e.hypothesisId === hypothesisId;
+                return (
+                <tr
+                  key={e.id}
+                  data-highlighted={isHighlighted || undefined}
+                  className={`transition-colors hover:bg-zinc-50 ${isHighlighted ? "bg-amber-50" : ""}`}
+                >
                   <td className="max-w-xs px-4 py-3">
                     <Link
-                      href={`/backlog/${e.hypothesisId}`}
-                      title={`Гипотеза: ${e.hypothesis.name}`}
+                      href={`/experiments/${e.id}`}
                       className="font-medium text-zinc-900 hover:underline"
                     >
                       {e.name}
@@ -120,16 +126,9 @@ export default async function ExperimentsPage({
                   <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
                     {formatDateRange(e.startDate, e.endDate)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/experiments/${e.id}`}
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
-                    >
-                      Изменить
-                    </Link>
-                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

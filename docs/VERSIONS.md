@@ -35,3 +35,18 @@
   "Изменить" link opens the experiment's own edit page. Added top nav
   (Backlog / Experiments) with active-route highlighting. Verified
   end-to-end in the browser.
+- [PROD-003] Calendar screen shipped: `/calendar`, a week-granularity
+  timeline computed from `startDate`/`endDate` (min/max across
+  experiments, not a fixed set of columns like the Excel sheet).
+  Experiments render as colored bars spanning their weeks (color =
+  Stage), clicking a bar opens `/experiments/[id]`, clicking the row's
+  name opens `/backlog/[hypothesisId]`. Experiments with no dates are
+  listed separately below the grid instead of being dropped. No
+  drag/resize on this screen — dates are still edited on the
+  Experiments screen's form; both screens read the same
+  `startDate`/`endDate` so edits show up in both automatically.
+  Verified end-to-end in the browser with two dated experiments
+  (different stages/colors) and one undated.
+- User decided: finish remaining mechanics across all three screens
+  before doing a real visual design pass — current styling (plain
+  zinc/Tailwind defaults) is intentionally a placeholder, not final.

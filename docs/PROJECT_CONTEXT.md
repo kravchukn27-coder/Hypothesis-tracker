@@ -25,11 +25,21 @@ Source of truth for the original data model: a Google Sheet exported as
    `/experiments/new`, `/experiments/[id]`. Experiment name in the list
    links to its parent hypothesis's `/backlog/[id]` card (not to its
    own edit page — that's the separate "Изменить" link).
-3. **Calendar** — timeline/Gantt view of experiments driven by
-   `startDate`/`endDate`/`stage`, replacing the Excel week-column hack.
+3. **Calendar** ✅ — `/calendar`, week-granularity timeline computed
+   from experiment dates, bars colored by Stage, links to both the
+   experiment (`/experiments/[id]`) and its hypothesis
+   (`/backlog/[id]`). No drag/resize — dates are edited on the
+   Experiments screen; both read the same fields so they stay in sync.
 4. **Extras** — custom funnel-level tags, filters/sorting.
 
-Screens 3–4 not built yet; this file will be updated as they land.
+Screen 4 not built yet.
+
+**Current phase: mechanics, not visual design.** All three core screens
+exist but styling is intentionally a plain Tailwind/zinc placeholder —
+the user wants remaining mechanics finished across all screens first,
+then a single real design pass over everything at once (agreed
+2026-08-06), rather than restyling once now and again after Calendar
+changes shape things.
 
 ## Core Data Rules
 

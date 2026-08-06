@@ -38,6 +38,16 @@ export const STAGE_BADGE_CLASSES: Record<ExperimentStage, string> = {
   ANALYSIS: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
 };
 
+export const STAGE_BAR_CLASSES: Record<ExperimentStage, string> = {
+  DISCOVERY: "bg-zinc-400",
+  DESIGN: "bg-violet-500",
+  DEVELOPMENT: "bg-amber-500",
+  EXPERIMENTATION: "bg-blue-500",
+  ANALYSIS: "bg-emerald-500",
+};
+
+export const NO_STAGE_BAR_CLASS = "bg-zinc-300";
+
 export function formatDateRange(start: Date | null, end: Date | null): string {
   const fmt = (d: Date) =>
     d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });

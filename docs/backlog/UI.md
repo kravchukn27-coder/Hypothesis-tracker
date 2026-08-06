@@ -131,49 +131,6 @@ palette) so the same author always gets the same color.
 
 ---
 
-## UI-008 — Unify Backlog/Experiments table visual style
-
-**Status:** TODO
-**Priority:** MEDIUM
-**Summary:** Redesign the two list tables (`/backlog`, `/experiments`)
-into one consistent, deliberately non-adaptive visual system instead
-of each having its own organically-grown column widths. Source: user
-direction + design research on GrowthBook/Statsig, 2026-08-06.
-
-**Description:** Currently each table's columns use different
-Tailwind `max-w-*`/`truncate` choices picked ad hoc per column, so the
-two tables don't feel like the same product. Bundles four related
-visual changes to the same surface (the two list pages), all sourced
-from the Statsig/GrowthBook research pass:
-1. Consistent, explicitly-set column widths shared between both
-   tables (not shrinking/growing to content) — wide enough that the
-   Comment column reads comfortably (current Backlog comment width is
-   the right reference size, per the user).
-2. Status shown as an icon + color (e.g. checkmark for a "settled"
-   status, warning triangle for something needing attention) instead
-   of only a colored text pill — faster to scan, seen on Statsig's
-   experiment timeline.
-3. A thin colored left-border accent on each row reflecting its
-   status — replaces/unifies the current one-off amber
-   background-highlight used for PROD-011's jump-to-experiment
-   feature, so status-by-color becomes one consistent mechanism
-   instead of two different ones.
-4. Icon-based row actions (trash for delete, pencil for edit, plus for
-   create) instead of text links ("Удалить", "Изменить",
-   "→ Эксперимент") — needs a shared icon set, e.g. `lucide-react`
-   (common with Tailwind projects, not yet a dependency here).
-
-**Acceptance Criteria:**
-- Backlog and Experiments tables share one column-width system —
-  visually consistent row height/spacing between the two.
-- Status column shows an icon + color, not just a colored text pill.
-- Row status is also reflected via a colored left-border accent,
-  replacing the current ad hoc amber-highlight-only approach.
-- Row actions (delete/edit/create-related links) are icon-based, using
-  one shared icon set across both tables.
-
----
-
 ## UI-010 — Breadcrumb navigation on detail pages
 
 **Status:** TODO

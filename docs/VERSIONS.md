@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+- [UI-008] Unified the Backlog and Experiments list tables' visual
+  system. New shared `src/components/tableWidths.ts` (NAME_COL,
+  STATUS_COL, META_COL, LONG_TEXT_COL, DATE_COL, ACTION_COL) applied
+  to both tables' columns, replacing each table's own ad hoc
+  `max-w-*`/`truncate` choices — Experiments' Таргетинг/Segment column
+  widened to match Backlog's Comment column (the reference width, per
+  the user). Added `lucide-react` (new dependency) for per-status/
+  per-stage icons: `STATUS_ICONS`/`STAGE_ICONS` maps in
+  `src/lib/hypothesis.ts`/`src/lib/experiment.ts`, rendered as an
+  overlay on the existing `StatusCell`/`StageCell` pill-selects (still
+  real `<select>`s, inline-edit unchanged) — required splitting
+  `Badge.tsx`'s `BADGE_BASE_CLASSES` into a new `BADGE_SHAPE_CLASSES`
+  (no horizontal padding) so the icon-prefixed `pl-6` doesn't fight
+  the badge's own `px-2.5` over the same CSS property. Added a
+  status-colored `border-l-4` accent per row (`STATUS_BORDER_CLASSES`/
+  `STAGE_BORDER_CLASSES`, same color families as the badge classes).
+  Per user decision: PROD-011's amber `bg-amber-50` jump-to-experiment
+  highlight on the Experiments list is kept layered on top of the new
+  border, not replaced by it. Backlog's remaining row action
+  ("→ Эксперимент"/"Создать эксперимент") is now icon-only
+  (ArrowRight/Plus with `aria-label`) — the card's original "trash for
+  delete, pencil for edit" language was already stale (UI-002 and
+  PROD-010 had already removed those list-row links), confirmed with
+  the user before implementing. Verified in the browser: both lists'
+  icons/borders/widths, inline status/stage edit still works, BUG-001's
+  "Перевести в эксперимент?" modal still fires on a real status
+  transition, and a Backlog jump to Experiments shows the amber
+  highlight and border together on the matching rows.
+
 - [UI-009] Redesigned `HypothesisForm`/`ExperimentForm` (and their
   detail/create pages) from one flat field list into labeled sections:
   Hypothesis — "Основное" (Name, Hypothesis text, Funnel Level,

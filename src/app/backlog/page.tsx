@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { ArrowRight, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { computeScore, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
+import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { StatusCell } from "./StatusCell";
 import { Badge } from "@/components/Badge";
 import { FilterBar } from "@/components/FilterBar";
 import { SortableHeader, type SortDir } from "@/components/SortableHeader";
+import { ACTION_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
 export default async function BacklogPage({
@@ -104,7 +106,7 @@ export default async function BacklogPage({
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="px-4 py-3">
+                <th className={`${NAME_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Name"
                     active={sort === "name"}
@@ -113,7 +115,7 @@ export default async function BacklogPage({
                     href={(d) => sortHref("name", d)}
                   />
                 </th>
-                <th className="px-4 py-3">
+                <th className={`${STATUS_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Status"
                     active={sort === "status"}
@@ -122,7 +124,7 @@ export default async function BacklogPage({
                     href={(d) => sortHref("status", d)}
                   />
                 </th>
-                <th className="px-4 py-3 text-right">
+                <th className={`${META_COL} px-4 py-3 text-right`}>
                   <SortableHeader
                     label="Score"
                     active={sort === "score"}
@@ -131,14 +133,17 @@ export default async function BacklogPage({
                     href={(d) => sortHref("score", d)}
                   />
                 </th>
-                <th className="px-4 py-3">Comment</th>
-                <th className="px-4 py-3" />
+                <th className={`${LONG_TEXT_COL} px-4 py-3`}>Comment</th>
+                <th className={`${ACTION_COL} px-4 py-3`} />
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {rows.map((h) => (
-                <tr key={h.id} className="transition-colors hover:bg-zinc-50">
-                  <td className="max-w-xs px-4 py-3">
+                <tr
+                  key={h.id}
+                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]}`}
+                >
+                  <td className={`${NAME_COL} px-4 py-3`}>
                     <Link
                       href={`/backlog/${h.id}`}
                       className="font-medium text-zinc-900 hover:underline"
@@ -151,7 +156,7 @@ export default async function BacklogPage({
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className={`${STATUS_COL} px-4 py-3`}>
                     <StatusCell
                       hypothesisId={h.id}
                       hypothesisName={h.name}
@@ -159,26 +164,30 @@ export default async function BacklogPage({
                       hasExperiments={h._count.experiments > 0}
                     />
                   </td>
-                  <td className="px-4 py-3 text-right font-medium tabular-nums text-zinc-900">
+                  <td className={`${META_COL} px-4 py-3 text-right font-medium tabular-nums text-zinc-900`}>
                     {h.score.toFixed(2)}
                   </td>
-                  <td className="max-w-sm truncate px-4 py-3 text-zinc-500">
+                  <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
                     {h.comment || "—"}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className={`${ACTION_COL} px-4 py-3 text-right`}>
                     {h._count.experiments > 0 ? (
                       <Link
                         href={`/experiments?hypothesisId=${h.id}`}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                        aria-label="Перейти к эксперименту"
+                        title="Перейти к эксперименту"
+                        className="inline-flex text-zinc-400 hover:text-zinc-900"
                       >
-                        → Эксперимент
+                        <ArrowRight className="size-4" />
                       </Link>
                     ) : (
                       <Link
                         href={`/experiments/new?hypothesisId=${h.id}`}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                        aria-label="Создать эксперимент"
+                        title="Создать эксперимент"
+                        className="inline-flex text-zinc-400 hover:text-zinc-900"
                       >
-                        Создать эксперимент
+                        <Plus className="size-4" />
                       </Link>
                     )}
                   </td>

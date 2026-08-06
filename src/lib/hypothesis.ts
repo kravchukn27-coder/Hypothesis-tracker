@@ -1,3 +1,12 @@
+import {
+  CalendarClock,
+  CheckCircle2,
+  CheckCheck,
+  CircleDot,
+  PauseCircle,
+  PlayCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { ConversionMetric, HypothesisStatus } from "@/generated/prisma/enums";
 
 export function computeScore(input: {
@@ -35,6 +44,27 @@ export const STATUS_BADGE_CLASSES: Record<HypothesisStatus, string> = {
   ACCEPTED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   HOLD: "bg-zinc-100 text-zinc-600 ring-zinc-500/20",
   DONE: "bg-zinc-900 text-white ring-zinc-900/10",
+};
+
+// Left-border row accent (UI-008) — same color families as
+// STATUS_BADGE_CLASSES, just as a solid border color instead of a
+// bg/text/ring triplet.
+export const STATUS_BORDER_CLASSES: Record<HypothesisStatus, string> = {
+  NEW: "border-blue-400",
+  PLANNED: "border-violet-400",
+  IN_PROGRESS: "border-amber-400",
+  ACCEPTED: "border-emerald-400",
+  HOLD: "border-zinc-300",
+  DONE: "border-zinc-900",
+};
+
+export const STATUS_ICONS: Record<HypothesisStatus, LucideIcon> = {
+  NEW: CircleDot,
+  PLANNED: CalendarClock,
+  IN_PROGRESS: PlayCircle,
+  ACCEPTED: CheckCircle2,
+  HOLD: PauseCircle,
+  DONE: CheckCheck,
 };
 
 export const CONVERSION_LABELS: Record<ConversionMetric, string> = {

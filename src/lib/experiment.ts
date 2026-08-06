@@ -1,3 +1,12 @@
+import {
+  BarChart3,
+  CheckCheck,
+  Code2,
+  FlaskConical,
+  PenTool,
+  Search,
+  type LucideIcon,
+} from "lucide-react";
 import { ExperimentStage } from "@/generated/prisma/enums";
 
 // Single merged field (TECH-002): status and stage used to be two
@@ -38,6 +47,27 @@ export const STAGE_BAR_CLASSES: Record<ExperimentStage, string> = {
   EXPERIMENTATION: "bg-blue-500",
   ANALYSIS: "bg-emerald-500",
   DONE: "bg-zinc-900",
+};
+
+// Left-border row accent (UI-008) — same color families as
+// STAGE_BADGE_CLASSES, just as a solid border color instead of a
+// bg/text/ring triplet.
+export const STAGE_BORDER_CLASSES: Record<ExperimentStage, string> = {
+  DISCOVERY: "border-zinc-300",
+  DESIGN: "border-violet-400",
+  DEVELOPMENT: "border-amber-400",
+  EXPERIMENTATION: "border-blue-400",
+  ANALYSIS: "border-emerald-400",
+  DONE: "border-zinc-900",
+};
+
+export const STAGE_ICONS: Record<ExperimentStage, LucideIcon> = {
+  DISCOVERY: Search,
+  DESIGN: PenTool,
+  DEVELOPMENT: Code2,
+  EXPERIMENTATION: FlaskConical,
+  ANALYSIS: BarChart3,
+  DONE: CheckCheck,
 };
 
 export function formatDateRange(start: Date | null, end: Date | null): string {

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { STAGE_LABELS, STAGE_ORDER, formatDateRange } from "@/lib/experiment";
+import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER, formatDateRange } from "@/lib/experiment";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import { SortableHeader, type SortDir } from "@/components/SortableHeader";
+import { DATE_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
 import { StageCell } from "./StageCell";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -130,7 +131,7 @@ export default async function ExperimentsPage({
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="px-4 py-3">
+                <th className={`${NAME_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Эксперимент"
                     active={sortBy === "name"}
@@ -139,7 +140,7 @@ export default async function ExperimentsPage({
                     href={(d) => sortHref("name", d)}
                   />
                 </th>
-                <th className="px-4 py-3">
+                <th className={`${STATUS_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Status"
                     active={sortBy === "stage"}
@@ -148,7 +149,7 @@ export default async function ExperimentsPage({
                     href={(d) => sortHref("stage", d)}
                   />
                 </th>
-                <th className="px-4 py-3">
+                <th className={`${META_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Автор"
                     active={sortBy === "author"}
@@ -157,8 +158,8 @@ export default async function ExperimentsPage({
                     href={(d) => sortHref("author", d)}
                   />
                 </th>
-                <th className="px-4 py-3">Таргетинг / Segment</th>
-                <th className="px-4 py-3">
+                <th className={`${LONG_TEXT_COL} px-4 py-3`}>Таргетинг / Segment</th>
+                <th className={`${DATE_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Даты"
                     active={sortBy === "startDate"}
@@ -176,9 +177,9 @@ export default async function ExperimentsPage({
                 <tr
                   key={e.id}
                   data-highlighted={isHighlighted || undefined}
-                  className={`transition-colors hover:bg-zinc-50 ${isHighlighted ? "bg-amber-50" : ""}`}
+                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STAGE_BORDER_CLASSES[e.stage]} ${isHighlighted ? "bg-amber-50" : ""}`}
                 >
-                  <td className="max-w-xs px-4 py-3">
+                  <td className={`${NAME_COL} px-4 py-3`}>
                     <Link
                       href={`/experiments/${e.id}`}
                       className="font-medium text-zinc-900 hover:underline"
@@ -187,14 +188,14 @@ export default async function ExperimentsPage({
                     </Link>
                     <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesis.name}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className={`${STATUS_COL} px-4 py-3`}>
                     <StageCell experimentId={e.id} stage={e.stage} />
                   </td>
-                  <td className="px-4 py-3 text-zinc-600">{e.author || "—"}</td>
-                  <td className="max-w-xs truncate px-4 py-3 text-zinc-500">
+                  <td className={`${META_COL} px-4 py-3 text-zinc-600`}>{e.author || "—"}</td>
+                  <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
                     {[e.targeting, e.segment].filter(Boolean).join(" · ") || "—"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
+                  <td className={`${DATE_COL} px-4 py-3 whitespace-nowrap text-zinc-600`}>
                     {formatDateRange(e.startDate, e.endDate)}
                   </td>
                 </tr>

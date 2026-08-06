@@ -6,11 +6,12 @@ import { updateHypothesisStatus } from "./actions";
 import { ConvertToExperimentModal } from "./ConvertToExperimentModal";
 import {
   STATUS_BADGE_CLASSES,
+  STATUS_ICONS,
   STATUS_LABELS,
   STATUS_ORDER,
   shouldPromptExperimentConversion,
 } from "@/lib/hypothesis";
-import { BADGE_BASE_CLASSES } from "@/components/Badge";
+import { BADGE_SHAPE_CLASSES } from "@/components/Badge";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
 export function StatusCell({
@@ -41,21 +42,29 @@ export function StatusCell({
     });
   }
 
+  const Icon = STATUS_ICONS[current];
+
   return (
     <>
-      <select
-        value={current}
-        disabled={pending}
-        onChange={(e) => handleChange(e.target.value as HypothesisStatus)}
-        onClick={(e) => e.stopPropagation()}
-        className={`${BADGE_BASE_CLASSES} cursor-pointer border-0 outline-none disabled:opacity-60 ${STATUS_BADGE_CLASSES[current]}`}
-      >
-        {STATUS_ORDER.map((s) => (
-          <option key={s} value={s}>
-            {STATUS_LABELS[s]}
-          </option>
-        ))}
-      </select>
+      <span className="relative inline-block">
+        <Icon
+          aria-hidden
+          className={`pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 ${STATUS_BADGE_CLASSES[current]}`}
+        />
+        <select
+          value={current}
+          disabled={pending}
+          onChange={(e) => handleChange(e.target.value as HypothesisStatus)}
+          onClick={(e) => e.stopPropagation()}
+          className={`${BADGE_SHAPE_CLASSES} cursor-pointer border-0 pr-2.5 pl-6 outline-none disabled:opacity-60 ${STATUS_BADGE_CLASSES[current]}`}
+        >
+          {STATUS_ORDER.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </span>
 
       {showPrompt && (
         <ConvertToExperimentModal

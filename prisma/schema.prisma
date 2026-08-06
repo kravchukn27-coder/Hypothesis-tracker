@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum HypothesisStatus {
+  NEW
+  PLANNED
+  IN_PROGRESS
+  ACCEPTED
+  HOLD
+  DONE
+}
+
+enum ConversionMetric {
+  CR
+  LTV
+  CR_LTV
+}
+
+enum ExperimentStatus {
+  DEV
+  EXPERIMENT
+  DONE
+}
+
+enum ExperimentStage {
+  DISCOVERY
+  DESIGN
+  DEVELOPMENT
+  EXPERIMENTATION
+  ANALYSIS
+}
+
+model FunnelLevel {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  isCustom    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  hypotheses  Hypothesis[]
+}
+
+model Hypothesis {
+  id            String            @id @default(cuid())
+  text          String
+  funnelLevel   FunnelLevel?      @relation(fields: [funnelLevelId], references: [id])
+  funnelLevelId String?
+  conversion    ConversionMetric  @default(CR)
+  impact        Int
+  effort        Float
+  reach         Float
+  confidence    Float
+  status        HypothesisStatus  @default(NEW)
+  result        String?
+  comment       String?
+  modeling      String?
+  sampleSize    String?
+  taskUrl       String?
+  experiments   Experiment[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Experiment {
+  id           String            @id @default(cuid())
+  name         String
+  status       ExperimentStatus  @default(DEV)
+  author       String?
+  targeting    String?
+  segment      String?
+  startDate    DateTime?
+  endDate      DateTime?
+  stage        ExperimentStage?
+  hypothesis   Hypothesis?       @relation(fields: [hypothesisId], references: [id])
+  hypothesisId String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}

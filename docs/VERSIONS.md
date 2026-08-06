@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- [UI-001] Backlog form: moved the Score card down to sit right after
+  Impact/Effort/Reach/Confidence instead of pinned above Name/
+  Hypothesis text — numbers and result now live together. Changed
+  Funnel Level from a free-typing `<datalist>` combobox to a `<select>`
+  of existing values plus a "+ Добавить новый..." option (matching how
+  Status works), backed by a new `FunnelLevelField` component in
+  `HypothesisForm.tsx`. No server-side change needed — the form field
+  is still submitted as `funnelLevel` either way, and the existing
+  upsert-by-name action logic handles both cases unchanged.
+
 - [TECH-002] Merged `Experiment.status` (Dev/Experiment/Done) and
   `Experiment.stage` (Discovery/Design/Development/Experimentation/
   Analysis) into a single required `stage` field: `ExperimentStage` =

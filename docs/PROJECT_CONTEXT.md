@@ -132,7 +132,13 @@ list you add to; they're something you spin off *from* a hypothesis:
 - **Fixed choice:** Conversion (3-way segmented control), Impact (1–5
   button group), Effort (1–5 button group, same widget as Impact),
   Status (dropdown/badge).
-- **Combobox (pick existing or add new):** Funnel Level.
+- **Select + add new (like Status, not a free-typing combobox):**
+  Funnel Level — `<select>` of existing `FunnelLevel` names plus a
+  "+ Добавить новый..." option that swaps in a text input (with
+  Cancel back to the select), see `FunnelLevelField` in
+  `HypothesisForm.tsx` (UI-001). The submitted form field is always
+  named `funnelLevel` either way — the server action's upsert-by-name
+  logic didn't need to change.
 - **Free text:** Name (short), Hypothesis text (long/textarea), Result,
   Comment, Моделирование, Выборка, Task URL.
 - **Free number:** Reach (%), Confidence (%).
@@ -147,6 +153,10 @@ list you add to; they're something you spin off *from* a hypothesis:
   `/backlog/[id]`, a detail view laid out close to the original Excel
   row — all fields visible and labeled, not redesigned into a minimal
   card. That page also has a persistent "Создать эксперимент" button.
+- Form field order: Name, Hypothesis text, Funnel Level/Status,
+  Conversion, Impact/Effort, Reach/Confidence, **Score** (sits right
+  after the four inputs that compute it, not pinned above the form —
+  UI-001), then Result (if Done)/Comment/Моделирование/Выборка/Task.
 - Creating a hypothesis redirects to the `/backlog` list, not to the
   new hypothesis's own detail page.
 

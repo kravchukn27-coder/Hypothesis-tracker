@@ -69,18 +69,6 @@ export function HypothesisForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-6 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">Score</p>
-          <p className="text-4xl font-semibold tabular-nums text-zinc-900">
-            {score.toFixed(2)}
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">
-            Impact × Confidence × Reach ÷ Effort — считается автоматически
-          </p>
-        </div>
-      </div>
-
       {state.error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-600/20">
           {state.error}
@@ -111,20 +99,11 @@ export function HypothesisForm({
       </Field>
 
       <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Funnel Level" htmlFor="funnelLevel">
-          <input
-            id="funnelLevel"
-            name="funnelLevel"
-            list="funnel-level-options"
+        <Field label="Funnel Level">
+          <FunnelLevelField
+            funnelLevels={funnelLevels}
             defaultValue={values.funnelLevelName}
-            placeholder="Выбери или впиши новый"
-            className={inputClass}
           />
-          <datalist id="funnel-level-options">
-            {funnelLevels.map((level) => (
-              <option key={level.id} value={level.name} />
-            ))}
-          </datalist>
         </Field>
 
         <Field label="Status" htmlFor="status">
@@ -174,6 +153,18 @@ export function HypothesisForm({
             onChange={setConfidencePct}
           />
         </Field>
+      </div>
+
+      <div className="flex items-start justify-between gap-6 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+        <div>
+          <p className="text-sm font-medium text-zinc-500">Score</p>
+          <p className="text-4xl font-semibold tabular-nums text-zinc-900">
+            {score.toFixed(2)}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Impact × Confidence × Reach ÷ Effort — считается автоматически
+          </p>
+        </div>
       </div>
 
       {status === "DONE" && (
@@ -262,6 +253,70 @@ function Field({
       </label>
       {children}
     </div>
+  );
+}
+
+const NEW_FUNNEL_LEVEL_OPTION = "__new__";
+
+function FunnelLevelField({
+  funnelLevels,
+  defaultValue,
+}: {
+  funnelLevels: FunnelLevel[];
+  defaultValue: string;
+}) {
+  const names = funnelLevels.map((f) => f.name);
+  const startsAsNew = defaultValue !== "" && !names.includes(defaultValue);
+
+  const [mode, setMode] = useState<"select" | "new">(startsAsNew ? "new" : "select");
+  const [selected, setSelected] = useState(names.includes(defaultValue) ? defaultValue : "");
+  const [newName, setNewName] = useState(startsAsNew ? defaultValue : "");
+
+  if (mode === "new") {
+    return (
+      <div className="flex gap-2">
+        <input
+          name="funnelLevel"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Новый Funnel Level"
+          autoFocus
+          className={inputClass}
+        />
+        {names.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setMode("select")}
+            className="shrink-0 text-sm text-zinc-500 hover:text-zinc-900"
+          >
+            Отмена
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <select
+      name="funnelLevel"
+      value={selected}
+      onChange={(e) => {
+        if (e.target.value === NEW_FUNNEL_LEVEL_OPTION) {
+          setMode("new");
+        } else {
+          setSelected(e.target.value);
+        }
+      }}
+      className={inputClass}
+    >
+      <option value="">—</option>
+      {names.map((name) => (
+        <option key={name} value={name}>
+          {name}
+        </option>
+      ))}
+      <option value={NEW_FUNNEL_LEVEL_OPTION}>+ Добавить новый...</option>
+    </select>
   );
 }
 

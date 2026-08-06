@@ -6,7 +6,7 @@ import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment
 import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
-import { Input } from "@/components/Input";
+import { Input, Select } from "@/components/Input";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -35,11 +35,13 @@ const emptyInitial: Initial = {
 export function ExperimentForm({
   action,
   hypothesis,
+  authors,
   initial,
   submitLabel,
 }: {
   action: (state: ExperimentFormState, formData: FormData) => Promise<ExperimentFormState>;
   hypothesis: Hypothesis;
+  authors: string[];
   initial?: Partial<Initial>;
   submitLabel: string;
 }) {
@@ -84,8 +86,8 @@ export function ExperimentForm({
 
       <FormSection title="Таргетинг">
         <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Автор" htmlFor="author">
-            <Input id="author" name="author" defaultValue={values.author} />
+          <Field label="Автор">
+            <AuthorField authors={authors} defaultValue={values.author} />
           </Field>
           <Field label="Segment" htmlFor="segment">
             <Input id="segment" name="segment" defaultValue={values.segment} />
@@ -123,6 +125,61 @@ export function ExperimentForm({
         </button>
       </div>
     </form>
+  );
+}
+
+const NEW_AUTHOR_OPTION = "__new__";
+
+function AuthorField({ authors, defaultValue }: { authors: string[]; defaultValue: string }) {
+  const startsAsNew = defaultValue !== "" && !authors.includes(defaultValue);
+
+  const [mode, setMode] = useState<"select" | "new">(startsAsNew ? "new" : "select");
+  const [selected, setSelected] = useState(authors.includes(defaultValue) ? defaultValue : "");
+  const [newName, setNewName] = useState(startsAsNew ? defaultValue : "");
+
+  if (mode === "new") {
+    return (
+      <div className="flex gap-2">
+        <Input
+          name="author"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Новый автор"
+          autoFocus
+        />
+        {authors.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setMode("select")}
+            className="shrink-0 text-sm text-zinc-500 hover:text-zinc-900"
+          >
+            Отмена
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Select
+      name="author"
+      value={selected}
+      onChange={(e) => {
+        if (e.target.value === NEW_AUTHOR_OPTION) {
+          setMode("new");
+        } else {
+          setSelected(e.target.value);
+        }
+      }}
+    >
+      <option value="">—</option>
+      {authors.map((name) => (
+        <option key={name} value={name}>
+          {name}
+        </option>
+      ))}
+      <option value={NEW_AUTHOR_OPTION}>+ Добавить нового...</option>
+    </Select>
   );
 }
 

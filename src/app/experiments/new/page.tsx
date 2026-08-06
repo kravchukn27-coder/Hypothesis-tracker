@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createExperiment } from "../actions";
+import { createExperiment, getAuthors } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 
 export default async function NewExperimentPage({
@@ -12,10 +12,13 @@ export default async function NewExperimentPage({
   const { hypothesisId } = await searchParams;
   if (!hypothesisId) redirect("/backlog");
 
-  const hypothesis = await prisma.hypothesis.findUnique({
-    where: { id: hypothesisId },
-    select: { id: true, name: true },
-  });
+  const [hypothesis, authors] = await Promise.all([
+    prisma.hypothesis.findUnique({
+      where: { id: hypothesisId },
+      select: { id: true, name: true },
+    }),
+    getAuthors(),
+  ]);
   if (!hypothesis) redirect("/backlog");
 
   return (
@@ -27,7 +30,12 @@ export default async function NewExperimentPage({
         <h1 className="mt-2 text-2xl font-semibold text-zinc-900">Новый эксперимент</h1>
       </div>
 
-      <ExperimentForm action={createExperiment} hypothesis={hypothesis} submitLabel="Создать" />
+      <ExperimentForm
+        action={createExperiment}
+        hypothesis={hypothesis}
+        authors={authors}
+        submitLabel="Создать"
+      />
     </div>
   );
 }

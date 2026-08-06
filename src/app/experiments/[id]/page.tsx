@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { deleteExperiment, updateExperiment } from "../actions";
+import { deleteExperiment, getAuthors, updateExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 
@@ -16,10 +16,13 @@ export default async function ExperimentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const experiment = await prisma.experiment.findUnique({
-    where: { id },
-    include: { hypothesis: true },
-  });
+  const [experiment, authors] = await Promise.all([
+    prisma.experiment.findUnique({
+      where: { id },
+      include: { hypothesis: true },
+    }),
+    getAuthors(),
+  ]);
 
   if (!experiment) notFound();
 
@@ -46,6 +49,7 @@ export default async function ExperimentDetailPage({
       <ExperimentForm
         action={action}
         hypothesis={{ id: experiment.hypothesisId, name: experiment.hypothesis.name }}
+        authors={authors}
         submitLabel="Сохранить"
         initial={{
           name: experiment.name,

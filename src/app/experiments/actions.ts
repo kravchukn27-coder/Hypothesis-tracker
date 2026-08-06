@@ -140,6 +140,16 @@ export async function updateExperimentStage(id: string, stage: string) {
   revalidatePath(`/experiments/${id}`);
 }
 
+export async function getAuthors(): Promise<string[]> {
+  const rows = await prisma.experiment.findMany({
+    where: { author: { not: null } },
+    select: { author: true },
+    distinct: ["author"],
+    orderBy: { author: "asc" },
+  });
+  return rows.map((r) => r.author).filter((a): a is string => Boolean(a));
+}
+
 export async function deleteExperiment(id: string): Promise<{ error?: string }> {
   const experiment = await prisma.experiment.findUnique({
     where: { id },

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER, formatDateRange } from "@/lib/experiment";
+import { Avatar } from "@/components/Avatar";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import { SortableHeader, type SortDir } from "@/components/SortableHeader";
@@ -191,7 +192,16 @@ export default async function ExperimentsPage({
                   <td className={`${STATUS_COL} px-4 py-3`}>
                     <StageCell experimentId={e.id} stage={e.stage} />
                   </td>
-                  <td className={`${META_COL} px-4 py-3 text-zinc-600`}>{e.author || "—"}</td>
+                  <td className={`${META_COL} px-4 py-3 text-zinc-600`}>
+                    {e.author ? (
+                      <span className="flex items-center gap-2">
+                        <Avatar name={e.author} />
+                        {e.author}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
                     {[e.targeting, e.segment].filter(Boolean).join(" · ") || "—"}
                   </td>

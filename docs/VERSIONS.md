@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- [UI-007] Автор on the Experiment create/edit form is now a select of
+  existing author names + "+ Добавить нового..." (new `AuthorField` in
+  `ExperimentForm.tsx`, mirrors `FunnelLevelField`'s select+add
+  interaction, same "edit an unlisted/legacy value → starts in add-new
+  mode" fallback), sourced from a new `getAuthors()` action
+  (`src/app/experiments/actions.ts`, distinct sorted author names) and
+  threaded into both `/experiments/new` and `/experiments/[id]`. No
+  data-model change — still the same free-text `author` column, just a
+  different picking UX. Wherever Автор is shown read-only (only the
+  Experiments list's АВТОР column — the card's other mentions,
+  `StageCell` row and the detail page, don't actually display it as
+  read-only text, confirmed before implementing) it now shows a small
+  colored initials avatar next to the name (new `src/lib/avatar.ts`:
+  `getInitials`/`getAvatarColorClasses`, hash-based so the same name
+  always gets the same color; new `src/components/Avatar.tsx`).
+  Verified in the browser: avatar+name renders correctly and
+  consistently in the list, the create form's select+add works, an
+  existing author is correctly pre-selected on the edit form, a save
+  round-trip persists the change, and the existing Автор `FilterBar`
+  filter is unaffected.
+
 - [UI-008] Unified the Backlog and Experiments list tables' visual
   system. New shared `src/components/tableWidths.ts` (NAME_COL,
   STATUS_COL, META_COL, LONG_TEXT_COL, DATE_COL, ACTION_COL) applied

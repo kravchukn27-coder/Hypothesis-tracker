@@ -90,47 +90,6 @@ show.
 
 ---
 
-## UI-007 — Experiment form: Автор as select+add, like Funnel Level
-
-**Status:** TODO
-**Priority:** MEDIUM
-**Summary:** `Автор` on the Experiment create/edit form
-(`ExperimentForm.tsx`) is currently a plain free-text input. It should
-work like `Funnel Level` on the Backlog form (UI-001): a select of
-existing author names, sorted alphabetically, plus an explicit "add
-new" option — not retyping the same name every time. Also, wherever
-Автор is *displayed* (Experiments list, detail page), show it as a
-small colored circular avatar with initials next to the name, not
-plain text — idea from Statsig's experiment timeline (design research,
-2026-08-06).
-
-**Description:** Source: user direction 2026-08-06. Unlike Funnel
-Level, `Author` has no dedicated table — it's a free-text column on
-`Experiment` (same shape as `Segment`, which already has a distinct-
-values filter from PROD-008). "Persisted" here just means: an author
-name typed once is already stored on that experiment row; this task
-is about the *picking* UX (select existing + add new), not about
-introducing a new `Author` table. Reuse the `FunnelLevelField`
-select+add interaction pattern, sourcing options from the distinct
-existing `Experiment.author` values (same data PROD-008's Автор filter
-already computes), sorted alphabetically. The avatar is a small,
-self-contained addition: derive initials from the name, derive a
-consistent color per name (e.g. a hash of the string into a fixed
-palette) so the same author always gets the same color.
-
-**Acceptance Criteria:**
-- Автор field on the experiment create/edit form is a select of
-  existing author names (alphabetically sorted) plus an "add new"
-  option that swaps in a text input — same interaction as Funnel Level
-  on the Backlog form.
-- No new database table — this is a UI/UX change to how the existing
-  free-text `author` field is entered, not a data-model change.
-- Wherever Автор is shown as read-only text today (Experiments list,
-  `StageCell` row, experiment detail page), it's shown as a small
-  circular initials avatar + name, with a consistent color per name.
-
----
-
 ## UI-010 — Breadcrumb navigation on detail pages
 
 **Status:** TODO

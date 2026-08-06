@@ -27,18 +27,13 @@ enum ConversionMetric {
   CR_LTV
 }
 
-enum ExperimentStatus {
-  DEV
-  EXPERIMENT
-  DONE
-}
-
 enum ExperimentStage {
   DISCOVERY
   DESIGN
   DEVELOPMENT
   EXPERIMENTATION
   ANALYSIS
+  DONE
 }
 
 model FunnelLevel {
@@ -72,17 +67,16 @@ model Hypothesis {
 }
 
 model Experiment {
-  id           String            @id @default(cuid())
+  id           String          @id @default(cuid())
   name         String
-  status       ExperimentStatus  @default(DEV)
   author       String?
   targeting    String?
   segment      String?
   startDate    DateTime?
   endDate      DateTime?
-  stage        ExperimentStage?
-  hypothesis   Hypothesis        @relation(fields: [hypothesisId], references: [id])
+  stage        ExperimentStage @default(DISCOVERY)
+  hypothesis   Hypothesis      @relation(fields: [hypothesisId], references: [id])
   hypothesisId String
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }

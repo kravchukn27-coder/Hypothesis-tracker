@@ -29,8 +29,7 @@ export type TimelineExperiment = {
   hypothesisName: string;
   startDate: Date | null;
   endDate: Date | null;
-  stage: string | null;
-  status: string;
+  stage: string;
 };
 
 export type TimelineRow = {

@@ -1,36 +1,29 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
-import {
-  EXPERIMENT_STATUS_LABELS,
-  EXPERIMENT_STATUS_ORDER,
-  STAGE_LABELS,
-  STAGE_ORDER,
-} from "@/lib/experiment";
+import { STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import type { ExperimentFormState } from "./actions";
-import type { ExperimentStage, ExperimentStatus } from "@/generated/prisma/enums";
+import type { ExperimentStage } from "@/generated/prisma/enums";
 
 type Hypothesis = { id: string; name: string };
 
 type Initial = {
   name: string;
-  status: ExperimentStatus;
   author: string;
   targeting: string;
   segment: string;
-  stage: ExperimentStage | "";
+  stage: ExperimentStage;
   startDate: string; // yyyy-mm-dd
   endDate: string;
 };
 
 const emptyInitial: Initial = {
   name: "",
-  status: "DEV",
   author: "",
   targeting: "",
   segment: "",
-  stage: "",
+  stage: "DISCOVERY",
   startDate: "",
   endDate: "",
 };
@@ -48,7 +41,6 @@ export function ExperimentForm({
 }) {
   const values = { ...emptyInitial, ...initial };
   const [state, formAction, pending] = useActionState(action, {});
-  const [status, setStatus] = useState<ExperimentStatus>(values.status);
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
@@ -80,14 +72,14 @@ export function ExperimentForm({
         </Link>
       </div>
 
-      <Field label="Status">
-        <SegmentedControl
-          name="status"
-          value={status}
-          onChange={setStatus}
-          options={EXPERIMENT_STATUS_ORDER}
-          labels={EXPERIMENT_STATUS_LABELS}
-        />
+      <Field label="Status" htmlFor="stage">
+        <select id="stage" name="stage" defaultValue={values.stage} className={inputClass}>
+          {STAGE_ORDER.map((s) => (
+            <option key={s} value={s}>
+              {STAGE_LABELS[s]}
+            </option>
+          ))}
+        </select>
       </Field>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -107,17 +99,6 @@ export function ExperimentForm({
           placeholder="GW, квиз"
           className={inputClass}
         />
-      </Field>
-
-      <Field label="Stage" htmlFor="stage">
-        <select id="stage" name="stage" defaultValue={values.stage} className={inputClass}>
-          <option value="">—</option>
-          {STAGE_ORDER.map((s) => (
-            <option key={s} value={s}>
-              {STAGE_LABELS[s]}
-            </option>
-          ))}
-        </select>
       </Field>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -172,40 +153,6 @@ function Field({
         {label}
       </label>
       {children}
-    </div>
-  );
-}
-
-function SegmentedControl<T extends string>({
-  name,
-  value,
-  onChange,
-  options,
-  labels,
-}: {
-  name: string;
-  value: T;
-  onChange: (v: T) => void;
-  options: T[];
-  labels: Record<T, string>;
-}) {
-  return (
-    <div className="inline-flex w-fit rounded-lg border border-zinc-300 p-1">
-      {options.map((opt) => (
-        <label key={opt}>
-          <input
-            type="radio"
-            name={name}
-            value={opt}
-            checked={value === opt}
-            onChange={() => onChange(opt)}
-            className="peer sr-only"
-          />
-          <div className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors peer-checked:bg-zinc-900 peer-checked:text-white">
-            {labels[opt]}
-          </div>
-        </label>
-      ))}
     </div>
   );
 }

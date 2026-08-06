@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- [TECH-002] Merged `Experiment.status` (Dev/Experiment/Done) and
+  `Experiment.stage` (Discovery/Design/Development/Experimentation/
+  Analysis) into a single required `stage` field: `ExperimentStage` =
+  Discovery/Design/Development/Experimentation/Analysis/Done, default
+  `DISCOVERY`. Removed the `ExperimentStatus` enum entirely. Labeled
+  "Status" in the Experiments list/form, "Stage" in the Calendar — same
+  field, same colors everywhere, no more parallel/duplicated concept.
+  Experiments list dropped its separate Status/Stage columns down to
+  one; Calendar's per-row sidebar dropped the redundant status badge
+  (the color bar already shows the same value). Pushed via
+  `prisma db push --accept-data-loss` on the local dev DB (2 existing
+  rows had `stage IS NULL` under the old nullable field — backfilled to
+  `DISCOVERY` before the push so the new required column could apply).
+
 - [BUG-001] Fixed "convert to experiment?" prompt inconsistency: it now
   fires the same way from the Backlog list's inline status dropdown
   and from the full edit form on `/backlog/[id]` (previously only the

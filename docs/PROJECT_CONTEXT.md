@@ -20,8 +20,9 @@ Source of truth for the original data model: a Google Sheet exported as
 
 1. **Backlog** ✅ — list/create/edit hypotheses, auto-computed Score,
    status. `/backlog`, `/backlog/new`, `/backlog/[id]`.
-2. **Experiments** ✅ — list/edit experiments (status, author,
-   targeting, segment, dates, stage). `/experiments`, `/experiments/[id]`.
+2. **Experiments** ✅ — list/edit experiments (status/stage — one merged
+   field, see Core Data Rules — author, targeting, segment, dates).
+   `/experiments`, `/experiments/[id]`.
    No standalone "create" entry point on this screen — `/experiments/new`
    requires a `?hypothesisId=` query param and redirects to `/backlog`
    without one; see "Hypothesis ↔ Experiment workflow" below. Experiment
@@ -61,11 +62,20 @@ changes shape things.
   experiment must be created from a hypothesis, and the Experiments
   screen must let you click through from an experiment's name to its
   Backlog card (see PROD-002).
-- Experiment stage/date model replaces the spreadsheet's "one column per
+- Experiment date model replaces the spreadsheet's "one column per
   week, stage name as cell value" layout with real `startDate`,
-  `endDate`, and a `stage` enum (Discovery/Design/Development/
-  Experimentation/Analysis), so the Calendar screen can be computed
-  instead of hand-shifted between columns.
+  `endDate`, so the Calendar screen can be computed instead of
+  hand-shifted between columns.
+- `Experiment` has **one** status/stage field (`stage`), not two. The
+  original Excel modeled these as separate concepts (`Статус`:
+  Dev/Experiment/Done, and a week-by-week stage cell:
+  Discovery/Design/Development/Experimentation/Analysis) — the user
+  identified this as a spreadsheet-era mistake, not a real distinction
+  (TECH-002, 2026-08-06). Merged enum `ExperimentStage`: Discovery /
+  Design / Development / Experimentation / Analysis / Done, required,
+  default `DISCOVERY`. Same field, same colors everywhere; labeled
+  "Status" in the Experiments list/form, "Stage" in the Calendar
+  (context-appropriate label, not a different field).
 
 ### Hypothesis ↔ Experiment workflow
 
@@ -145,11 +155,11 @@ list you add to; they're something you spin off *from* a hypothesis:
 | Excel column | Prisma field | Notes |
 |---|---|---|
 | Эксперимент | `name` | |
-| Статус | `status` | enum `DEV` / `EXPERIMENT` / `DONE` |
+| Статус | `stage` | merged with the week-column stage into one field, see Core Data Rules (TECH-002) |
 | Автор | `author` | |
 | Таргетинг | `targeting` | |
 | Segment | `segment` | |
-| (week columns F..AF, stage as cell value) | `startDate`, `endDate`, `stage` | replaced with real dates + a stage enum, see Core Data Rules |
+| (week columns F..AF, stage as cell value) | `startDate`, `endDate`, `stage` | dates replace the week columns; stage cell value merged into the same `stage` field as the old `Статус` column, see Core Data Rules |
 | *(none — added)* | `hypothesisId` (required) | every experiment must belong to a hypothesis; see Core Data Rules |
 
 `Email step ideas` sheet was not migrated (unrelated link list, per user

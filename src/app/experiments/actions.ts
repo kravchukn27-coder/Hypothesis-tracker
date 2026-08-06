@@ -8,11 +8,10 @@ import { z } from "zod";
 const experimentFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно"),
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
-  status: z.enum(["DEV", "EXPERIMENT", "DONE"]),
   author: z.string().trim().optional(),
   targeting: z.string().trim().optional(),
   segment: z.string().trim().optional(),
-  stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", ""]).optional(),
+  stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"]),
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
 });
@@ -46,11 +45,10 @@ export async function createExperiment(
     data: {
       name: data.name,
       hypothesisId: data.hypothesisId,
-      status: data.status,
       author: data.author || null,
       targeting: data.targeting || null,
       segment: data.segment || null,
-      stage: data.stage || null,
+      stage: data.stage,
       startDate: toDate(data.startDate),
       endDate: toDate(data.endDate),
     },
@@ -84,11 +82,10 @@ export async function updateExperiment(
     data: {
       name: data.name,
       hypothesisId: data.hypothesisId,
-      status: data.status,
       author: data.author || null,
       targeting: data.targeting || null,
       segment: data.segment || null,
-      stage: data.stage || null,
+      stage: data.stage,
       startDate: toDate(data.startDate),
       endDate: toDate(data.endDate),
     },

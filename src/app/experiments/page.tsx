@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import {
-  EXPERIMENT_STATUS_BADGE_CLASSES,
-  EXPERIMENT_STATUS_LABELS,
-  STAGE_BADGE_CLASSES,
-  STAGE_LABELS,
-  formatDateRange,
-} from "@/lib/experiment";
+import { STAGE_BADGE_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
 
 export default async function ExperimentsPage() {
   const experiments = await prisma.experiment.findMany({
@@ -43,7 +37,6 @@ export default async function ExperimentsPage() {
               <tr>
                 <th className="px-4 py-3">Эксперимент</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Stage</th>
                 <th className="px-4 py-3">Автор</th>
                 <th className="px-4 py-3">Таргетинг / Segment</th>
                 <th className="px-4 py-3">Даты</th>
@@ -65,21 +58,10 @@ export default async function ExperimentsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${EXPERIMENT_STATUS_BADGE_CLASSES[e.status]}`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${STAGE_BADGE_CLASSES[e.stage]}`}
                     >
-                      {EXPERIMENT_STATUS_LABELS[e.status]}
+                      {STAGE_LABELS[e.stage]}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {e.stage ? (
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${STAGE_BADGE_CLASSES[e.stage]}`}
-                      >
-                        {STAGE_LABELS[e.stage]}
-                      </span>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-zinc-600">{e.author || "—"}</td>
                   <td className="max-w-xs truncate px-4 py-3 text-zinc-500">

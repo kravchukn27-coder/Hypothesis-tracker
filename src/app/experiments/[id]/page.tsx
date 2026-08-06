@@ -39,11 +39,10 @@ export default async function ExperimentDetailPage({
         submitLabel="Сохранить"
         initial={{
           name: experiment.name,
-          status: experiment.status,
           author: experiment.author ?? "",
           targeting: experiment.targeting ?? "",
           segment: experiment.segment ?? "",
-          stage: experiment.stage ?? "",
+          stage: experiment.stage,
           startDate: toDateInputValue(experiment.startDate),
           endDate: toDateInputValue(experiment.endDate),
         }}

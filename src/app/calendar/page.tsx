@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { buildTimeline, formatWeekLabel } from "@/lib/calendar";
-import {
-  EXPERIMENT_STATUS_BADGE_CLASSES,
-  EXPERIMENT_STATUS_LABELS,
-  NO_STAGE_BAR_CLASS,
-  STAGE_BAR_CLASSES,
-  STAGE_LABELS,
-  formatDateRange,
-} from "@/lib/experiment";
+import { STAGE_BAR_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
 
 export default async function CalendarPage() {
   const experiments = await prisma.experiment.findMany({
@@ -25,7 +18,6 @@ export default async function CalendarPage() {
       startDate: e.startDate,
       endDate: e.endDate,
       stage: e.stage,
-      status: e.status,
     })),
   );
 
@@ -97,11 +89,7 @@ export default async function CalendarPage() {
                       >
                         {e.name}
                       </Link>
-                      <span
-                        className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${EXPERIMENT_STATUS_BADGE_CLASSES[e.status as keyof typeof EXPERIMENT_STATUS_BADGE_CLASSES]}`}
-                      >
-                        {EXPERIMENT_STATUS_LABELS[e.status as keyof typeof EXPERIMENT_STATUS_LABELS]}
-                      </span>
+                      <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesisName}</p>
                     </div>
                     <div
                       className="relative grid flex-1"
@@ -116,13 +104,11 @@ export default async function CalendarPage() {
                       ))}
                       <Link
                         href={`/experiments/${e.id}`}
-                        title={`${STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS] ?? "Stage не задан"} · ${formatDateRange(e.startDate, e.endDate)}`}
+                        title={`${STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]} · ${formatDateRange(e.startDate, e.endDate)}`}
                         style={{ gridColumn: `${colStart} / ${colEnd}`, gridRow: 1 }}
-                        className={`my-2 flex items-center truncate rounded-md px-2 text-xs font-medium text-white transition-opacity hover:opacity-90 ${
-                          e.stage ? STAGE_BAR_CLASSES[e.stage as keyof typeof STAGE_BAR_CLASSES] : NO_STAGE_BAR_CLASS
-                        }`}
+                        className={`my-2 flex items-center truncate rounded-md px-2 text-xs font-medium text-white transition-opacity hover:opacity-90 ${STAGE_BAR_CLASSES[e.stage as keyof typeof STAGE_BAR_CLASSES]}`}
                       >
-                        {e.stage ? STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS] : e.name}
+                        {STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]}
                       </Link>
                     </div>
                   </div>

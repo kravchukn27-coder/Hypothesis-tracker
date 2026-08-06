@@ -1,25 +1,16 @@
-import { ExperimentStage, ExperimentStatus } from "@/generated/prisma/enums";
+import { ExperimentStage } from "@/generated/prisma/enums";
 
-export const EXPERIMENT_STATUS_LABELS: Record<ExperimentStatus, string> = {
-  DEV: "Dev",
-  EXPERIMENT: "Experiment",
-  DONE: "Done",
-};
-
-export const EXPERIMENT_STATUS_ORDER: ExperimentStatus[] = ["DEV", "EXPERIMENT", "DONE"];
-
-export const EXPERIMENT_STATUS_BADGE_CLASSES: Record<ExperimentStatus, string> = {
-  DEV: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  EXPERIMENT: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  DONE: "bg-zinc-900 text-white ring-zinc-900/10",
-};
-
+// Single merged field (TECH-002): status and stage used to be two
+// separate enums that meant the same thing. Labeled "Status" in the
+// Experiments list/form, "Stage" in the Calendar — same field, same
+// values, same colors everywhere.
 export const STAGE_LABELS: Record<ExperimentStage, string> = {
   DISCOVERY: "Discovery",
   DESIGN: "Design",
   DEVELOPMENT: "Development",
   EXPERIMENTATION: "Experimentation",
   ANALYSIS: "Analysis",
+  DONE: "Done",
 };
 
 export const STAGE_ORDER: ExperimentStage[] = [
@@ -28,6 +19,7 @@ export const STAGE_ORDER: ExperimentStage[] = [
   "DEVELOPMENT",
   "EXPERIMENTATION",
   "ANALYSIS",
+  "DONE",
 ];
 
 export const STAGE_BADGE_CLASSES: Record<ExperimentStage, string> = {
@@ -36,6 +28,7 @@ export const STAGE_BADGE_CLASSES: Record<ExperimentStage, string> = {
   DEVELOPMENT: "bg-amber-50 text-amber-700 ring-amber-600/20",
   EXPERIMENTATION: "bg-blue-50 text-blue-700 ring-blue-600/20",
   ANALYSIS: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  DONE: "bg-zinc-900 text-white ring-zinc-900/10",
 };
 
 export const STAGE_BAR_CLASSES: Record<ExperimentStage, string> = {
@@ -44,9 +37,8 @@ export const STAGE_BAR_CLASSES: Record<ExperimentStage, string> = {
   DEVELOPMENT: "bg-amber-500",
   EXPERIMENTATION: "bg-blue-500",
   ANALYSIS: "bg-emerald-500",
+  DONE: "bg-zinc-900",
 };
-
-export const NO_STAGE_BAR_CLASS = "bg-zinc-300";
 
 export function formatDateRange(start: Date | null, end: Date | null): string {
   const fmt = (d: Date) =>

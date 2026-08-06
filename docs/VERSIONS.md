@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- [UI-003] `/backlog/[id]` now shows the hypothesis's creation date
+  ("Создана DD месяц YYYY г.") as read-only info under the title —
+  display-only, `Hypothesis.createdAt` already existed and has been
+  collected automatically since the model was first created. Verified
+  in the browser.
+
 - [PROD-007] Added click-to-sort column headers on both tables (new
   shared `SortableHeader` component, plain server-rendered links, no
   JS) — clicking toggles direction, active column shows an arrow.

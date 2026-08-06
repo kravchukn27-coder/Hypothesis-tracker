@@ -33,6 +33,14 @@ export default async function HypothesisDetailPage({
             ← Backlog
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{hypothesis.name}</h1>
+          <p className="mt-1 text-xs text-zinc-400">
+            Создана{" "}
+            {hypothesis.createdAt.toLocaleDateString("ru-RU", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <Link

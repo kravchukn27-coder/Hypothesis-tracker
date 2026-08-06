@@ -3,8 +3,6 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { StatusCell } from "./StatusCell";
-import { deleteHypothesis } from "./actions";
-import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { FilterBar } from "@/components/FilterBar";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
@@ -129,20 +127,13 @@ export default async function BacklogPage({
                   <td className="max-w-sm truncate px-4 py-3 text-zinc-500">
                     {h.comment || "—"}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-3">
-                      <Link
-                        href={`/experiments/new?hypothesisId=${h.id}`}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
-                      >
-                        → Эксперимент
-                      </Link>
-                      <ConfirmDeleteButton
-                        onConfirm={deleteHypothesis.bind(null, h.id)}
-                        confirmTitle="Удалить гипотезу?"
-                        confirmMessage={`«${h.name}» будет удалена без возможности восстановления.`}
-                      />
-                    </div>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/experiments/new?hypothesisId=${h.id}`}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+                    >
+                      → Эксперимент
+                    </Link>
                   </td>
                 </tr>
               ))}

@@ -116,7 +116,7 @@ transitions, not relevant to Experiment stage.
 ## PROD-010 — Experiments list: clicking a row opens the experiment, not the hypothesis
 
 **Status:** TODO
-**Priority:** MEDIUM
+**Priority:** HIGH
 **Summary:** Reverse the current click target on `/experiments`.
 Clicking an experiment's name currently opens its parent hypothesis's
 Backlog card (`/backlog/[hypothesisId]`); the experiment's own detail
@@ -156,7 +156,7 @@ default.
 ## PROD-011 — Backlog row action: jump to (and highlight) its experiment(s), not always "create"
 
 **Status:** TODO
-**Priority:** MEDIUM
+**Priority:** HIGH
 **Summary:** On `/backlog`, the row action currently always says
 "→ Эксперимент" and links to the create-experiment flow
 (`/experiments/new?hypothesisId=...`), even when the hypothesis

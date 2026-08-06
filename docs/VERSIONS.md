@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- [UI-002] Removed the "Удалить" (delete) button from Backlog and
+  Experiments list rows — it now lives only on the detail pages
+  (`/backlog/[id]`, `/experiments/[id]`), same confirmation modal and
+  blocking rule from PROD-005, unchanged there. Verified in the
+  browser: both lists show no delete action; both detail pages still
+  do.
+
 - [PROD-004] Added sort and filter to the Backlog and Experiments
   lists, both driven by URL query params (shareable/bookmarkable, no
   client state) via a new shared `FilterBar` component. Backlog: sort

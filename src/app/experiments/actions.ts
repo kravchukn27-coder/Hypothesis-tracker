@@ -62,7 +62,7 @@ export async function createExperiment(
   const data = parsed.data;
   const name = await computeExperimentName(data.hypothesisId);
 
-  const experiment = await prisma.experiment.create({
+  await prisma.experiment.create({
     data: {
       name,
       hypothesisId: data.hypothesisId,
@@ -84,7 +84,7 @@ export async function createExperiment(
   revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${data.hypothesisId}`);
-  redirect(`/experiments/${experiment.id}?saved=1`);
+  redirect("/experiments?saved=1");
 }
 
 export async function updateExperiment(
@@ -115,7 +115,7 @@ export async function updateExperiment(
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
-  redirect(`/experiments/${id}?saved=1`);
+  redirect("/experiments?saved=1");
 }
 
 const stageSchema = z.enum([

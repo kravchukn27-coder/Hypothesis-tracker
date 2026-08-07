@@ -9,6 +9,7 @@ import { SortableHeader, type SortDir } from "@/components/SortableHeader";
 import { DATE_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
 import { DateCell } from "./DateCell";
 import { StageCell } from "./StageCell";
+import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 export default async function ExperimentsPage({
@@ -87,6 +88,9 @@ export default async function ExperimentsPage({
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+      <Suspense fallback={null}>
+        <SavedToastGate />
+      </Suspense>
       {hypothesisId && <ScrollToHighlighted />}
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>

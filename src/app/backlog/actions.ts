@@ -126,7 +126,7 @@ export async function updateHypothesis(
     before !== null &&
     shouldPromptExperimentConversion(data.status, before._count.experiments > 0);
 
-  redirect(shouldPrompt ? `/backlog/${id}?promptExperiment=1&saved=1` : `/backlog/${id}?saved=1`);
+  redirect(shouldPrompt ? `/backlog/${id}?promptExperiment=1&saved=1` : "/backlog?saved=1");
 }
 
 export async function getFunnelLevels() {

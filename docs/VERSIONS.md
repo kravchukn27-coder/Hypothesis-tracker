@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- [UI-016] Saving a hypothesis or experiment now returns to the list
+  instead of leaving you stuck on the detail card. `updateHypothesis`
+  (`src/app/backlog/actions.ts`) redirects to `/backlog` normally, and
+  still to `/backlog/[id]?promptExperiment=1` only for BUG-001's
+  status-change prompt case (unchanged, so the modal still has a card
+  to appear on). `createExperiment`/`updateExperiment`
+  (`src/app/experiments/actions.ts`) redirect to `/experiments`
+  instead of the (new) experiment's own detail page.
+  `createExperiment` no longer needs the created row's id, so it no
+  longer captures it. Since the UI-004 "Сохранено" toast rides the
+  `?saved=1` redirect target, `SavedToastGate` is now also mounted on
+  `/experiments` (it already was on `/backlog`, for hypothesis
+  creation). Verified in the browser (via direct form submission,
+  since the shared dev server's browser pane wasn't cooperating with
+  scroll/click): a plain hypothesis save redirects to `/backlog` with
+  the toast; a status-change save that should prompt still redirects
+  to `/backlog/[id]` with the modal; experiment update and create both
+  redirect to `/experiments` with the toast. Cleaned up the test
+  experiment/status change afterward (shared dev DB).
+
 - [PROD-014/016 fix] Fixed a real bug: after paging the Calendar window
   (prev/next or "Сегодня"), experiment bars stayed visually anchored to
   their old grid position instead of moving with the new window,

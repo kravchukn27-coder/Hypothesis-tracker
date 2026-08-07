@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER, formatDateRange } from "@/lib/experiment";
+import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import { SortableHeader, type SortDir } from "@/components/SortableHeader";
 import { DATE_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
+import { DateCell } from "./DateCell";
 import { StageCell } from "./StageCell";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -205,8 +206,8 @@ export default async function ExperimentsPage({
                   <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
                     {[e.targeting, e.segment].filter(Boolean).join(" · ") || "—"}
                   </td>
-                  <td className={`${DATE_COL} px-4 py-3 whitespace-nowrap text-zinc-600`}>
-                    {formatDateRange(e.startDate, e.endDate)}
+                  <td className={`${DATE_COL} px-4 py-3`}>
+                    <DateCell experimentId={e.id} startDate={e.startDate} endDate={e.endDate} />
                   </td>
                 </tr>
                 );

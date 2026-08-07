@@ -140,6 +140,20 @@ export async function updateExperimentStage(id: string, stage: string) {
   revalidatePath(`/experiments/${id}`);
 }
 
+export async function updateExperimentDates(
+  id: string,
+  startDate: string | null,
+  endDate: string | null,
+) {
+  await prisma.experiment.update({
+    where: { id },
+    data: { startDate: toDate(startDate ?? undefined), endDate: toDate(endDate ?? undefined) },
+  });
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${id}`);
+}
+
 export async function getAuthors(): Promise<string[]> {
   const rows = await prisma.experiment.findMany({
     where: { author: { not: null } },

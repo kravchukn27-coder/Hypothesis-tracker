@@ -7,5 +7,5 @@ export const META_COL = "w-32";
 // Reference width is Backlog's existing Comment column — wide enough
 // to read comfortably, per the user.
 export const LONG_TEXT_COL = "w-96";
-export const DATE_COL = "w-44";
+export const DATE_COL = "w-60";
 export const ACTION_COL = "w-12";

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- [PROD-012] Experiments list's "Даты" column is now inline-editable —
+  two `<input type="date">`s right in the row (new `DateCell`
+  component, mirrors PROD-009's `StageCell`), updating
+  `Experiment.startDate`/`endDate` immediately via a new
+  `updateExperimentDates` action, no navigation to
+  `/experiments/[id]` needed. Widened `DATE_COL` (tableWidths.ts,
+  `w-44` → `w-60`) to fit both inputs comfortably; only used by this
+  table, so no impact elsewhere. No extra `/calendar` revalidation
+  added — matches the existing convention (no other date-changing
+  action revalidates it either), since the Calendar screen already
+  reads fresh data by construction. Verified in the browser: set a
+  date on an undated experiment, row re-sorted correctly by the new
+  start date, Calendar screen picked it up without any calendar-side
+  change, then cleared it back to its original empty state.
+
 - [UI-010] Replaced the plain "← Backlog"/"← Experiments" back-link on
   `/backlog/[id]` and `/experiments/[id]` with a real breadcrumb
   ("Backlog / Название" / "Experiments / Название"). New shared

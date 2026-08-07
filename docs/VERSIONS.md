@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+- [UI-005] Backlog list's Comment column is now clickable (navigates
+  to `/backlog/[id]`, same target as the row's Name link) when a
+  comment exists, and shows a fade-to-transparent mask at the clipped
+  edge instead of relying only on the native ellipsis, as a clearer
+  affordance that the text continues off-screen. Column width
+  unchanged (`LONG_TEXT_COL`, from UI-008). Empty comments stay a
+  plain non-interactive "—". Verified in the browser: fade renders on
+  a long comment, clicking it opens `/backlog/[id]` with the full
+  comment visible.
+
+- [UI-004] Added a "Сохранено"/error toast after hypothesis/experiment
+  create and update, without touching any existing redirect target.
+  New app-wide `ToastProvider` (`src/components/toast/ToastProvider.tsx`,
+  mounted in `src/app/layout.tsx`) exposing `useToast()`. Success path:
+  reuses the exact technique already established by
+  `ExperimentPromptGate`/BUG-001 — server actions now redirect with an
+  added `?saved=1` (alongside the existing `?promptExperiment=1` where
+  applicable, e.g. `createHypothesis`/`updateHypothesis` in
+  `src/app/backlog/actions.ts`, `createExperiment`/`updateExperiment`
+  in `src/app/experiments/actions.ts`), and a new
+  `SavedToastGate` (mounted on `/backlog`, `/backlog/[id]`,
+  `/experiments/[id]`) shows the toast on mount and strips the flag via
+  `router.replace`, converging on the same clean URL regardless of
+  which gate's effect runs first. Error path (no navigation on
+  validation failure): `HypothesisForm`/`ExperimentForm` fire an error
+  toast via `useEffect` on `state.error`, additive to the existing
+  inline red-box message. Caught and fixed a double-toast bug during
+  verification — React's dev-only StrictMode double-invokes effects,
+  so `SavedToastGate` needed a `useRef` guard to ensure `showToast`
+  only fires once per navigation. Verified in the browser: single
+  toast on hypothesis create/update, single toast on experiment
+  create/update, a status change that also triggers BUG-001's
+  "Перевести в эксперимент?" modal shows both correctly, and a
+  validation error shows the error toast with no navigation and the
+  existing inline error message intact.
+
 - [UI-006] `/backlog/[id]`'s experiment button now mirrors the Backlog
   list's PROD-011 conditional: no experiments yet → "Создать
   эксперимент" (unchanged, `/experiments/new?hypothesisId=...`); has

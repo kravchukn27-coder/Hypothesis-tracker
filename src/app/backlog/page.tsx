@@ -171,8 +171,17 @@ export default async function BacklogPage({
                   <td className={`${META_COL} px-4 py-3 text-right font-medium tabular-nums text-zinc-900`}>
                     {h.score.toFixed(2)}
                   </td>
-                  <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
-                    {h.comment || "—"}
+                  <td className={`${LONG_TEXT_COL} px-4 py-3`}>
+                    {h.comment ? (
+                      <Link
+                        href={`/backlog/${h.id}`}
+                        className="block overflow-hidden whitespace-nowrap text-zinc-500 hover:text-zinc-900 hover:underline [mask-image:linear-gradient(to_right,black_85%,transparent_100%)]"
+                      >
+                        {h.comment}
+                      </Link>
+                    ) : (
+                      <span className="text-zinc-500">—</span>
+                    )}
                   </td>
                   <td className={`${ACTION_COL} px-4 py-3 text-right`}>
                     {h._count.experiments > 0 ? (

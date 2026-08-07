@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { addDays, buildTimeline, formatDayLabel, startOfDay, WINDOW_DAYS } from "@/lib/calendar";
+import { addDays, buildTimeline, formatDayLabel, formatWeekdayLabel, PAGE_STEP_DAYS, startOfDay, WINDOW_DAYS } from "@/lib/calendar";
 import { STAGE_BAR_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
 import { ExperimentBar } from "./ExperimentBar";
 
@@ -16,6 +16,9 @@ function parseWindowStart(start: string | undefined): Date {
 function toDateParam(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
+/** Keeps the grid a stable height regardless of how many rows are in the current window. */
+const MIN_ROWS = 3;
 
 export default async function CalendarPage({
   searchParams,
@@ -43,8 +46,8 @@ export default async function CalendarPage({
     windowStart,
   );
 
-  const prevHref = `/calendar?start=${toDateParam(addDays(windowStart, -1))}`;
-  const nextHref = `/calendar?start=${toDateParam(addDays(windowStart, 1))}`;
+  const prevHref = `/calendar?start=${toDateParam(addDays(windowStart, -PAGE_STEP_DAYS))}`;
+  const nextHref = `/calendar?start=${toDateParam(addDays(windowStart, PAGE_STEP_DAYS))}`;
   const isToday = windowStart.getTime() === startOfDay(new Date()).getTime();
 
   return (
@@ -70,14 +73,14 @@ export default async function CalendarPage({
           </Link>
           <Link
             href={prevHref}
-            aria-label="Назад на день"
+            aria-label={`Назад на ${PAGE_STEP_DAYS} дней`}
             className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
           >
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <Link
             href={nextHref}
-            aria-label="Вперёд на день"
+            aria-label={`Вперёд на ${PAGE_STEP_DAYS} дней`}
             className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
           >
             <ChevronRight className="h-4 w-4" />
@@ -120,16 +123,17 @@ export default async function CalendarPage({
                 </div>
                 <div
                   className="grid flex-1"
-                  style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(112px, 1fr))` }}
+                  style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(0, 1fr))` }}
                 >
                   {days.map((d, i) => (
                     <div
                       key={i}
-                      className={`border-l border-zinc-100 px-2 py-3 text-center ${
+                      className={`border-l border-zinc-100 px-1 py-2 text-center leading-tight ${
                         i + 1 === todayColumn ? "bg-blue-50/60 text-blue-700" : ""
                       }`}
                     >
-                      {formatDayLabel(d)}
+                      <div>{formatDayLabel(d)}</div>
+                      <div className="text-zinc-400">{formatWeekdayLabel(d)}</div>
                     </div>
                   ))}
                 </div>
@@ -149,7 +153,7 @@ export default async function CalendarPage({
                   </div>
                   <div
                     className="relative grid flex-1"
-                    style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(112px, 1fr))` }}
+                    style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(0, 1fr))` }}
                   >
                     {days.map((_, i) => (
                       <div
@@ -159,6 +163,7 @@ export default async function CalendarPage({
                       />
                     ))}
                     <ExperimentBar
+                      key={`${e.id}-${colStart}-${colEnd}-${toDateParam(windowStart)}`}
                       experimentId={e.id}
                       href={`/experiments/${e.id}`}
                       label={STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]}
@@ -175,10 +180,17 @@ export default async function CalendarPage({
               ))}
 
               {rows.length === 0 && (
-                <div className="px-4 py-8 text-center text-sm text-zinc-400">
+                <div className="flex items-center border-b border-zinc-100 px-4 py-3 text-sm text-zinc-400">
                   Нет экспериментов в этом окне
                 </div>
               )}
+
+              {Array.from({ length: Math.max(MIN_ROWS - Math.max(rows.length, 1), 0) }).map((_, i) => (
+                <div key={`filler-${i}`} className="flex border-b border-zinc-100 last:border-b-0" aria-hidden="true">
+                  <div className="w-56 shrink-0 px-4 py-3" />
+                  <div className="flex-1" />
+                </div>
+              ))}
             </div>
           </div>
 

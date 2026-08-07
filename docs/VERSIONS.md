@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+- [PROD-014/016 fix] Fixed a real bug: after paging the Calendar window
+  (prev/next or "Сегодня"), experiment bars stayed visually anchored to
+  their old grid position instead of moving with the new window,
+  making an in-progress experiment look like it started/ended on the
+  wrong day (user report, 2026-08-07 — `web-funnel-v4_2` appeared to
+  start 15 авг instead of its real 10 авг after paging forward). Root
+  cause: `ExperimentBar`'s local `pos` state was seeded from
+  `colStart`/`colEnd` props only on first mount (`useState`) and never
+  re-synced when the server recomputed new column positions for a
+  different window — a classic stale-derived-state bug, since
+  client-side navigation between `/calendar?start=...` URLs doesn't
+  remount components whose position in the tree is unchanged. Fixed by
+  giving `<ExperimentBar>` an explicit `key` including `colStart`,
+  `colEnd`, and the window start date (`src/app/calendar/page.tsx`),
+  forcing a fresh mount — and therefore a fresh `pos` — whenever any of
+  those change. Also fixed: the day grid's row count made the table
+  visibly grow/shrink depending on how many experiments fell in the
+  current window (user feedback, screenshots comparing a 2-row vs
+  3-row window) — now padded with blank filler rows up to a
+  `MIN_ROWS = 3` floor so the table is always at least that tall,
+  regardless of window content. Verified in the browser: paging
+  forward now shows bars at their correct real dates; a 1-row and a
+  0-row window both render at the same height as a 3-row window.
+
+- [PROD-014/016 revision] Calendar window widened from 10 to 15 days
+  and the prev/next arrows now page by 5 days instead of 1 (user
+  feedback after checking the table live, 2026-08-07). Both are driven
+  by two constants in `src/lib/calendar.ts` (`WINDOW_DAYS`,
+  `PAGE_STEP_DAYS`) — `WINDOW_DAYS` alone also widens the drag clamp
+  bounds in `ExperimentBar` since it reads the same constant, no
+  separate change needed there. Arrow `aria-label`s updated to match
+  ("Назад/Вперёд на 5 дней"). Verified in the browser: 15 day columns
+  render, next/prev jumps the window by 5 days.
+
+- [PROD-014/016 revision] Removed the day grid's horizontal scrollbar
+  (user feedback, 2026-08-07: the 15-day grid at a fixed 112px/column
+  min-width overflowed the card) by dropping the `minmax(112px, …)`
+  floor to `minmax(0, …)` so all 15 columns always fit the fixed-width
+  card, and splitting the day header into two lines ("07 авг" /
+  weekday) so labels stay legible at the resulting narrower column
+  width. New `formatWeekdayLabel` in `src/lib/calendar.ts` alongside
+  the existing `formatDayLabel` (now date-only, weekday split out).
+  Verified in the browser: `scrollWidth === clientWidth` on the grid
+  wrapper (no scrollbar), labels still readable.
+
 - [PROD-016] Calendar experiment bars are now draggable — grab the
   body to move both `startDate`/`endDate` by the same offset (duration
   preserved), or grab a ~8px strip on the left/right edge to resize

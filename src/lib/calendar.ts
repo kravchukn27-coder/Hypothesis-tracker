@@ -1,6 +1,7 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export const WINDOW_DAYS = 10;
+export const WINDOW_DAYS = 15;
+export const PAGE_STEP_DAYS = 5;
 
 /** Midnight of `date`, in local time. */
 export function startOfDay(date: Date): Date {
@@ -16,7 +17,11 @@ export function daysBetween(a: Date, b: Date): number {
 }
 
 export function formatDayLabel(date: Date): string {
-  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short", weekday: "short" });
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
+}
+
+export function formatWeekdayLabel(date: Date): string {
+  return date.toLocaleDateString("ru-RU", { weekday: "short" });
 }
 
 export type TimelineExperiment = {

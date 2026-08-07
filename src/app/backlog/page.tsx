@@ -189,18 +189,18 @@ export default async function BacklogPage({
                         href={`/experiments?hypothesisId=${h.id}`}
                         aria-label="Перейти к эксперименту"
                         title="Перейти к эксперименту"
-                        className="inline-flex text-zinc-400 hover:text-zinc-900"
+                        className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-600 shadow-sm transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
                       >
-                        <ArrowRight className="size-4" />
+                        <ArrowRight className="size-[18px]" />
                       </Link>
                     ) : (
                       <Link
                         href={`/experiments/new?hypothesisId=${h.id}`}
                         aria-label="Создать эксперимент"
                         title="Создать эксперимент"
-                        className="inline-flex text-zinc-400 hover:text-zinc-900"
+                        className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-600 shadow-sm transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
                       >
-                        <Plus className="size-4" />
+                        <Plus className="size-[18px]" />
                       </Link>
                     )}
                   </td>

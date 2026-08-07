@@ -84,7 +84,7 @@ export async function createExperiment(
   revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${data.hypothesisId}`);
-  redirect(`/experiments/${experiment.id}`);
+  redirect(`/experiments/${experiment.id}?saved=1`);
 }
 
 export async function updateExperiment(
@@ -115,7 +115,7 @@ export async function updateExperiment(
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
-  redirect(`/experiments/${id}`);
+  redirect(`/experiments/${id}?saved=1`);
 }
 
 const stageSchema = z.enum([

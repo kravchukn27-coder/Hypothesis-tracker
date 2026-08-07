@@ -6,6 +6,7 @@ import { deleteHypothesis, getFunnelLevels, updateHypothesis } from "../actions"
 import { HypothesisForm } from "../HypothesisForm";
 import { ExperimentPromptGate } from "../ExperimentPromptGate";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { SavedToastGate } from "@/components/toast/SavedToastGate";
 
 export default async function HypothesisDetailPage({
   params,
@@ -27,6 +28,9 @@ export default async function HypothesisDetailPage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
+      <Suspense fallback={null}>
+        <SavedToastGate />
+      </Suspense>
       <div className="flex items-start justify-between gap-4">
         <div>
           <Link href="/backlog" className="text-sm text-zinc-500 hover:text-zinc-900">

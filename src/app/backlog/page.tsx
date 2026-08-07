@@ -8,6 +8,7 @@ import { Badge } from "@/components/Badge";
 import { FilterBar } from "@/components/FilterBar";
 import { SortableHeader, type SortDir } from "@/components/SortableHeader";
 import { ACTION_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
+import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
 export default async function BacklogPage({
@@ -56,6 +57,9 @@ export default async function BacklogPage({
 
   return (
     <div className="mx-auto flex max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
+      <Suspense fallback={null}>
+        <SavedToastGate />
+      </Suspense>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Backlog</h1>

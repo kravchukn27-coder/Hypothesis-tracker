@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   computeScore,
   CONVERSION_LABELS,
@@ -13,6 +13,7 @@ import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { FIELD_CLASSES, Input, Select, Textarea } from "@/components/Input";
+import { useToast } from "@/components/toast/ToastProvider";
 import type { HypothesisFormState } from "./actions";
 import type { ConversionMetric, HypothesisStatus } from "@/generated/prisma/enums";
 import type { FunnelLevel } from "@/generated/prisma/client";
@@ -64,6 +65,11 @@ export function HypothesisForm({
 }) {
   const values = { ...emptyInitial, ...initial };
   const [state, formAction, pending] = useActionState(action, {});
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (state.error) showToast(state.error, "error");
+  }, [state.error, showToast]);
 
   const [impact, setImpact] = useState(values.impact);
   const [effort, setEffort] = useState(values.effort);

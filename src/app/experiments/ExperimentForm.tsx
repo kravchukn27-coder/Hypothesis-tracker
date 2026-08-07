@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { Input, Select } from "@/components/Input";
+import { useToast } from "@/components/toast/ToastProvider";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -47,6 +48,11 @@ export function ExperimentForm({
 }) {
   const values = { ...emptyInitial, ...initial };
   const [state, formAction, pending] = useActionState(action, {});
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (state.error) showToast(state.error, "error");
+  }, [state.error, showToast]);
 
   return (
     <form action={formAction} className="flex flex-col gap-8">

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { addDays, buildTimeline, formatDayLabel, startOfDay, WINDOW_DAYS } from "@/lib/calendar";
 import { STAGE_BAR_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
+import { ExperimentBar } from "./ExperimentBar";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -157,14 +158,18 @@ export default async function CalendarPage({
                         style={{ gridColumn: i + 1, gridRow: 1 }}
                       />
                     ))}
-                    <Link
+                    <ExperimentBar
+                      experimentId={e.id}
                       href={`/experiments/${e.id}`}
+                      label={STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]}
                       title={`${STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]} · ${formatDateRange(e.startDate, e.endDate)}${overdue ? " · Просрочен" : ""}`}
-                      style={{ gridColumn: `${colStart} / ${colEnd}`, gridRow: 1 }}
-                      className={`my-2 flex items-center truncate rounded-md px-3 text-sm font-medium text-white transition-opacity hover:opacity-90 ${STAGE_BAR_CLASSES[e.stage as keyof typeof STAGE_BAR_CLASSES]} ${overdue ? "ring-2 ring-red-500 ring-offset-1" : ""}`}
-                    >
-                      {STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]}
-                    </Link>
+                      barClass={STAGE_BAR_CLASSES[e.stage as keyof typeof STAGE_BAR_CLASSES]}
+                      overdue={overdue}
+                      colStart={colStart}
+                      colEnd={colEnd}
+                      days={WINDOW_DAYS}
+                      windowStart={toDateParam(windowStart)}
+                    />
                   </div>
                 </div>
               ))}

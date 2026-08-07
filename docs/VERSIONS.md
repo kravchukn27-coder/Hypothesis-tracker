@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [PROD-016] Calendar experiment bars are now draggable — grab the
+  body to move both `startDate`/`endDate` by the same offset (duration
+  preserved), or grab a ~8px strip on the left/right edge to resize
+  just that end (1-day minimum duration). New client component
+  `src/app/calendar/ExperimentBar.tsx` handles pointer-event drag
+  (move/resize-left/resize-right), giving live optimistic visual
+  feedback via local grid-column state during the drag and persisting
+  through the existing `updateExperimentDates` action
+  (`src/app/experiments/actions.ts`, PROD-012) + `router.refresh()` on
+  drop — same pattern as `DateCell`. A plain click (no pointer
+  movement) still navigates to `/experiments/[id]` as before. Drag is
+  clamped to the current 10-day window — no auto-paging past its
+  edges. Verified in the browser (via synthetic pointer events, since
+  computer-use drag doesn't map to this custom pointer handling):
+  move preserves duration and persists across reload, right-edge
+  resize changes only `endDate`, left-edge resize clamps at the 1-day
+  minimum, and a non-dragging click still navigates.
+
 - [PROD-014] Calendar screen now shows a fixed ~10-day rolling window
   of day columns instead of a week-granularity grid spanning the
   entire experiment date range. `src/lib/calendar.ts`'s `buildTimeline`

@@ -13,6 +13,7 @@ import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { FIELD_CLASSES, Input, Select, Textarea } from "@/components/Input";
+import { StickyFormSubmit } from "@/components/StickyFormSubmit";
 import { useToast } from "@/components/toast/ToastProvider";
 import type { HypothesisFormState } from "./actions";
 import type { ConversionMetric, HypothesisStatus } from "@/generated/prisma/enums";
@@ -85,7 +86,7 @@ export function HypothesisForm({
   });
 
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form action={formAction} className="flex flex-col gap-8 pb-20">
       {state.error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-600/20">
           {state.error}
@@ -213,15 +214,7 @@ export function HypothesisForm({
         </Field>
       </FormSection>
 
-      <div className="flex justify-end gap-3 border-t border-zinc-200 pt-6">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
-        >
-          {pending ? "Сохраняем..." : submitLabel}
-        </button>
-      </div>
+      <StickyFormSubmit pending={pending} label={submitLabel} />
     </form>
   );
 }

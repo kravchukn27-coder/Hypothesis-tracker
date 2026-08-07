@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- [PROD-017] Calendar's "Без дат" section is now actionable instead of
+  a plain link list — each row got inline start/end date inputs (new
+  `UndatedRow`, reusing PROD-012's `DateCell` as-is) that save
+  immediately and move the row out of "Без дат" into the day grid, no
+  card navigation needed. Also added drag-to-schedule: dragging an
+  undated row's name/hypothesis block (the drag handle — scoped there
+  specifically so it doesn't fight with clicking into the date inputs)
+  onto a day column header (new `DayHeaderCell`, native HTML5
+  drag-and-drop) sets a 1-day duration on drop (`start === end ===`
+  that day), matching PROD-016's existing 1-day minimum-duration
+  floor; the user can resize afterward with PROD-016's drag handles.
+  Both call the existing `updateExperimentDates` action +
+  `router.refresh()`, same pattern as `DateCell`/`ExperimentBar`.
+  Verified in the browser (via synthetic events — native pointer/drag
+  interactions don't map to the computer-use click tool here): inline
+  date input moves a row from "Без дат" into the grid; dragging an
+  undated item onto a specific day header schedules it there as a
+  1-day bar. Restored the two experiments' dates back to null
+  afterward (shared dev DB with another session).
+
 - [UI-016] Saving a hypothesis or experiment now returns to the list
   instead of leaving you stuck on the detail card. `updateHypothesis`
   (`src/app/backlog/actions.ts`) redirects to `/backlog` normally, and

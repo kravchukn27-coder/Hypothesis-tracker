@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { addDays, buildTimeline, formatDayLabel, formatWeekdayLabel, PAGE_STEP_DAYS, startOfDay, WINDOW_DAYS } from "@/lib/calendar";
 import { STAGE_BAR_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
 import { ExperimentBar } from "./ExperimentBar";
+import { DayHeaderCell } from "./DayHeaderCell";
+import { UndatedRow } from "./UndatedRow";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -126,15 +128,10 @@ export default async function CalendarPage({
                   style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(0, 1fr))` }}
                 >
                   {days.map((d, i) => (
-                    <div
-                      key={i}
-                      className={`border-l border-zinc-100 px-1 py-2 text-center leading-tight ${
-                        i + 1 === todayColumn ? "bg-blue-50/60 text-blue-700" : ""
-                      }`}
-                    >
+                    <DayHeaderCell key={i} date={toDateParam(d)} isToday={i + 1 === todayColumn}>
                       <div>{formatDayLabel(d)}</div>
                       <div className="text-zinc-400">{formatWeekdayLabel(d)}</div>
-                    </div>
+                    </DayHeaderCell>
                   ))}
                 </div>
               </div>
@@ -199,17 +196,9 @@ export default async function CalendarPage({
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Без дат
               </p>
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex flex-col gap-2">
                 {undated.map((e) => (
-                  <li key={e.id}>
-                    <Link
-                      href={`/experiments/${e.id}`}
-                      className="text-sm text-zinc-700 hover:underline"
-                    >
-                      {e.name}
-                    </Link>
-                    <span className="ml-2 text-xs text-zinc-400">{e.hypothesisName}</span>
-                  </li>
+                  <UndatedRow key={e.id} experimentId={e.id} name={e.name} hypothesisName={e.hypothesisName} />
                 ))}
               </ul>
             </div>

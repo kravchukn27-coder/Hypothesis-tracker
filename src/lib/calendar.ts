@@ -1,25 +1,22 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const MS_PER_WEEK = 7 * MS_PER_DAY;
 
-/** Monday 00:00 of the week containing `date`, in local time. */
-export function startOfWeek(date: Date): Date {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const day = d.getDay(); // 0 = Sunday
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diffToMonday);
-  return d;
+export const WINDOW_DAYS = 10;
+
+/** Midnight of `date`, in local time. */
+export function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-export function addWeeks(date: Date, weeks: number): Date {
-  return new Date(date.getTime() + weeks * MS_PER_WEEK);
+export function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * MS_PER_DAY);
 }
 
-export function weeksBetween(a: Date, b: Date): number {
-  return Math.round((b.getTime() - a.getTime()) / MS_PER_WEEK);
+export function daysBetween(a: Date, b: Date): number {
+  return Math.round((b.getTime() - a.getTime()) / MS_PER_DAY);
 }
 
-export function formatWeekLabel(date: Date): string {
-  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
+export function formatDayLabel(date: Date): string {
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short", weekday: "short" });
 }
 
 export type TimelineExperiment = {
@@ -34,39 +31,42 @@ export type TimelineExperiment = {
 
 export type TimelineRow = {
   experiment: TimelineExperiment;
-  colStart: number; // 1-indexed grid column
-  colEnd: number; // exclusive, for `${colStart} / ${colEnd}`
+  colStart: number; // 1-indexed grid column, clipped to the window
+  colEnd: number; // exclusive, for `${colStart} / ${colEnd}`, clipped to the window
+  overdue: boolean;
 };
 
-export function buildTimeline(experiments: TimelineExperiment[]) {
+/**
+ * Builds a fixed-size day-granularity window starting at `windowStart`
+ * (already normalized to a local midnight). Bars are clipped to the
+ * window rather than omitted when they extend past its edges.
+ */
+export function buildTimeline(experiments: TimelineExperiment[], windowStart: Date, days: number = WINDOW_DAYS) {
   const dated = experiments.filter((e) => e.startDate || e.endDate);
   const undated = experiments.filter((e) => !e.startDate && !e.endDate);
 
-  if (dated.length === 0) {
-    return { weeks: [] as Date[], rows: [] as TimelineRow[], undated, todayColumn: null as number | null };
-  }
+  const rangeStart = startOfDay(windowStart);
+  const dayList: Date[] = Array.from({ length: days }, (_, i) => addDays(rangeStart, i));
+  const rangeEnd = addDays(rangeStart, days); // exclusive upper bound
 
-  const allDates = dated.flatMap((e) => [e.startDate, e.endDate].filter((d): d is Date => !!d));
-  const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
-  const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
+  const today = startOfDay(new Date());
 
-  const rangeStart = startOfWeek(minDate);
-  const rangeEndWeek = startOfWeek(maxDate);
-  const weekCount = weeksBetween(rangeStart, rangeEndWeek) + 1;
+  const rows: TimelineRow[] = dated
+    .map((e) => {
+      const start = startOfDay(e.startDate ?? e.endDate!);
+      const end = startOfDay(e.endDate ?? e.startDate!);
+      if (end < rangeStart || start >= rangeEnd) return null;
 
-  const weeks: Date[] = Array.from({ length: weekCount }, (_, i) => addWeeks(rangeStart, i));
+      const colStart = Math.max(daysBetween(rangeStart, start) + 1, 1);
+      const colEnd = Math.min(daysBetween(rangeStart, end) + 2, days + 1);
+      const overdue = e.stage !== "DONE" && !!e.endDate && startOfDay(e.endDate) < today;
 
-  const rows: TimelineRow[] = dated.map((e) => {
-    const start = startOfWeek(e.startDate ?? e.endDate!);
-    const end = startOfWeek(e.endDate ?? e.startDate!);
-    const colStart = weeksBetween(rangeStart, start) + 1;
-    const colEnd = weeksBetween(rangeStart, end) + 2;
-    return { experiment: e, colStart, colEnd: Math.max(colEnd, colStart + 1) };
-  });
+      return { experiment: e, colStart, colEnd: Math.max(colEnd, colStart + 1), overdue };
+    })
+    .filter((r): r is TimelineRow => r !== null);
 
-  const today = startOfWeek(new Date());
-  const todayIdx = weeksBetween(rangeStart, today);
-  const todayColumn = todayIdx >= 0 && todayIdx < weekCount ? todayIdx + 1 : null;
+  const todayIdx = daysBetween(rangeStart, today);
+  const todayColumn = todayIdx >= 0 && todayIdx < days ? todayIdx + 1 : null;
 
-  return { weeks, rows, undated, todayColumn };
+  return { days: dayList, rows, undated, todayColumn };
 }

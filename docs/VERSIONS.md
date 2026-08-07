@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- [PROD-014] Calendar screen now shows a fixed ~10-day rolling window
+  of day columns instead of a week-granularity grid spanning the
+  entire experiment date range. `src/lib/calendar.ts`'s `buildTimeline`
+  rewritten around day-based helpers (`startOfDay`/`addDays`/
+  `daysBetween`) and takes a window start + fixed day count, clipping
+  bars to the window edges rather than omitting experiments that only
+  partially overlap it. Prev/next arrows page the window by one day
+  and a "Сегодня" control resets it to today, both via a `start`
+  URL search param (`/calendar?start=YYYY-MM-DD`) — no client JS,
+  consistent with the rest of the app's server-rendered pages.
+  Experiments past their `endDate` with `stage` ≠ `DONE` get a red
+  ring/badge. Foundation for PROD-016 (drag-to-reschedule). Verified
+  in the browser: paging forward/back, "Сегодня" reset, and bar
+  clipping at both window edges.
+
 - [PROD-012] Experiments list's "Даты" column is now inline-editable —
   two `<input type="date">`s right in the row (new `DateCell`
   component, mirrors PROD-009's `StageCell`), updating

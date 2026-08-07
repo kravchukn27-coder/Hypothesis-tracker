@@ -6,6 +6,7 @@ import { deleteHypothesis, getFunnelLevels, updateHypothesis } from "../actions"
 import { HypothesisForm } from "../HypothesisForm";
 import { ExperimentPromptGate } from "../ExperimentPromptGate";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 
 export default async function HypothesisDetailPage({
@@ -33,9 +34,7 @@ export default async function HypothesisDetailPage({
       </Suspense>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/backlog" className="text-sm text-zinc-500 hover:text-zinc-900">
-            ← Backlog
-          </Link>
+          <Breadcrumb listLabel="Backlog" listHref="/backlog" current={hypothesis.name} />
           <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{hypothesis.name}</h1>
           <p className="mt-1 text-xs text-zinc-400">
             Создана{" "}

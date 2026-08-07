@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { deleteExperiment, getAuthors, updateExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 
 function toDateInputValue(date: Date | null): string {
@@ -37,9 +37,7 @@ export default async function ExperimentDetailPage({
       </Suspense>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/experiments" className="text-sm text-zinc-500 hover:text-zinc-900">
-            ← Experiments
-          </Link>
+          <Breadcrumb listLabel="Experiments" listHref="/experiments" current={experiment.name} />
           <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{experiment.name}</h1>
         </div>
         <ConfirmDeleteButton

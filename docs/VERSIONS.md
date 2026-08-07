@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- [UI-010] Replaced the plain "← Backlog"/"← Experiments" back-link on
+  `/backlog/[id]` and `/experiments/[id]` with a real breadcrumb
+  ("Backlog / Название" / "Experiments / Название"). New shared
+  `src/components/Breadcrumb.tsx` (list label + href, current item
+  name), used by both detail pages. Verified in the browser on both
+  routes.
+
 - [UI-005] Backlog list's Comment column is now clickable (navigates
   to `/backlog/[id]`, same target as the row's Name link) when a
   comment exists, and shows a fade-to-transparent mask at the clipped

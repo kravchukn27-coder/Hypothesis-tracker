@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- [UI-015] Backlog's Funnel Level badge moved out from under the Name
+  cell into its own column between Status and Score (`Badge`
+  treatment, "—" when unset). Comment column narrowed (`LONG_TEXT_COL`
+  → new `COMMENT_COL`, `w-72`) to make room while keeping Backlog's
+  total table width matching Experiments' (`FUNNEL_LEVEL_COL`, also
+  `w-72`) — Experiments' own Segment column keeps `LONG_TEXT_COL`
+  unchanged. Also fixed a regression this surfaced: Backlog's table
+  wrapper was `overflow-hidden`, which would have clipped the now-wider
+  table instead of scrolling it; switched to `overflow-x-auto` to match
+  the Experiments table's existing pattern.
 - [PROD-018] Added an "archived" concept for Hypothesis and Experiment
   (`archived`/`archivedAt` columns on both models). Archive/Unarchive
   buttons on both detail cards (`/backlog/[id]`, `/experiments/[id]`),

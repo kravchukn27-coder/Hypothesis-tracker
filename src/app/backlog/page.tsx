@@ -14,7 +14,8 @@ import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHea
 import {
   ACTION_COL,
   CHECKBOX_COL,
-  LONG_TEXT_COL,
+  COMMENT_COL,
+  FUNNEL_LEVEL_COL,
   META_COL,
   NAME_COL,
   STATUS_COL,
@@ -149,7 +150,7 @@ export default async function BacklogPage({
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-zinc-200">
+        <div className="overflow-x-auto rounded-xl border border-zinc-200">
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
@@ -184,6 +185,7 @@ export default async function BacklogPage({
                     href={(d) => sortHref("status", d)}
                   />
                 </th>
+                <th className={`${FUNNEL_LEVEL_COL} px-4 py-3`}>Funnel Level</th>
                 <th className={`${META_COL} px-4 py-3 text-right`}>
                   <SortableHeader
                     label="Score"
@@ -193,7 +195,7 @@ export default async function BacklogPage({
                     href={(d) => sortHref("score", d)}
                   />
                 </th>
-                <th className={`${LONG_TEXT_COL} px-4 py-3`}>Comment</th>
+                <th className={`${COMMENT_COL} px-4 py-3`}>Comment</th>
                 <th className={`${ACTION_COL} px-4 py-3`} />
               </tr>
             </thead>
@@ -213,11 +215,6 @@ export default async function BacklogPage({
                     >
                       {h.name}
                     </Link>
-                    {h.funnelLevel && (
-                      <div className="mt-1">
-                        <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{h.funnelLevel.name}</Badge>
-                      </div>
-                    )}
                   </td>
                   <td className={`${STATUS_COL} px-4 py-3`}>
                     <StatusCell
@@ -228,10 +225,17 @@ export default async function BacklogPage({
                       archived={h.archived}
                     />
                   </td>
+                  <td className={`${FUNNEL_LEVEL_COL} px-4 py-3`}>
+                    {h.funnelLevel ? (
+                      <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{h.funnelLevel.name}</Badge>
+                    ) : (
+                      <span className="text-zinc-500">—</span>
+                    )}
+                  </td>
                   <td className={`${META_COL} px-4 py-3 text-right font-medium tabular-nums text-zinc-900`}>
                     {h.score.toFixed(2)}
                   </td>
-                  <td className={`${LONG_TEXT_COL} px-4 py-3`}>
+                  <td className={`${COMMENT_COL} px-4 py-3`}>
                     {h.comment ? (
                       <Link
                         href={`/backlog/${h.id}`}

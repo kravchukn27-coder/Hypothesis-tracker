@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+- [PROD-018] Added an "archived" concept for Hypothesis and Experiment
+  (`archived`/`archivedAt` columns on both models). Archive/Unarchive
+  buttons on both detail cards (`/backlog/[id]`, `/experiments/[id]`),
+  reusing `ConfirmDeleteButton`'s modal pattern (generalized with
+  configurable label/color/`onSuccess` props). Both list pages
+  (`/backlog`, `/experiments`) gained a bulk-select mode — "Изменить"
+  toggles a checkbox column, then "Архивировать"/"Удалить" act on the
+  selection, each behind its own confirmation (new `SelectionProvider`/
+  `BulkActionBar` in `src/components/`). Archived items are hidden from
+  the default list view, with a "Показать архив" toggle
+  (`?archived=1`) to see only archived items — confirmed with the user
+  over showing them inline with a badge. Reaching Done auto-prompts to
+  archive: Hypothesis status → Done (inline `StatusCell` or the form)
+  and Experiment stage → Done (inline `StageCell`, previously not wired
+  to any post-save behavior, or the form) both show a "Хотите
+  архивировать?" Да/Нет prompt, mirroring BUG-001's convert-to-
+  experiment prompt mechanics. Bulk delete mirrors the single-delete
+  guard (can't delete a hypothesis that still has experiments) by
+  skipping and reporting instead of failing the whole batch. Done-stage
+  experiments no longer appear on `/calendar`, independent of archived
+  state (a Done experiment the user declines to archive still drops
+  off the grid). Unarchive was not in the original acceptance criteria
+  but added after confirming with the user — without it, Archive would
+  have been functionally a slower Delete.
 - [PROD-013] Creation date now surfaced everywhere: `/experiments/[id]`
   shows "Создан ..." under the title (mirrors the Hypothesis card's
   UI-003 treatment), and both `/backlog` and `/experiments` lists gained

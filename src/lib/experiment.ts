@@ -70,6 +70,15 @@ export const STAGE_ICONS: Record<ExperimentStage, LucideIcon> = {
   DONE: CheckCheck,
 };
 
+/**
+ * PROD-018: prompts to archive once an experiment reaches Done, unless
+ * it's already archived. Used from both the Experiments list's inline
+ * stage editor and the experiment detail form.
+ */
+export function shouldPromptArchiveExperiment(stage: ExperimentStage, archived: boolean): boolean {
+  return !archived && stage === "DONE";
+}
+
 export function formatDateRange(start: Date | null, end: Date | null): string {
   const fmt = (d: Date) =>
     d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });

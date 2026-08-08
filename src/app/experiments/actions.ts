@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { shouldPromptArchiveExperiment } from "@/lib/experiment";
 
 const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
@@ -209,6 +210,10 @@ export async function updateExperiment(
   // them — the form's now-disabled Status/date fields still submit
   // their last-known values, but must not overwrite the derived cache.
   const locked = await hasWeekStages(id);
+  const before = await prisma.experiment.findUnique({
+    where: { id },
+    select: { stage: true, archived: true },
+  });
 
   await prisma.experiment.update({
     where: { id },
@@ -228,6 +233,12 @@ export async function updateExperiment(
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+
+  const stageChanged = !locked && before !== null && before.stage !== data.stage;
+  const shouldPromptArchive =
+    stageChanged && before !== null && shouldPromptArchiveExperiment(data.stage, before.archived);
+
+  if (shouldPromptArchive) redirect(`/experiments/${id}?promptArchive=1&saved=1`);
   redirect("/experiments?saved=1");
 }
 
@@ -451,4 +462,38 @@ export async function deleteExperiment(id: string): Promise<{ error?: string }> 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${experiment.hypothesisId}`);
   redirect("/experiments");
+}
+
+export async function archiveExperiment(id: string) {
+  await prisma.experiment.update({
+    where: { id },
+    data: { archived: true, archivedAt: new Date() },
+  });
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${id}`);
+}
+
+export async function unarchiveExperiment(id: string) {
+  await prisma.experiment.update({
+    where: { id },
+    data: { archived: false, archivedAt: null },
+  });
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${id}`);
+}
+
+export async function archiveExperiments(ids: string[]): Promise<{ error?: string } | void> {
+  if (ids.length === 0) return;
+  await prisma.experiment.updateMany({
+    where: { id: { in: ids } },
+    data: { archived: true, archivedAt: new Date() },
+  });
+  revalidatePath("/experiments");
+}
+
+export async function deleteExperiments(ids: string[]): Promise<{ error?: string } | void> {
+  if (ids.length === 0) return;
+  await prisma.experiment.deleteMany({ where: { id: { in: ids } } });
+  revalidatePath("/experiments");
+  revalidatePath("/backlog");
 }

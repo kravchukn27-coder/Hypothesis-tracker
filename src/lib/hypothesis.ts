@@ -89,3 +89,12 @@ export function shouldPromptExperimentConversion(
 ): boolean {
   return !hasExperiments && PROMPT_WORTHY_STATUSES.includes(status);
 }
+
+/**
+ * PROD-018: prompts to archive once a hypothesis reaches Done, unless
+ * it's already archived. Used from both the Backlog list's inline
+ * status editor and the hypothesis detail form.
+ */
+export function shouldPromptArchiveHypothesis(status: HypothesisStatus, archived: boolean): boolean {
+  return !archived && status === "DONE";
+}

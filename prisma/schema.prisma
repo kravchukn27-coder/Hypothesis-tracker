@@ -103,6 +103,8 @@ model Hypothesis {
   sampleSize    String?
   taskUrl       String?
   experiments   Experiment[]
+  archived      Boolean           @default(false)
+  archivedAt    DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -129,6 +131,8 @@ model Experiment {
   markets      Market[]
   products     Product[]
   segments     Segment[]
+  archived     Boolean                @default(false)
+  archivedAt   DateTime?
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
 }

@@ -4,10 +4,20 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
+import { archiveExperiments, deleteExperiments } from "./actions";
+import { BulkActionBar } from "@/components/BulkActionBar";
+import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
-import { DATE_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
+import {
+  CHECKBOX_COL,
+  DATE_COL,
+  LONG_TEXT_COL,
+  META_COL,
+  NAME_COL,
+  STATUS_COL,
+} from "@/components/tableWidths";
 import { DateCell } from "./DateCell";
 import { StageCell } from "./StageCell";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
@@ -23,15 +33,18 @@ export default async function ExperimentsPage({
     hypothesisId?: string;
     sortBy?: string;
     dir?: string;
+    archived?: string;
   }>;
 }) {
-  const { stage, segment, author, hypothesisId, sortBy = "startDate", dir } = await searchParams;
+  const { stage, segment, author, hypothesisId, sortBy = "startDate", dir, archived } = await searchParams;
+  const showArchived = archived === "1";
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
 
   const [experiments, segments, authorRows] = await Promise.all([
     prisma.experiment.findMany({
       where: {
+        archived: showArchived,
         ...(stage ? { stage: stage as ExperimentStage } : {}),
         ...(segment ? { segments: { some: { id: segment } } } : {}),
         ...(author ? { author } : {}),
@@ -74,6 +87,7 @@ export default async function ExperimentsPage({
     if (segment) params.set("segment", segment);
     if (author) params.set("author", author);
     if (hypothesisId) params.set("hypothesisId", hypothesisId);
+    if (showArchived) params.set("archived", "1");
     params.set("sortBy", field);
     params.set("dir", nextDir);
     return `/experiments?${params.toString()}`;
@@ -87,38 +101,60 @@ export default async function ExperimentsPage({
         <SavedToastGate />
       </Suspense>
       {hypothesisId && <ScrollToHighlighted />}
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
-          {isFiltered ? " (с фильтром)" : ""}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
+            {showArchived ? " в архиве" : ""}
+            {isFiltered ? " (с фильтром)" : ""}
+          </p>
+        </div>
+        <Link
+          href={showArchived ? "/experiments" : "/experiments?archived=1"}
+          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+        >
+          {showArchived ? "Скрыть архив" : "Показать архив"}
+        </Link>
       </div>
 
-      <Suspense fallback={null}>
-        <FilterBar
-          fields={[
-            {
-              name: "stage",
-              label: "Status",
-              options: STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
-            },
-            ...(segmentOptions.length > 0
-              ? [{ name: "segment", label: "Segment", options: segmentOptions }]
-              : []),
-            ...(authorOptions.length > 0
-              ? [{ name: "author", label: "Автор", options: authorOptions }]
-              : []),
-          ]}
+      <SelectionProvider ids={experiments.map((e) => e.id)}>
+        <div className="flex items-center justify-between gap-3">
+          <Suspense fallback={null}>
+            <FilterBar
+              fields={[
+                {
+                  name: "stage",
+                  label: "Status",
+                  options: STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
+                },
+                ...(segmentOptions.length > 0
+                  ? [{ name: "segment", label: "Segment", options: segmentOptions }]
+                  : []),
+                ...(authorOptions.length > 0
+                  ? [{ name: "author", label: "Автор", options: authorOptions }]
+                  : []),
+              ]}
+            />
+          </Suspense>
+          <SelectModeToggle />
+        </div>
+
+        <BulkActionBar
+          itemLabelOne="эксперимент"
+          itemLabelMany="экспериментов"
+          onArchive={archiveExperiments}
+          onDelete={deleteExperiments}
         />
-      </Suspense>
 
       {experiments.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
           <p className="text-sm text-zinc-500">
             {isFiltered
               ? "Нет экспериментов под текущий фильтр."
-              : "Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в Backlog."}
+              : showArchived
+                ? "В архиве пока пусто."
+                : "Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в Backlog."}
           </p>
           <Link
             href="/backlog"
@@ -132,6 +168,9 @@ export default async function ExperimentsPage({
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
+                <th className={`${CHECKBOX_COL} px-4 py-3`}>
+                  <SelectAllCheckbox />
+                </th>
                 <th className={`${NAME_COL} px-4 py-3`}>
                   <div className="flex items-center gap-2">
                     <SortableHeader
@@ -190,6 +229,9 @@ export default async function ExperimentsPage({
                   data-highlighted={isHighlighted || undefined}
                   className={`border-l-4 transition-colors hover:bg-zinc-50 ${STAGE_BORDER_CLASSES[e.stage]} ${isHighlighted ? "bg-amber-50" : ""}`}
                 >
+                  <td className={`${CHECKBOX_COL} px-4 py-3`}>
+                    <RowCheckbox id={e.id} />
+                  </td>
                   <td className={`${NAME_COL} px-4 py-3`}>
                     <Link
                       href={`/experiments/${e.id}`}
@@ -200,7 +242,13 @@ export default async function ExperimentsPage({
                     <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesis.name}</p>
                   </td>
                   <td className={`${STATUS_COL} px-4 py-3`}>
-                    <StageCell experimentId={e.id} stage={e.stage} locked={e._count.weekStages > 0} />
+                    <StageCell
+                      experimentId={e.id}
+                      experimentName={e.name}
+                      stage={e.stage}
+                      archived={e.archived}
+                      locked={e._count.weekStages > 0}
+                    />
                   </td>
                   <td className={`${META_COL} px-4 py-3 text-zinc-600`}>
                     {e.author ? (
@@ -230,6 +278,7 @@ export default async function ExperimentsPage({
           </table>
         </div>
       )}
+      </SelectionProvider>
     </div>
   );
 }

@@ -35,6 +35,9 @@ export default async function CalendarPage({
   const windowStart = parseWindowStart(start);
 
   const experiments = await prisma.experiment.findMany({
+    // PROD-018: a Done experiment drops off the Calendar as soon as it
+    // reaches that stage — independent of whether it's been archived.
+    where: { stage: { not: "DONE" } },
     include: { hypothesis: true, weekStages: { orderBy: { weekStart: "asc" } } },
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
   });

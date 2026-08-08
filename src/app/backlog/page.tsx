@@ -5,10 +5,20 @@ import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
+import { archiveHypotheses, deleteHypotheses } from "./actions";
 import { Badge } from "@/components/Badge";
+import { BulkActionBar } from "@/components/BulkActionBar";
+import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
-import { ACTION_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
+import {
+  ACTION_COL,
+  CHECKBOX_COL,
+  LONG_TEXT_COL,
+  META_COL,
+  NAME_COL,
+  STATUS_COL,
+} from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
@@ -20,15 +30,18 @@ export default async function BacklogPage({
     dir?: string;
     funnelLevel?: string;
     status?: string;
+    archived?: string;
   }>;
 }) {
-  const { sort = "score", dir, funnelLevel, status } = await searchParams;
+  const { sort = "score", dir, funnelLevel, status, archived } = await searchParams;
+  const showArchived = archived === "1";
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" || sort === "createdAt" ? "desc" : "asc";
 
   const [hypotheses, funnelLevels] = await Promise.all([
     prisma.hypothesis.findMany({
       where: {
+        archived: showArchived,
         ...(funnelLevel ? { funnelLevelId: funnelLevel } : {}),
         ...(status ? { status: status as HypothesisStatus } : {}),
       },
@@ -51,6 +64,7 @@ export default async function BacklogPage({
     const params = new URLSearchParams();
     if (funnelLevel) params.set("funnelLevel", funnelLevel);
     if (status) params.set("status", status);
+    if (showArchived) params.set("archived", "1");
     params.set("sort", field);
     params.set("dir", nextDir);
     return `/backlog?${params.toString()}`;
@@ -68,51 +82,80 @@ export default async function BacklogPage({
           <h1 className="text-2xl font-semibold text-zinc-900">Backlog</h1>
           <p className="mt-1 text-sm text-zinc-500">
             {rows.length} {rows.length === 1 ? "гипотеза" : "гипотез"}
+            {showArchived ? " в архиве" : ""}
             {isFiltered ? " (с фильтром)" : ""}
           </p>
         </div>
-        <Link
-          href="/backlog/new"
-          className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-        >
-          + Новая гипотеза
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={showArchived ? "/backlog" : "/backlog?archived=1"}
+            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            {showArchived ? "Скрыть архив" : "Показать архив"}
+          </Link>
+          <Link
+            href="/backlog/new"
+            className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+          >
+            + Новая гипотеза
+          </Link>
+        </div>
       </div>
 
-      <Suspense fallback={null}>
-        <FilterBar
-          fields={[
-            {
-              name: "funnelLevel",
-              label: "Funnel Level",
-              options: funnelLevels.map((f) => ({ value: f.id, label: f.name })),
-            },
-            {
-              name: "status",
-              label: "Status",
-              options: STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
-            },
-          ]}
+      <SelectionProvider ids={rows.map((h) => h.id)}>
+        <div className="flex items-center justify-between gap-3">
+          <Suspense fallback={null}>
+            <FilterBar
+              fields={[
+                {
+                  name: "funnelLevel",
+                  label: "Funnel Level",
+                  options: funnelLevels.map((f) => ({ value: f.id, label: f.name })),
+                },
+                {
+                  name: "status",
+                  label: "Status",
+                  options: STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
+                },
+              ]}
+            />
+          </Suspense>
+          <SelectModeToggle />
+        </div>
+
+        <BulkActionBar
+          itemLabelOne="гипотеза"
+          itemLabelMany="гипотез"
+          onArchive={archiveHypotheses}
+          onDelete={deleteHypotheses}
         />
-      </Suspense>
 
       {rows.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
           <p className="text-sm text-zinc-500">
-            {isFiltered ? "Нет гипотез под текущий фильтр." : "Пока нет ни одной гипотезы."}
+            {isFiltered
+              ? "Нет гипотез под текущий фильтр."
+              : showArchived
+                ? "В архиве пока пусто."
+                : "Пока нет ни одной гипотезы."}
           </p>
-          <Link
-            href="/backlog/new"
-            className="text-sm font-medium text-zinc-900 underline underline-offset-4"
-          >
-            Добавить первую
-          </Link>
+          {!showArchived && (
+            <Link
+              href="/backlog/new"
+              className="text-sm font-medium text-zinc-900 underline underline-offset-4"
+            >
+              Добавить первую
+            </Link>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-zinc-200">
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
+                <th className={`${CHECKBOX_COL} px-4 py-3`}>
+                  <SelectAllCheckbox />
+                </th>
                 <th className={`${NAME_COL} px-4 py-3`}>
                   <div className="flex items-center gap-2">
                     <SortableHeader
@@ -160,6 +203,9 @@ export default async function BacklogPage({
                   key={h.id}
                   className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]}`}
                 >
+                  <td className={`${CHECKBOX_COL} px-4 py-3`}>
+                    <RowCheckbox id={h.id} />
+                  </td>
                   <td className={`${NAME_COL} px-4 py-3`}>
                     <Link
                       href={`/backlog/${h.id}`}
@@ -179,6 +225,7 @@ export default async function BacklogPage({
                       hypothesisName={h.name}
                       status={h.status}
                       hasExperiments={h._count.experiments > 0}
+                      archived={h.archived}
                     />
                   </td>
                   <td className={`${META_COL} px-4 py-3 text-right font-medium tabular-nums text-zinc-900`}>
@@ -223,6 +270,7 @@ export default async function BacklogPage({
           </table>
         </div>
       )}
+      </SelectionProvider>
     </div>
   );
 }

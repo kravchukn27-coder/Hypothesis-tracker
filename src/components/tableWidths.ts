@@ -9,3 +9,6 @@ export const META_COL = "w-32";
 export const LONG_TEXT_COL = "w-96";
 export const DATE_COL = "w-60";
 export const ACTION_COL = "w-12";
+// Bulk-select checkbox column (PROD-018) — only rendered while
+// selection mode is active, so it can stay narrow.
+export const CHECKBOX_COL = "w-8";

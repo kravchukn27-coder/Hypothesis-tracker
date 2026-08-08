@@ -1,20 +1,30 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 export function ConfirmDeleteButton({
   onConfirm,
+  onSuccess,
   confirmTitle,
   confirmMessage,
   triggerLabel = "Удалить",
+  pendingLabel = "Удаляем...",
   triggerClassName,
+  confirmButtonClassName = "bg-red-600 hover:bg-red-700",
 }: {
   onConfirm: () => Promise<{ error?: string } | void>;
+  /** Called after a successful (no-error) confirm. Only needed when
+   * `onConfirm` doesn't redirect/unmount this component itself. */
+  onSuccess?: () => void;
   confirmTitle: string;
   confirmMessage: string;
   triggerLabel?: string;
+  pendingLabel?: string;
   triggerClassName?: string;
+  confirmButtonClassName?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -25,8 +35,14 @@ export function ConfirmDeleteButton({
       const result = await onConfirm();
       if (result?.error) {
         setError(result.error);
+        return;
       }
-      // On success the server action redirects and this component unmounts.
+      // If the server action redirects, this component unmounts before
+      // reaching here. Otherwise, refresh so the page reflects the
+      // server-side change, and let the caller do any extra cleanup.
+      setOpen(false);
+      router.refresh();
+      onSuccess?.();
     });
   }
 
@@ -77,9 +93,9 @@ export function ConfirmDeleteButton({
                 type="button"
                 onClick={handleConfirm}
                 disabled={pending}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${confirmButtonClassName}`}
               >
-                {pending ? "Удаляем..." : "Удалить"}
+                {pending ? pendingLabel : triggerLabel}
               </button>
             </div>
           </div>

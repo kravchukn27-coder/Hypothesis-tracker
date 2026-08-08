@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { FilterBar } from "@/components/FilterBar";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
-import { SortableHeader, type SortDir } from "@/components/SortableHeader";
+import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import { DATE_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
 import { DateCell } from "./DateCell";
 import { StageCell } from "./StageCell";
@@ -25,7 +26,8 @@ export default async function ExperimentsPage({
   }>;
 }) {
   const { stage, segment, author, hypothesisId, sortBy = "startDate", dir } = await searchParams;
-  const currentDir: SortDir = dir === "desc" ? "desc" : "asc";
+  const currentDir: SortDir =
+    dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
 
   const [experiments, segments, authorRows] = await Promise.all([
     prisma.experiment.findMany({
@@ -57,6 +59,7 @@ export default async function ExperimentsPage({
     if (sortBy === "name") cmp = a.name.localeCompare(b.name, "ru");
     else if (sortBy === "stage") cmp = STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage);
     else if (sortBy === "author") cmp = (a.author ?? "").localeCompare(b.author ?? "", "ru");
+    else if (sortBy === "createdAt") cmp = a.createdAt.getTime() - b.createdAt.getTime();
     else {
       const at = a.startDate ? a.startDate.getTime() : Infinity;
       const bt = b.startDate ? b.startDate.getTime() : Infinity;
@@ -130,13 +133,23 @@ export default async function ExperimentsPage({
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className={`${NAME_COL} px-4 py-3`}>
-                  <SortableHeader
-                    label="Эксперимент"
-                    active={sortBy === "name"}
-                    dir={currentDir}
-                    defaultDir="asc"
-                    href={(d) => sortHref("name", d)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <SortableHeader
+                      label="Эксперимент"
+                      active={sortBy === "name"}
+                      dir={currentDir}
+                      defaultDir="asc"
+                      href={(d) => sortHref("name", d)}
+                    />
+                    <SortIcon
+                      icon={Clock}
+                      label="Created"
+                      active={sortBy === "createdAt"}
+                      dir={currentDir}
+                      defaultDir="desc"
+                      href={(d) => sortHref("createdAt", d)}
+                    />
+                  </div>
                 </th>
                 <th className={`${STATUS_COL} px-4 py-3`}>
                   <SortableHeader

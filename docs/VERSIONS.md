@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- [PROD-013] Creation date now surfaced everywhere: `/experiments/[id]`
+  shows "Создан ..." under the title (mirrors the Hypothesis card's
+  UI-003 treatment), and both `/backlog` and `/experiments` lists gained
+  a "Created" sort dimension, newest-first by default. Resolved the
+  no-spare-column-width constraint by piggybacking on the Name column —
+  a small Clock-icon link (new `SortIcon` in
+  `src/components/SortableHeader.tsx`) sits next to the existing Name
+  sort header rather than adding a new column, confirmed by the user
+  over the alternatives (new column, repurposing an existing one).
 - [PROD-019] Calendar switched from day-granularity to week-granularity
   (nearest 8 weeks, same forward/back paging re-scaled to weeks), with
   new per-week stage editing — the actual mechanic the user reports:
@@ -253,6 +262,19 @@
   ring/badge. Foundation for PROD-016 (drag-to-reschedule). Verified
   in the browser: paging forward/back, "Сегодня" reset, and bar
   clipping at both window edges.
+
+- [BUG-002] Fixed the status/stage pill-select icon overlapping the
+  label text on `/backlog` and `/experiments` (e.g. "Accepted" reading
+  as "cepted"). Root cause: native `<select>` chrome (internal text
+  padding, the browser's own dropdown arrow) isn't fully governed by
+  arbitrary CSS padding, so a hand-tuned `pl-6` looked fine in one
+  renderer but clipped the icon into the text in another. Fix: new
+  shared `src/components/IconSelect.tsx` — `appearance-none` removes
+  native chrome entirely, replaced with our own leading icon and a
+  `ChevronDown`, with generous padding. `StatusCell`/`StageCell` are
+  now thin wrappers around it, guaranteeing identical sizing between
+  the two lists by construction. Verified in the browser at both
+  desktop and mobile widths, plus that inline editing still works.
 
 - [PROD-012] Experiments list's "Даты" column is now inline-editable —
   two `<input type="date">`s right in the row (new `DateCell`

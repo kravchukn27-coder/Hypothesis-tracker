@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Clock, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
@@ -7,7 +7,7 @@ import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
 import { Badge } from "@/components/Badge";
 import { FilterBar } from "@/components/FilterBar";
-import { SortableHeader, type SortDir } from "@/components/SortableHeader";
+import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import { ACTION_COL, LONG_TEXT_COL, META_COL, NAME_COL, STATUS_COL } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
@@ -23,7 +23,8 @@ export default async function BacklogPage({
   }>;
 }) {
   const { sort = "score", dir, funnelLevel, status } = await searchParams;
-  const currentDir: SortDir = dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" ? "desc" : "asc";
+  const currentDir: SortDir =
+    dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" || sort === "createdAt" ? "desc" : "asc";
 
   const [hypotheses, funnelLevels] = await Promise.all([
     prisma.hypothesis.findMany({
@@ -41,6 +42,7 @@ export default async function BacklogPage({
     let cmp = 0;
     if (sort === "status") cmp = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
     else if (sort === "name") cmp = a.name.localeCompare(b.name, "ru");
+    else if (sort === "createdAt") cmp = a.createdAt.getTime() - b.createdAt.getTime();
     else cmp = a.score - b.score;
     return currentDir === "asc" ? cmp : -cmp;
   });
@@ -112,13 +114,23 @@ export default async function BacklogPage({
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className={`${NAME_COL} px-4 py-3`}>
-                  <SortableHeader
-                    label="Name"
-                    active={sort === "name"}
-                    dir={currentDir}
-                    defaultDir="asc"
-                    href={(d) => sortHref("name", d)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <SortableHeader
+                      label="Name"
+                      active={sort === "name"}
+                      dir={currentDir}
+                      defaultDir="asc"
+                      href={(d) => sortHref("name", d)}
+                    />
+                    <SortIcon
+                      icon={Clock}
+                      label="Created"
+                      active={sort === "createdAt"}
+                      dir={currentDir}
+                      defaultDir="desc"
+                      href={(d) => sortHref("createdAt", d)}
+                    />
+                  </div>
                 </th>
                 <th className={`${STATUS_COL} px-4 py-3`}>
                   <SortableHeader

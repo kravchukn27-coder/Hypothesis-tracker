@@ -65,6 +65,14 @@ export default async function ExperimentDetailPage({
         <div>
           <Breadcrumb listLabel="Experiments" listHref="/experiments" current={experiment.name} />
           <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{experiment.name}</h1>
+          <p className="mt-1 text-xs text-zinc-400">
+            Создан{" "}
+            {experiment.createdAt.toLocaleDateString("ru-RU", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
         </div>
         <ConfirmDeleteButton
           onConfirm={deleteExperiment.bind(null, experiment.id)}

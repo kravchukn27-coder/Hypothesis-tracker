@@ -7,7 +7,7 @@ import {
   setExperimentWeekStage,
   shiftExperimentWeeks,
 } from "@/app/experiments/actions";
-import { STAGE_BAR_CLASSES, STAGE_LABELS } from "@/lib/experiment";
+import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -89,6 +89,7 @@ export function ExperimentWeekRow({
       {cells.map((cell, i) => {
         const isOpen = openWeekIndex === i;
         const isOverdueCell = overdue && i === lastFilledIndex;
+        const StageIcon = cell.stage ? STAGE_ICONS[cell.stage as ExperimentStage] : null;
         return (
           <div
             key={i}
@@ -107,9 +108,10 @@ export function ExperimentWeekRow({
                   setOpenWeekIndex(isOpen ? null : i);
                 }}
                 title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                className={`relative my-2 flex h-8 w-full items-center justify-center truncate rounded-md px-1 text-[11px] font-medium text-white ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""}`}
+                className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""}`}
               >
-                {STAGE_LABELS[cell.stage as ExperimentStage]}
+                {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
+                <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
                 {i === lastFilledIndex && (
                   <span
                     onPointerDown={(e) => {

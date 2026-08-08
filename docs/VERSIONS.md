@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- [PROD-015] Calendar week-bars (`ExperimentWeekRow.tsx`) now show the
+  stage's icon (`STAGE_ICONS` from `src/lib/experiment.ts`) next to
+  the label, matching the Backlog/Experiments list pill-selects —
+  previously color/label-only.
 - [UI-013] Detail-form field-sizing fixes: the Status field on
   `/backlog/[id]`/`/backlog/new` and the Status (Stage) field on
   `/experiments/[id]`/`/experiments/new` now render via the shared

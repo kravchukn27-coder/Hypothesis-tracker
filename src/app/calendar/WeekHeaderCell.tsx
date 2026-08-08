@@ -2,21 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateExperimentDates } from "@/app/experiments/actions";
+import { setExperimentWeekStage } from "@/app/experiments/actions";
 
 /**
- * Header cell for one day column. Also acts as a drop target for
+ * Header cell for one week column (PROD-019). Also a drop target for
  * dragging an undated experiment (PROD-017) onto the grid — dropping
- * sets a 1-day duration (start === end === this day), matching
- * PROD-016's existing 1-day minimum-duration floor.
+ * assigns that week a Discovery stage entry, the same default a new
+ * experiment starts at.
  */
-export function DayHeaderCell({
-  date,
+export function WeekHeaderCell({
+  weekStartISO,
   isToday,
   children,
 }: {
-  /** `YYYY-MM-DD`, local. */
-  date: string;
+  weekStartISO: string;
   isToday: boolean;
   children: React.ReactNode;
 }) {
@@ -37,7 +36,7 @@ export function DayHeaderCell({
         const experimentId = e.dataTransfer.getData("text/plain");
         if (!experimentId) return;
         startTransition(async () => {
-          await updateExperimentDates(experimentId, date, date);
+          await setExperimentWeekStage(experimentId, weekStartISO, "DISCOVERY");
           router.refresh();
         });
       }}

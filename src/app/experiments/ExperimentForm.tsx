@@ -18,11 +18,13 @@ import { Input, Select } from "@/components/Input";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
 import { TagMultiSelect } from "@/components/TagMultiSelect";
 import { useToast } from "@/components/toast/ToastProvider";
+import { ExperimentWeekStagesEditor } from "./ExperimentWeekStagesEditor";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 type Hypothesis = { id: string; name: string };
 type Tag = { id: string; name: string };
+type WeekEntry = { weekStartISO: string; stage: ExperimentStage };
 
 type Initial = {
   name: string;
@@ -36,6 +38,7 @@ type Initial = {
   markets: Tag[];
   products: Tag[];
   segments: Tag[];
+  weekStages: WeekEntry[];
 };
 
 const emptyInitial: Initial = {
@@ -50,10 +53,12 @@ const emptyInitial: Initial = {
   markets: [],
   products: [],
   segments: [],
+  weekStages: [],
 };
 
 export function ExperimentForm({
   action,
+  experimentId,
   hypothesis,
   authors,
   funnelLevels,
@@ -66,6 +71,8 @@ export function ExperimentForm({
   submitLabel,
 }: {
   action: (state: ExperimentFormState, formData: FormData) => Promise<ExperimentFormState>;
+  /** Only present when editing an existing experiment (needed for the per-week editor). */
+  experimentId?: string;
   hypothesis: Hypothesis;
   authors: string[];
   funnelLevels: Tag[];
@@ -80,6 +87,10 @@ export function ExperimentForm({
   const values = { ...emptyInitial, ...initial };
   const [state, formAction, pending] = useActionState(action, {});
   const { showToast } = useToast();
+  // PROD-019: once week entries exist, stage/dates are derived — the
+  // manual Status/date fields below become read-only, edit via the
+  // per-week editor (or the Calendar's week-cells) instead.
+  const weekLocked = values.weekStages.length > 0;
 
   useEffect(() => {
     if (state.error) showToast(state.error, "error");
@@ -118,13 +129,23 @@ export function ExperimentForm({
 
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Status" htmlFor="stage">
-            <StageField defaultValue={values.stage} />
+            <StageField defaultValue={values.stage} locked={weekLocked} />
           </Field>
           <Field label="Автор">
             <AuthorField authors={authors} defaultValue={values.author} />
           </Field>
         </div>
       </FormSection>
+
+      {experimentId && (
+        <FormSection title="По неделям">
+          <p className="text-sm text-zinc-500">
+            Стадия и даты эксперимента теперь определяются по неделям — тот же
+            редактор, что и клик по квадратику на Calendar.
+          </p>
+          <ExperimentWeekStagesEditor experimentId={experimentId} weeks={values.weekStages} />
+        </FormSection>
+      )}
 
       <FormSection title="Таргетинг">
         <div className="grid gap-6 sm:grid-cols-2">
@@ -188,10 +209,24 @@ export function ExperimentForm({
       <FormSection title="Расписание">
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Дата начала" htmlFor="startDate">
-            <Input id="startDate" name="startDate" type="date" defaultValue={values.startDate} />
+            <Input
+              id="startDate"
+              name="startDate"
+              type="date"
+              defaultValue={values.startDate}
+              disabled={weekLocked}
+              title={weekLocked ? "Управляется по неделям — редактируй выше" : undefined}
+            />
           </Field>
           <Field label="Дата окончания" htmlFor="endDate">
-            <Input id="endDate" name="endDate" type="date" defaultValue={values.endDate} />
+            <Input
+              id="endDate"
+              name="endDate"
+              type="date"
+              defaultValue={values.endDate}
+              disabled={weekLocked}
+              title={weekLocked ? "Управляется по неделям — редактируй выше" : undefined}
+            />
           </Field>
         </div>
       </FormSection>
@@ -256,21 +291,29 @@ function AuthorField({ authors, defaultValue }: { authors: string[]; defaultValu
   );
 }
 
-function StageField({ defaultValue }: { defaultValue: ExperimentStage }) {
+function StageField({ defaultValue, locked }: { defaultValue: ExperimentStage; locked?: boolean }) {
   const [stage, setStage] = useState(defaultValue);
   return (
-    <select
-      id="stage"
-      name="stage"
-      value={stage}
-      onChange={(e) => setStage(e.target.value as ExperimentStage)}
-      className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none ${STAGE_BADGE_CLASSES[stage]}`}
-    >
-      {STAGE_ORDER.map((s) => (
-        <option key={s} value={s}>
-          {STAGE_LABELS[s]}
-        </option>
-      ))}
-    </select>
+    <>
+      {/* Disabled <select>s aren't submitted with the form — a hidden
+          input keeps `stage` in the payload (required by the schema)
+          when locked, since the visible control below is disabled. */}
+      {locked && <input type="hidden" name="stage" value={stage} />}
+      <select
+        id="stage"
+        name={locked ? undefined : "stage"}
+        value={stage}
+        disabled={locked}
+        title={locked ? "Управляется по неделям — редактируй ниже" : undefined}
+        onChange={(e) => setStage(e.target.value as ExperimentStage)}
+        className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none disabled:cursor-default disabled:opacity-60 ${STAGE_BADGE_CLASSES[stage]}`}
+      >
+        {STAGE_ORDER.map((s) => (
+          <option key={s} value={s}>
+            {STAGE_LABELS[s]}
+          </option>
+        ))}
+      </select>
+    </>
   );
 }

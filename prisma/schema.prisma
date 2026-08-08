@@ -108,13 +108,20 @@ model Hypothesis {
 }
 
 model Experiment {
-  id           String          @id @default(cuid())
+  id           String                 @id @default(cuid())
   name         String
   author       String?
+  // startDate/endDate/stage are derived caches (PROD-019, 2026-08-07):
+  // once weekStages exist, they're recomputed automatically from the
+  // week entries (min/max weekStart, latest week's stage) — not
+  // directly editable anymore. Kept as real columns (not computed on
+  // every read) so existing queries/filters/sorts across the app keep
+  // working unchanged.
   startDate    DateTime?
   endDate      DateTime?
-  stage        ExperimentStage @default(DISCOVERY)
-  hypothesis   Hypothesis      @relation(fields: [hypothesisId], references: [id])
+  stage        ExperimentStage        @default(DISCOVERY)
+  weekStages   ExperimentWeekStage[]
+  hypothesis   Hypothesis             @relation(fields: [hypothesisId], references: [id])
   hypothesisId String
   funnelLevels FunnelLevel[]
   platforms    Platform[]
@@ -122,6 +129,24 @@ model Experiment {
   markets      Market[]
   products     Product[]
   segments     Segment[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+}
+
+/**
+ * One experiment's stage for one specific week (PROD-019, 2026-08-07).
+ * `weekStart` is always a Monday 00:00 local. Source of truth for
+ * per-week progress on the Calendar; Experiment.stage/startDate/endDate
+ * are a denormalized cache derived from these rows.
+ */
+model ExperimentWeekStage {
+  id           String          @id @default(cuid())
+  experiment   Experiment      @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  experimentId String
+  weekStart    DateTime
+  stage        ExperimentStage
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+
+  @@unique([experimentId, weekStart])
 }

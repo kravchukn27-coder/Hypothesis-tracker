@@ -16,6 +16,7 @@ import { ExperimentForm } from "../ExperimentForm";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
+import { toDateParam } from "@/lib/calendar";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -39,6 +40,7 @@ export default async function ExperimentDetailPage({
         markets: true,
         products: true,
         segments: true,
+        weekStages: { orderBy: { weekStart: "asc" } },
       },
     }),
     getAuthors(),
@@ -75,6 +77,7 @@ export default async function ExperimentDetailPage({
 
       <ExperimentForm
         action={action}
+        experimentId={experiment.id}
         hypothesis={{ id: experiment.hypothesisId, name: experiment.hypothesis.name }}
         authors={authors}
         funnelLevels={funnelLevels}
@@ -96,6 +99,10 @@ export default async function ExperimentDetailPage({
           markets: experiment.markets,
           products: experiment.products,
           segments: experiment.segments,
+          weekStages: experiment.weekStages.map((w) => ({
+            weekStartISO: toDateParam(w.weekStart),
+            stage: w.stage,
+          })),
         }}
       />
     </div>

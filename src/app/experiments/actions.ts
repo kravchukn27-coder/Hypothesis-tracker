@@ -49,6 +49,43 @@ function toDate(value: string | undefined) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Monday 00:00 of the week containing `date`, in local time. */
+function startOfWeek(date: Date): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay(); // 0 = Sunday
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+/**
+ * PROD-019: recomputes Experiment.stage/startDate/endDate from its
+ * ExperimentWeekStage rows (latest week's stage; earliest/latest week
+ * as the date span) — the denormalized cache that keeps every
+ * existing query/filter/sort/badge across the app working unchanged.
+ * No-op if there are no week entries (nothing to derive from yet).
+ */
+async function recomputeExperimentDerivedFields(experimentId: string) {
+  const weeks = await prisma.experimentWeekStage.findMany({
+    where: { experimentId },
+    orderBy: { weekStart: "asc" },
+  });
+  if (weeks.length === 0) return;
+
+  const first = weeks[0];
+  const last = weeks[weeks.length - 1];
+  await prisma.experiment.update({
+    where: { id: experimentId },
+    data: {
+      stage: last.stage,
+      startDate: first.weekStart,
+      endDate: new Date(last.weekStart.getTime() + 6 * MS_PER_DAY),
+    },
+  });
+}
+
 function splitCsv(value: string | undefined): string[] {
   return (value ?? "")
     .split(",")
@@ -168,6 +205,10 @@ export async function updateExperiment(
   }
   const data = parsed.data;
   const tagIds = await resolveExperimentTagIds(data);
+  // PROD-019: once week entries exist, stage/dates are derived from
+  // them — the form's now-disabled Status/date fields still submit
+  // their last-known values, but must not overwrite the derived cache.
+  const locked = await hasWeekStages(id);
 
   await prisma.experiment.update({
     where: { id },
@@ -175,9 +216,7 @@ export async function updateExperiment(
       name: data.name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
-      stage: data.stage,
-      startDate: toDate(data.startDate),
-      endDate: toDate(data.endDate),
+      ...(locked ? {} : { stage: data.stage, startDate: toDate(data.startDate), endDate: toDate(data.endDate) }),
       funnelLevels: { set: tagIds.funnelLevels.map((id) => ({ id })) },
       platforms: { set: tagIds.platforms.map((id) => ({ id })) },
       channels: { set: tagIds.channels.map((id) => ({ id })) },
@@ -201,9 +240,23 @@ const stageSchema = z.enum([
   "DONE",
 ]);
 
+/**
+ * PROD-019: once an experiment has week-stage entries, stage/dates are
+ * derived from them — direct edits here would immediately be
+ * overwritten by the next recompute and desync from the week grid, so
+ * both of these become no-ops for experiments that have weeks (the UI
+ * hides the manual controls in that case; this is the server-side
+ * backstop).
+ */
+async function hasWeekStages(experimentId: string): Promise<boolean> {
+  const count = await prisma.experimentWeekStage.count({ where: { experimentId } });
+  return count > 0;
+}
+
 export async function updateExperimentStage(id: string, stage: string) {
   const parsed = stageSchema.safeParse(stage);
   if (!parsed.success) return;
+  if (await hasWeekStages(id)) return;
 
   await prisma.experiment.update({
     where: { id },
@@ -219,6 +272,8 @@ export async function updateExperimentDates(
   startDate: string | null,
   endDate: string | null,
 ) {
+  if (await hasWeekStages(id)) return;
+
   await prisma.experiment.update({
     where: { id },
     data: { startDate: toDate(startDate ?? undefined), endDate: toDate(endDate ?? undefined) },
@@ -226,6 +281,127 @@ export async function updateExperimentDates(
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+}
+
+/**
+ * PROD-019: sets (creates or updates) one week's stage for an
+ * experiment, then recomputes the denormalized stage/startDate/endDate
+ * cache. Used by both the Calendar's week-cell click and the detail
+ * card's per-week editor.
+ */
+export async function setExperimentWeekStage(experimentId: string, weekStartISO: string, stage: string) {
+  const parsedStage = stageSchema.safeParse(stage);
+  if (!parsedStage.success) return;
+  const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
+
+  await prisma.experimentWeekStage.upsert({
+    where: { experimentId_weekStart: { experimentId, weekStart } },
+    update: { stage: parsedStage.data },
+    create: { experimentId, weekStart, stage: parsedStage.data },
+  });
+  await recomputeExperimentDerivedFields(experimentId);
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
+}
+
+/**
+ * PROD-019: appends the next week after an experiment's last week
+ * entry (or the current week if it has none yet), defaulting to the
+ * last entry's stage — the detail card's "+ Добавить неделю" button.
+ */
+export async function addNextExperimentWeek(experimentId: string) {
+  const last = await prisma.experimentWeekStage.findFirst({
+    where: { experimentId },
+    orderBy: { weekStart: "desc" },
+  });
+  const nextWeekStart = last
+    ? new Date(last.weekStart.getTime() + 7 * MS_PER_DAY)
+    : startOfWeek(new Date());
+  const stage = last?.stage ?? "DISCOVERY";
+
+  await prisma.experimentWeekStage.upsert({
+    where: { experimentId_weekStart: { experimentId, weekStart: nextWeekStart } },
+    update: {},
+    create: { experimentId, weekStart: nextWeekStart, stage },
+  });
+  await recomputeExperimentDerivedFields(experimentId);
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
+}
+
+/**
+ * PROD-019: drag-to-move a whole block of weeks (Calendar). Shifts
+ * every existing week entry by `deltaWeeks`. Deletes and recreates
+ * rather than updating in place, since shifting could otherwise
+ * transiently collide with the `[experimentId, weekStart]` unique
+ * constraint mid-update.
+ */
+export async function shiftExperimentWeeks(experimentId: string, deltaWeeks: number) {
+  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return;
+
+  const entries = await prisma.experimentWeekStage.findMany({ where: { experimentId } });
+  if (entries.length === 0) return;
+
+  await prisma.$transaction([
+    prisma.experimentWeekStage.deleteMany({ where: { experimentId } }),
+    ...entries.map((e) =>
+      prisma.experimentWeekStage.create({
+        data: {
+          experimentId,
+          stage: e.stage,
+          weekStart: new Date(e.weekStart.getTime() + deltaWeeks * 7 * MS_PER_DAY),
+        },
+      }),
+    ),
+  ]);
+  await recomputeExperimentDerivedFields(experimentId);
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
+}
+
+/**
+ * PROD-019: drag-to-resize the end of a block of weeks (Calendar).
+ * `deltaWeeks > 0` appends that many weeks (repeating the last stage);
+ * `deltaWeeks < 0` removes that many trailing weeks, keeping at least
+ * one.
+ */
+export async function resizeExperimentWeeks(experimentId: string, deltaWeeks: number) {
+  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return;
+
+  const entries = await prisma.experimentWeekStage.findMany({
+    where: { experimentId },
+    orderBy: { weekStart: "asc" },
+  });
+  if (entries.length === 0) return;
+
+  if (deltaWeeks > 0) {
+    const last = entries[entries.length - 1];
+    const additions = Array.from({ length: deltaWeeks }, (_, i) => ({
+      experimentId,
+      stage: last.stage,
+      weekStart: new Date(last.weekStart.getTime() + (i + 1) * 7 * MS_PER_DAY),
+    }));
+    await prisma.experimentWeekStage.createMany({ data: additions });
+  } else {
+    const removeCount = Math.min(-deltaWeeks, entries.length - 1);
+    const toRemove = entries.slice(entries.length - removeCount);
+    if (toRemove.length > 0) {
+      await prisma.experimentWeekStage.deleteMany({
+        where: { id: { in: toRemove.map((e) => e.id) } },
+      });
+    }
+  }
+  await recomputeExperimentDerivedFields(experimentId);
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
 }
 
 export async function getFunnelLevels() {

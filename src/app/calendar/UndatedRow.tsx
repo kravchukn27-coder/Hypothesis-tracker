@@ -29,7 +29,14 @@ export function UndatedRow({
         }}
         className="min-w-0 cursor-grab active:cursor-grabbing"
       >
-        <Link href={`/experiments/${experimentId}`} className="text-sm text-zinc-700 hover:underline">
+        {/* draggable=false: anchors are natively draggable, which would
+            otherwise steal the drag gesture (as a browser link-drag)
+            before it reaches the wrapping div's onDragStart below. */}
+        <Link
+          href={`/experiments/${experimentId}`}
+          draggable={false}
+          className="text-sm text-zinc-700 hover:underline"
+        >
           {name}
         </Link>
         <span className="ml-2 text-xs text-zinc-400">{hypothesisName}</span>

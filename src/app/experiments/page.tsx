@@ -34,7 +34,7 @@ export default async function ExperimentsPage({
         ...(segment ? { segments: { some: { id: segment } } } : {}),
         ...(author ? { author } : {}),
       },
-      include: { hypothesis: true, segments: true },
+      include: { hypothesis: true, segments: true, _count: { select: { weekStages: true } } },
     }),
     prisma.segment.findMany({ orderBy: { name: "asc" } }),
     prisma.experiment.findMany({
@@ -187,7 +187,7 @@ export default async function ExperimentsPage({
                     <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesis.name}</p>
                   </td>
                   <td className={`${STATUS_COL} px-4 py-3`}>
-                    <StageCell experimentId={e.id} stage={e.stage} />
+                    <StageCell experimentId={e.id} stage={e.stage} locked={e._count.weekStages > 0} />
                   </td>
                   <td className={`${META_COL} px-4 py-3 text-zinc-600`}>
                     {e.author ? (
@@ -203,7 +203,12 @@ export default async function ExperimentsPage({
                     {e.segments.map((s) => s.name).join(", ") || "—"}
                   </td>
                   <td className={`${DATE_COL} px-4 py-3`}>
-                    <DateCell experimentId={e.id} startDate={e.startDate} endDate={e.endDate} />
+                    <DateCell
+                      experimentId={e.id}
+                      startDate={e.startDate}
+                      endDate={e.endDate}
+                      locked={e._count.weekStages > 0}
+                    />
                   </td>
                 </tr>
                 );

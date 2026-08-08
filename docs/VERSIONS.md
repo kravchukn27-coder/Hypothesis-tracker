@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+- [PROD-019] Calendar switched from day-granularity to week-granularity
+  (nearest 8 weeks, same forward/back paging re-scaled to weeks), with
+  new per-week stage editing — the actual mechanic the user reports:
+  experiment stages progress week-by-week, not day-by-day, so the
+  day-grid shipped as PROD-014/016/017 was the wrong unit. New
+  `ExperimentWeekStage` table (`experimentId`, `weekStart`, `stage`)
+  is the source of truth for weekly progress; `Experiment.stage`/
+  `startDate`/`endDate` became a denormalized cache, auto-recomputed
+  from the latest/earliest/latest week entries
+  (`recomputeExperimentDerivedFields`) so every existing query/filter/
+  sort/badge across the app keeps working unchanged. Each week-cell on
+  an experiment's Calendar row is now individually clickable
+  (`ExperimentWeekRow.tsx`) — a popover offers all 6 stages, including
+  re-picking the same one to mean "continued into this week." Drag a
+  filled cell to shift a whole block of weeks; drag its right edge to
+  extend/shrink. The same per-week editing is also available from the
+  detail card (`ExperimentWeekStagesEditor.tsx`, a "По неделям"
+  section with a "+ Добавить неделю" button) — once an experiment has
+  week entries, its old manual Status/date controls (list's
+  `StageCell`/`DateCell`, the form's Status/date fields) become
+  read-only both client- and server-side, since editing them directly
+  would immediately be overwritten by the next recompute. Existing
+  experiments with dates but no week entries render via on-the-fly
+  synthesis (not persisted) rather than forcing a backfill; 3
+  already-dated experiments *were* backfilled into real week entries
+  via a one-off script (not committed) so nothing regressed visually
+  on launch. `BUG-003` (day-grid drag-and-drop) is resolved as a
+  byproduct — the day grid it was filed against no longer exists, and
+  the week-grid equivalent (drag from "Без дат" onto a week header) is
+  now verified working. This was explicitly scoped as a plan-only
+  voice request first (card wrote up the redesign and open decisions,
+  no code touched), then implemented after the user confirmed: (1) new
+  table + derived-cache approach, (2) inline popover for the click-to-
+  set UI, (3) replace the old day-grid drag mechanics with week-scaled
+  equivalents. Verified extensively in the browser: click-to-set on a
+  new and an already-filled week, re-picking the same stage on a
+  consecutive week, drag-to-move, drag-to-resize, drag-from-"Без дат"
+  onto a week, card-based stage change and "+ Добавить неделю", locked
+  read-only states, and — importantly — a real regression caught and
+  fixed during testing: the old day-bar's click-through link to
+  `/experiments/[id]` disappeared once bars were replaced by per-week
+  buttons; fixed by making the row's name link to the experiment (was
+  linking to the hypothesis) with the hypothesis moved to its own
+  subtitle link.
+
 - [TECH-003 follow-up] Two user-requested tweaks to the Experiment form
   (2026-08-07, same day as TECH-003): (1) Segment converted from a
   free-text field into a 6th multi-select tag category — same pattern

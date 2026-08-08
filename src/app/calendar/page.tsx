@@ -1,22 +1,26 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { addDays, buildTimeline, formatDayLabel, formatWeekdayLabel, PAGE_STEP_DAYS, startOfDay, WINDOW_DAYS } from "@/lib/calendar";
-import { STAGE_BAR_CLASSES, STAGE_LABELS, formatDateRange } from "@/lib/experiment";
-import { ExperimentBar } from "./ExperimentBar";
-import { DayHeaderCell } from "./DayHeaderCell";
+import {
+  addWeeks,
+  buildTimeline,
+  formatWeekLabel,
+  PAGE_STEP_WEEKS,
+  startOfWeek,
+  toDateParam,
+  WINDOW_WEEKS,
+} from "@/lib/calendar";
+import { STAGE_BAR_CLASSES, STAGE_LABELS } from "@/lib/experiment";
+import { ExperimentWeekRow } from "./ExperimentWeekRow";
+import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
     const parsed = new Date(`${start}T00:00:00`);
-    if (!Number.isNaN(parsed.getTime())) return startOfDay(parsed);
+    if (!Number.isNaN(parsed.getTime())) return startOfWeek(parsed);
   }
-  return startOfDay(new Date());
-}
-
-function toDateParam(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return startOfWeek(new Date());
 }
 
 /** Keeps the grid a stable height regardless of how many rows are in the current window. */
@@ -31,11 +35,11 @@ export default async function CalendarPage({
   const windowStart = parseWindowStart(start);
 
   const experiments = await prisma.experiment.findMany({
-    include: { hypothesis: true },
+    include: { hypothesis: true, weekStages: { orderBy: { weekStart: "asc" } } },
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
   });
 
-  const { days, rows, undated, todayColumn } = buildTimeline(
+  const { weeks, rows, undated, todayColumn } = buildTimeline(
     experiments.map((e) => ({
       id: e.id,
       name: e.name,
@@ -44,13 +48,14 @@ export default async function CalendarPage({
       startDate: e.startDate,
       endDate: e.endDate,
       stage: e.stage,
+      weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage })),
     })),
     windowStart,
   );
 
-  const prevHref = `/calendar?start=${toDateParam(addDays(windowStart, -PAGE_STEP_DAYS))}`;
-  const nextHref = `/calendar?start=${toDateParam(addDays(windowStart, PAGE_STEP_DAYS))}`;
-  const isToday = windowStart.getTime() === startOfDay(new Date()).getTime();
+  const prevHref = `/calendar?start=${toDateParam(addWeeks(windowStart, -PAGE_STEP_WEEKS))}`;
+  const nextHref = `/calendar?start=${toDateParam(addWeeks(windowStart, PAGE_STEP_WEEKS))}`;
+  const isToday = windowStart.getTime() === startOfWeek(new Date()).getTime();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -75,14 +80,14 @@ export default async function CalendarPage({
           </Link>
           <Link
             href={prevHref}
-            aria-label={`Назад на ${PAGE_STEP_DAYS} дней`}
+            aria-label={`Назад на ${PAGE_STEP_WEEKS} нед.`}
             className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
           >
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <Link
             href={nextHref}
-            aria-label={`Вперёд на ${PAGE_STEP_DAYS} дней`}
+            aria-label={`Вперёд на ${PAGE_STEP_WEEKS} нед.`}
             className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
           >
             <ChevronRight className="h-4 w-4" />
@@ -125,54 +130,48 @@ export default async function CalendarPage({
                 </div>
                 <div
                   className="grid flex-1"
-                  style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(0, 1fr))` }}
+                  style={{ gridTemplateColumns: `repeat(${WINDOW_WEEKS}, minmax(0, 1fr))` }}
                 >
-                  {days.map((d, i) => (
-                    <DayHeaderCell key={i} date={toDateParam(d)} isToday={i + 1 === todayColumn}>
-                      <div>{formatDayLabel(d)}</div>
-                      <div className="text-zinc-400">{formatWeekdayLabel(d)}</div>
-                    </DayHeaderCell>
+                  {weeks.map((w, i) => (
+                    <WeekHeaderCell key={i} weekStartISO={toDateParam(w)} isToday={i === todayColumn}>
+                      {formatWeekLabel(w)}
+                    </WeekHeaderCell>
                   ))}
                 </div>
               </div>
 
-              {rows.map(({ experiment: e, colStart, colEnd, overdue }) => (
+              {rows.map(({ experiment: e, cells, overdue }) => (
                 <div key={e.id} className="flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50">
                   <div className="sticky left-0 z-10 w-56 shrink-0 bg-white px-4 py-3">
+                    {/* PROD-019: previously the colored bar itself linked to
+                        /experiments/[id] — now that each week is its own
+                        stage-editing button, the name here is the only
+                        click-through to the experiment's own card. */}
                     <Link
-                      href={`/backlog/${e.hypothesisId}`}
-                      title={`Гипотеза: ${e.hypothesisName}`}
+                      href={`/experiments/${e.id}`}
+                      title={e.name}
                       className="block truncate text-sm font-medium text-zinc-900 hover:underline"
                     >
                       {e.name}
                     </Link>
-                    <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesisName}</p>
+                    <Link
+                      href={`/backlog/${e.hypothesisId}`}
+                      title={`Гипотеза: ${e.hypothesisName}`}
+                      className="mt-0.5 block truncate text-xs text-zinc-400 hover:underline"
+                    >
+                      {e.hypothesisName}
+                    </Link>
                   </div>
-                  <div
-                    className="relative grid flex-1"
-                    style={{ gridTemplateColumns: `repeat(${WINDOW_DAYS}, minmax(0, 1fr))` }}
-                  >
-                    {days.map((_, i) => (
-                      <div
-                        key={i}
-                        className={`border-l border-zinc-100 ${i + 1 === todayColumn ? "bg-blue-50/40" : ""}`}
-                        style={{ gridColumn: i + 1, gridRow: 1 }}
-                      />
-                    ))}
-                    <ExperimentBar
-                      key={`${e.id}-${colStart}-${colEnd}-${toDateParam(windowStart)}`}
-                      experimentId={e.id}
-                      href={`/experiments/${e.id}`}
-                      label={STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]}
-                      title={`${STAGE_LABELS[e.stage as keyof typeof STAGE_LABELS]} · ${formatDateRange(e.startDate, e.endDate)}${overdue ? " · Просрочен" : ""}`}
-                      barClass={STAGE_BAR_CLASSES[e.stage as keyof typeof STAGE_BAR_CLASSES]}
-                      overdue={overdue}
-                      colStart={colStart}
-                      colEnd={colEnd}
-                      days={WINDOW_DAYS}
-                      windowStart={toDateParam(windowStart)}
-                    />
-                  </div>
+                  <ExperimentWeekRow
+                    key={`${e.id}-${toDateParam(windowStart)}`}
+                    experimentId={e.id}
+                    overdue={overdue}
+                    cells={cells.map((c) => ({
+                      weekIndex: c.weekIndex,
+                      weekStartISO: toDateParam(c.weekStart),
+                      stage: c.stage,
+                    }))}
+                  />
                 </div>
               ))}
 

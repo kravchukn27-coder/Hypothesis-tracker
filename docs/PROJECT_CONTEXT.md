@@ -34,11 +34,21 @@ Source of truth for the original data model: a Google Sheet exported as
    `/experiments/[id]` (its "Гипотеза" field links to
    `/backlog/[hypothesisId]`), not the list's primary click target
    anymore.
-3. **Calendar** ✅ — `/calendar`, week-granularity timeline computed
-   from experiment dates, bars colored by Stage, links to both the
-   experiment (`/experiments/[id]`) and its hypothesis
-   (`/backlog/[id]`). No drag/resize — dates are edited on the
-   Experiments screen; both read the same fields so they stay in sync.
+3. **Calendar** ✅ — `/calendar`, week-granularity grid (PROD-019,
+   2026-08-08 — day-granularity per PROD-014/016/017 was a
+   misunderstanding of the domain, since experiment stages actually
+   progress by week, not by day). Nearest 8 weeks, forward/back paging
+   by 1 week, "Сегодня" reset. Each week is its own cell per
+   experiment row, individually clickable to set that week's stage
+   (`ExperimentWeekRow.tsx`) — including re-picking the same stage to
+   mean "continued into this week." Drag-to-move (shift a block of
+   weeks) and drag-to-resize (extend/shrink the end) both work at
+   week granularity. Same per-week editing is also available from
+   `/experiments/[id]` (`ExperimentWeekStagesEditor.tsx`), not
+   calendar-only. Dragging an undated experiment from "Без дат" onto a
+   week header schedules it there (Discovery default). Row's name
+   links to the experiment (`/experiments/[id]`), hypothesis subtitle
+   links to the hypothesis (`/backlog/[id]`).
 4. **Extras** ✅ — custom funnel-level tags (already supported via the
    Backlog form's Funnel Level select+add, UI-001), and list
    filter/sort on Backlog and Experiments (PROD-004, PROD-007,
@@ -127,7 +137,29 @@ changes shape things.
   Design / Development / Experimentation / Analysis / Done, required,
   default `DISCOVERY`. Same field, same colors everywhere; labeled
   "Status" in the Experiments list/form, "Stage" in the Calendar
-  (context-appropriate label, not a different field).
+  (context-appropriate label, not a different field). **Revisited by
+  PROD-019 (2026-08-08):** the user clarified that stage genuinely
+  does progress week-by-week in practice (Discovery might run 2+
+  weeks, then Design, etc.) — TECH-002 was right that *status* and
+  *stage* aren't two different concepts, but wrong to assume a single
+  snapshot value was enough. New `ExperimentWeekStage` table
+  (`experimentId`, `weekStart`, `stage`) is now the source of truth
+  for progress; `Experiment.stage`/`startDate`/`endDate` are a
+  **derived cache** — automatically recomputed from the latest/
+  earliest/latest week entries (`recomputeExperimentDerivedFields` in
+  `src/app/experiments/actions.ts`) whenever a week entry changes, so
+  every existing query/filter/sort/badge across the app (list Status
+  column, filters, `StageCell`) keeps working unchanged without
+  needing to know about weeks at all. Once an experiment has week
+  entries, its manual Status/date controls (`StageCell`, `DateCell`,
+  the form's Status/date fields) become read-only — both client-side
+  (a `locked` prop) and server-side (`updateExperimentStage`/
+  `updateExperimentDates` no-op if week entries exist) — edit via the
+  Calendar's week-cells or the detail card's per-week editor instead.
+  Existing experiments with `startDate`/`endDate` but no week entries
+  yet (not re-tagged since PROD-019) render on the Calendar via
+  on-the-fly synthesis (`buildTimeline` in `src/lib/calendar.ts`, not
+  persisted) rather than forcing a backfill on every read path.
 - `Experiment.targeting` (free text, e.g. `"GW, квиз"`) was **removed**
   (TECH-003, 2026-08-07) — it was a flattened mix of 5 distinct tag
   categories from the source tool. Replaced with 5 real many-to-many

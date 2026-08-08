@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- [UI-013] Detail-form field-sizing fixes: the Status field on
+  `/backlog/[id]`/`/backlog/new` and the Status (Stage) field on
+  `/experiments/[id]`/`/experiments/new` now render via the shared
+  `IconSelect` component (same pill + leading icon as the list rows'
+  `StatusCell`/`StageCell`) instead of a hand-rolled plain `<select>` —
+  `IconSelect` gained optional `id`/`name`/`title` props so it can also
+  work as a native form field, not just a self-saving list control.
+  Experiment's locked (week-tracked) path — disabled select plus a
+  hidden `stage` input — carried over unchanged. Separately, Hypothesis
+  form's "Выборка (users)" field switched from a single-line `Input` to
+  a 3-row `Textarea`, matching "Моделирование" next to it. Visual/
+  component-reuse only — no field name or behavior changes.
 - [UI-015] Backlog's Funnel Level badge moved out from under the Name
   cell into its own column between Status and Score (`Badge`
   treatment, "—" when unset). Comment column narrowed (`LONG_TEXT_COL`

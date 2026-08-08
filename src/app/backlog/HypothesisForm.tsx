@@ -6,13 +6,14 @@ import {
   CONVERSION_LABELS,
   SCALE_VALUES,
   STATUS_BADGE_CLASSES,
+  STATUS_ICONS,
   STATUS_LABELS,
   STATUS_ORDER,
 } from "@/lib/hypothesis";
-import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { FIELD_CLASSES, Input, Select, Textarea } from "@/components/Input";
+import { IconSelect } from "@/components/IconSelect";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
 import { useToast } from "@/components/toast/ToastProvider";
 import type { HypothesisFormState } from "./actions";
@@ -121,19 +122,16 @@ export function HypothesisForm({
           </Field>
 
           <Field label="Status" htmlFor="status">
-            <select
+            <IconSelect
               id="status"
               name="status"
               value={status}
-              onChange={(e) => setStatus(e.target.value as HypothesisStatus)}
-              className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none ${STATUS_BADGE_CLASSES[status]}`}
-            >
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
+              options={STATUS_ORDER}
+              labels={STATUS_LABELS}
+              icon={STATUS_ICONS[status]}
+              colorClasses={STATUS_BADGE_CLASSES[status]}
+              onChange={setStatus}
+            />
           </Field>
         </div>
       </FormSection>
@@ -199,7 +197,7 @@ export function HypothesisForm({
             <Textarea id="modeling" name="modeling" defaultValue={values.modeling} rows={3} />
           </Field>
           <Field label="Выборка (users)" htmlFor="sampleSize">
-            <Input id="sampleSize" name="sampleSize" defaultValue={values.sampleSize} />
+            <Textarea id="sampleSize" name="sampleSize" defaultValue={values.sampleSize} rows={3} />
           </Field>
         </div>
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import {
   CHANNEL_BADGE_COLOR,
   FUNNEL_LEVEL_BADGE_COLOR,
@@ -11,9 +11,9 @@ import {
   PRODUCT_BADGE_COLOR,
   SEGMENT_BADGE_COLOR,
 } from "@/lib/tags";
-import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
+import { IconSelect } from "@/components/IconSelect";
 import { Input, Select } from "@/components/Input";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
 import { TagMultiSelect } from "@/components/TagMultiSelect";
@@ -299,21 +299,18 @@ function StageField({ defaultValue, locked }: { defaultValue: ExperimentStage; l
           input keeps `stage` in the payload (required by the schema)
           when locked, since the visible control below is disabled. */}
       {locked && <input type="hidden" name="stage" value={stage} />}
-      <select
+      <IconSelect
         id="stage"
         name={locked ? undefined : "stage"}
         value={stage}
+        options={STAGE_ORDER}
+        labels={STAGE_LABELS}
+        icon={STAGE_ICONS[stage]}
+        colorClasses={STAGE_BADGE_CLASSES[stage]}
         disabled={locked}
         title={locked ? "Управляется по неделям — редактируй ниже" : undefined}
-        onChange={(e) => setStage(e.target.value as ExperimentStage)}
-        className={`${BADGE_BASE_CLASSES} w-fit cursor-pointer border-0 outline-none disabled:cursor-default disabled:opacity-60 ${STAGE_BADGE_CLASSES[stage]}`}
-      >
-        {STAGE_ORDER.map((s) => (
-          <option key={s} value={s}>
-            {STAGE_LABELS[s]}
-          </option>
-        ))}
-      </select>
+        onChange={setStage}
+      />
     </>
   );
 }

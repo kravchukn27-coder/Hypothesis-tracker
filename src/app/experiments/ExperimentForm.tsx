@@ -9,6 +9,7 @@ import {
   MARKET_BADGE_COLOR,
   PLATFORM_BADGE_COLOR,
   PRODUCT_BADGE_COLOR,
+  SEGMENT_BADGE_COLOR,
 } from "@/lib/tags";
 import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
@@ -26,7 +27,6 @@ type Tag = { id: string; name: string };
 type Initial = {
   name: string;
   author: string;
-  segment: string;
   stage: ExperimentStage;
   startDate: string; // yyyy-mm-dd
   endDate: string;
@@ -35,12 +35,12 @@ type Initial = {
   channels: Tag[];
   markets: Tag[];
   products: Tag[];
+  segments: Tag[];
 };
 
 const emptyInitial: Initial = {
   name: "",
   author: "",
-  segment: "",
   stage: "DISCOVERY",
   startDate: "",
   endDate: "",
@@ -49,6 +49,7 @@ const emptyInitial: Initial = {
   channels: [],
   markets: [],
   products: [],
+  segments: [],
 };
 
 export function ExperimentForm({
@@ -60,6 +61,7 @@ export function ExperimentForm({
   channels,
   markets,
   products,
+  segments,
   initial,
   submitLabel,
 }: {
@@ -71,6 +73,7 @@ export function ExperimentForm({
   channels: Tag[];
   markets: Tag[];
   products: Tag[];
+  segments: Tag[];
   initial?: Partial<Initial>;
   submitLabel: string;
 }) {
@@ -113,21 +116,17 @@ export function ExperimentForm({
           </Link>
         </div>
 
-        <Field label="Status" htmlFor="stage">
-          <StageField defaultValue={values.stage} />
-        </Field>
-      </FormSection>
-
-      <FormSection title="Таргетинг">
         <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Status" htmlFor="stage">
+            <StageField defaultValue={values.stage} />
+          </Field>
           <Field label="Автор">
             <AuthorField authors={authors} defaultValue={values.author} />
           </Field>
-          <Field label="Segment" htmlFor="segment">
-            <Input id="segment" name="segment" defaultValue={values.segment} />
-          </Field>
         </div>
+      </FormSection>
 
+      <FormSection title="Таргетинг">
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Funnel Level">
             <TagMultiSelect
@@ -166,14 +165,24 @@ export function ExperimentForm({
           </Field>
         </div>
 
-        <Field label="Product">
-          <TagMultiSelect
-            name="product"
-            options={products}
-            initialSelected={values.products}
-            color={PRODUCT_BADGE_COLOR}
-          />
-        </Field>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Product">
+            <TagMultiSelect
+              name="product"
+              options={products}
+              initialSelected={values.products}
+              color={PRODUCT_BADGE_COLOR}
+            />
+          </Field>
+          <Field label="Segment">
+            <TagMultiSelect
+              name="segment"
+              options={segments}
+              initialSelected={values.segments}
+              color={SEGMENT_BADGE_COLOR}
+            />
+          </Field>
+        </div>
       </FormSection>
 
       <FormSection title="Расписание">

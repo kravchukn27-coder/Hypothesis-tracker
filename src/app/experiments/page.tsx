@@ -27,21 +27,16 @@ export default async function ExperimentsPage({
   const { stage, segment, author, hypothesisId, sortBy = "startDate", dir } = await searchParams;
   const currentDir: SortDir = dir === "desc" ? "desc" : "asc";
 
-  const [experiments, segmentRows, authorRows] = await Promise.all([
+  const [experiments, segments, authorRows] = await Promise.all([
     prisma.experiment.findMany({
       where: {
         ...(stage ? { stage: stage as ExperimentStage } : {}),
-        ...(segment ? { segment } : {}),
+        ...(segment ? { segments: { some: { id: segment } } } : {}),
         ...(author ? { author } : {}),
       },
-      include: { hypothesis: true },
+      include: { hypothesis: true, segments: true },
     }),
-    prisma.experiment.findMany({
-      where: { segment: { not: null } },
-      select: { segment: true },
-      distinct: ["segment"],
-      orderBy: { segment: "asc" },
-    }),
+    prisma.segment.findMany({ orderBy: { name: "asc" } }),
     prisma.experiment.findMany({
       where: { author: { not: null } },
       select: { author: true },
@@ -50,10 +45,7 @@ export default async function ExperimentsPage({
     }),
   ]);
 
-  const segmentOptions = segmentRows
-    .map((r) => r.segment)
-    .filter((s): s is string => Boolean(s))
-    .map((s) => ({ value: s, label: s }));
+  const segmentOptions = segments.map((s) => ({ value: s.id, label: s.name }));
 
   const authorOptions = authorRows
     .map((r) => r.author)
@@ -208,7 +200,7 @@ export default async function ExperimentsPage({
                     )}
                   </td>
                   <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
-                    {e.segment || "—"}
+                    {e.segments.map((s) => s.name).join(", ") || "—"}
                   </td>
                   <td className={`${DATE_COL} px-4 py-3`}>
                     <DateCell experimentId={e.id} startDate={e.startDate} endDate={e.endDate} />

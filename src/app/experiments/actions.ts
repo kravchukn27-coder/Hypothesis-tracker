@@ -8,13 +8,13 @@ import { z } from "zod";
 const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
   author: z.string().trim().optional(),
-  segment: z.string().trim().optional(),
   stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"]),
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
-  // TECH-003: 5 multi-select tag categories, each submitted as a pair of
-  // comma-joined hidden fields (see TagMultiSelect) — existing tag ids
-  // to connect, and new tag names to create-then-connect.
+  // TECH-003: 6 multi-select tag categories (5 original + Segment,
+  // folded in the same way), each submitted as a pair of comma-joined
+  // hidden fields (see TagMultiSelect) — existing tag ids to connect,
+  // and new tag names to create-then-connect.
   funnelLevelIds: z.string().trim().optional(),
   funnelLevelNew: z.string().trim().optional(),
   platformIds: z.string().trim().optional(),
@@ -25,6 +25,8 @@ const baseExperimentFields = {
   marketNew: z.string().trim().optional(),
   productIds: z.string().trim().optional(),
   productNew: z.string().trim().optional(),
+  segmentIds: z.string().trim().optional(),
+  segmentNew: z.string().trim().optional(),
 };
 
 // Create: name is auto-generated server-side (PROD-006), never submitted.
@@ -83,15 +85,18 @@ async function resolveExperimentTagIds(data: {
   marketNew?: string;
   productIds?: string;
   productNew?: string;
+  segmentIds?: string;
+  segmentNew?: string;
 }) {
-  const [funnelLevels, platforms, channels, markets, products] = await Promise.all([
+  const [funnelLevels, platforms, channels, markets, products, segments] = await Promise.all([
     resolveTagIds(prisma.funnelLevel, data.funnelLevelIds, data.funnelLevelNew),
     resolveTagIds(prisma.platform, data.platformIds, data.platformNew),
     resolveTagIds(prisma.channel, data.channelIds, data.channelNew),
     resolveTagIds(prisma.market, data.marketIds, data.marketNew),
     resolveTagIds(prisma.product, data.productIds, data.productNew),
+    resolveTagIds(prisma.segment, data.segmentIds, data.segmentNew),
   ]);
-  return { funnelLevels, platforms, channels, markets, products };
+  return { funnelLevels, platforms, channels, markets, products, segments };
 }
 
 /**
@@ -127,7 +132,6 @@ export async function createExperiment(
       name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
-      segment: data.segment || null,
       stage: data.stage,
       startDate: toDate(data.startDate),
       endDate: toDate(data.endDate),
@@ -136,6 +140,7 @@ export async function createExperiment(
       channels: { connect: tagIds.channels.map((id) => ({ id })) },
       markets: { connect: tagIds.markets.map((id) => ({ id })) },
       products: { connect: tagIds.products.map((id) => ({ id })) },
+      segments: { connect: tagIds.segments.map((id) => ({ id })) },
     },
   });
 
@@ -170,7 +175,6 @@ export async function updateExperiment(
       name: data.name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
-      segment: data.segment || null,
       stage: data.stage,
       startDate: toDate(data.startDate),
       endDate: toDate(data.endDate),
@@ -179,6 +183,7 @@ export async function updateExperiment(
       channels: { set: tagIds.channels.map((id) => ({ id })) },
       markets: { set: tagIds.markets.map((id) => ({ id })) },
       products: { set: tagIds.products.map((id) => ({ id })) },
+      segments: { set: tagIds.segments.map((id) => ({ id })) },
     },
   });
 
@@ -241,6 +246,10 @@ export async function getMarkets() {
 
 export async function getProducts() {
   return prisma.product.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getSegments() {
+  return prisma.segment.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getAuthors(): Promise<string[]> {

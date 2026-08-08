@@ -9,6 +9,7 @@ import {
   getMarkets,
   getPlatforms,
   getProducts,
+  getSegments,
   updateExperiment,
 } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
@@ -27,7 +28,7 @@ export default async function ExperimentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [experiment, authors, funnelLevels, platforms, channels, markets, products] = await Promise.all([
+  const [experiment, authors, funnelLevels, platforms, channels, markets, products, segments] = await Promise.all([
     prisma.experiment.findUnique({
       where: { id },
       include: {
@@ -37,6 +38,7 @@ export default async function ExperimentDetailPage({
         channels: true,
         markets: true,
         products: true,
+        segments: true,
       },
     }),
     getAuthors(),
@@ -45,6 +47,7 @@ export default async function ExperimentDetailPage({
     getChannels(),
     getMarkets(),
     getProducts(),
+    getSegments(),
   ]);
 
   if (!experiment) notFound();
@@ -79,11 +82,11 @@ export default async function ExperimentDetailPage({
         channels={channels}
         markets={markets}
         products={products}
+        segments={segments}
         submitLabel="Сохранить"
         initial={{
           name: experiment.name,
           author: experiment.author ?? "",
-          segment: experiment.segment ?? "",
           stage: experiment.stage,
           startDate: toDateInputValue(experiment.startDate),
           endDate: toDateInputValue(experiment.endDate),
@@ -92,6 +95,7 @@ export default async function ExperimentDetailPage({
           channels: experiment.channels,
           markets: experiment.markets,
           products: experiment.products,
+          segments: experiment.segments,
         }}
       />
     </div>

@@ -5,3 +5,4 @@ export const PLATFORM_BADGE_COLOR = "bg-emerald-50 text-emerald-700 ring-emerald
 export const CHANNEL_BADGE_COLOR = "bg-blue-50 text-blue-700 ring-blue-600/20";
 export const MARKET_BADGE_COLOR = "bg-orange-50 text-orange-700 ring-orange-600/20";
 export const PRODUCT_BADGE_COLOR = "bg-purple-50 text-purple-700 ring-purple-600/20";
+export const SEGMENT_BADGE_COLOR = "bg-rose-50 text-rose-700 ring-rose-600/20";

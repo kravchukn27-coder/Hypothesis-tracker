@@ -72,10 +72,11 @@ below for why Backlog only has one of each.
   direction `asc`), `?dir=asc|desc`. Filters via `FilterBar`:
   `?stage=<ExperimentStage>` (labeled "Status" in the UI, same merged
   field as everywhere else post-TECH-002), `?segment=<value>`,
-  `?author=<value>` — Segment and Автор are free-text DB columns, but
-  each filter is a `<select>` of the *distinct existing values* in the
-  data, not a text search box, matching how Funnel Level already
-  works. Experiments never had a sort dropdown, so PROD-007 didn't
+  `?author=<value>` — Автор is a free-text DB column, Segment is a tag
+  relation (`Segment.id` as the filter value, since 2026-08-07's
+  follow-up to TECH-003), but each filter is still a `<select>` of the
+  *distinct existing values* in the data, not a text search box,
+  matching how Funnel Level already works. Experiments never had a sort dropdown, so PROD-007 didn't
   need to remove anything there — just added headers and switched the
   Prisma `orderBy` to the same in-memory sort so there's one code path.
 - A "Сбросить" link (from `FilterBar`) appears once any *filter* field
@@ -142,13 +143,23 @@ changes shape things.
   values were **not** backfilled into the new fields (confirmed
   data-loss tradeoff, no automatic mapping was possible from free text
   to structured tags) — existing experiments start with all 5 fields
-  empty unless re-tagged by hand. The Experiments list's old
-  "Таргетинг / Segment" column is now Segment-only; showing the new
-  structured tags there is a separate follow-up, not yet done. The
-  existing `"Квиз"` FunnelLevel value was renamed to `"Quiz"` as part
-  of this same change (English translations for the whole category,
-  confirmed by the user) — a rename, not a new row, so existing
-  `"Квиз"`-tagged hypotheses now read `"Quiz"`.
+  empty unless re-tagged by hand. The existing `"Квиз"` FunnelLevel
+  value was renamed to `"Quiz"` as part of this same change (English
+  translations for the whole category, confirmed by the user) — a
+  rename, not a new row, so existing `"Квиз"`-tagged hypotheses now
+  read `"Quiz"`.
+- `Experiment.segment` (also free text originally) was converted the
+  same way (2026-08-07 follow-up, same day) into a 6th multi-select
+  tag category — a real `Segment` table + many-to-many relation,
+  `TagMultiSelect`-edited like the other 5. Unlike `targeting`,
+  existing `segment` string values *were* cleanly backfilled (a
+  1-string-to-1-tag mapping is unambiguous, unlike targeting's
+  flattened 5-category mess) — one `Segment` row created per distinct
+  existing value, connected to the experiments that had it, before the
+  old column was dropped. The Experiments list's Segment column now
+  joins the related tag names (`", "`-separated) instead of reading a
+  scalar field. Also moved: "Автор" now lives in the Experiment form's
+  "Основное" section instead of "Таргетинг" (user request, same day).
 
 ### Hypothesis ↔ Experiment workflow
 
@@ -250,7 +261,7 @@ list you add to; they're something you spin off *from* a hypothesis:
 | Статус | `stage` | merged with the week-column stage into one field, see Core Data Rules (TECH-002) |
 | Автор | `author` | |
 | Таргетинг | `funnelLevels`/`platforms`/`channels`/`markets`/`products` | originally one free-text field; split into 5 many-to-many tag relations (TECH-003, 2026-08-07), see Core Data Rules |
-| Segment | `segment` | |
+| Segment | `segments` | originally free text; converted to a many-to-many tag relation with backfill (2026-08-07 follow-up to TECH-003), see Core Data Rules |
 | (week columns F..AF, stage as cell value) | `startDate`, `endDate`, `stage` | dates replace the week columns; stage cell value merged into the same `stage` field as the old `Статус` column, see Core Data Rules |
 | *(none — added)* | `hypothesisId` (required) | every experiment must belong to a hypothesis; see Core Data Rules |
 

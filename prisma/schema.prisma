@@ -77,6 +77,14 @@ model Product {
   experiments Experiment[]
 }
 
+model Segment {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  isCustom    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  experiments Experiment[]
+}
+
 model Hypothesis {
   id            String            @id @default(cuid())
   name          String
@@ -103,7 +111,6 @@ model Experiment {
   id           String          @id @default(cuid())
   name         String
   author       String?
-  segment      String?
   startDate    DateTime?
   endDate      DateTime?
   stage        ExperimentStage @default(DISCOVERY)
@@ -114,6 +121,7 @@ model Experiment {
   channels     Channel[]
   markets      Market[]
   products     Product[]
+  segments     Segment[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }

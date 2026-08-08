@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- [TECH-003 follow-up] Two user-requested tweaks to the Experiment form
+  (2026-08-07, same day as TECH-003): (1) Segment converted from a
+  free-text field into a 6th multi-select tag category — same pattern
+  as Platform/Channel/Market/Product (new `Segment` table, rose badge
+  color, `TagMultiSelect`-edited). Unlike `targeting`, existing
+  `segment` string values *were* backfillable (unambiguous 1-string-
+  to-1-tag mapping) — one `Segment` row created per distinct existing
+  value and connected to the experiments that had it, via a two-step
+  migration (add the relation additively first, backfill, only then
+  drop the old column) so no data was ever actually at risk despite
+  Prisma's safety gate requiring the same explicit consent for the
+  final drop as any other `--accept-data-loss` push. The Experiments
+  list's Segment column and filter now read the relation (joined tag
+  names; filter by `Segment.id`) instead of the old scalar string.
+  (2) "Автор" moved from the "Таргетинг" section to "Основное",
+  alongside Status. Verified in the browser: both backfilled Segment
+  values ("Segment A", "ва") show correctly on their experiments and
+  in the list/filter after restarting the dev server (its in-memory
+  Prisma client was stale from before the schema change).
+
 - [TECH-003] `Experiment.targeting` (free text, e.g. `"GW, квиз"`) —
   a flattened mix of 5 distinct tag categories from the source tool —
   replaced with 5 real multi-select tag fields on the Experiment

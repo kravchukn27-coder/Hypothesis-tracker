@@ -164,7 +164,7 @@ export default async function ExperimentsPage({
                     href={(d) => sortHref("author", d)}
                   />
                 </th>
-                <th className={`${LONG_TEXT_COL} px-4 py-3`}>Таргетинг / Segment</th>
+                <th className={`${LONG_TEXT_COL} px-4 py-3`}>Segment</th>
                 <th className={`${DATE_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Даты"
@@ -208,7 +208,7 @@ export default async function ExperimentsPage({
                     )}
                   </td>
                   <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
-                    {[e.targeting, e.segment].filter(Boolean).join(" · ") || "—"}
+                    {e.segment || "—"}
                   </td>
                   <td className={`${DATE_COL} px-4 py-3`}>
                     <DateCell experimentId={e.id} startDate={e.startDate} endDate={e.endDate} />

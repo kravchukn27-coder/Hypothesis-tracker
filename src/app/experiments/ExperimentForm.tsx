@@ -3,47 +3,74 @@
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { STAGE_BADGE_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import {
+  CHANNEL_BADGE_COLOR,
+  FUNNEL_LEVEL_BADGE_COLOR,
+  MARKET_BADGE_COLOR,
+  PLATFORM_BADGE_COLOR,
+  PRODUCT_BADGE_COLOR,
+} from "@/lib/tags";
 import { BADGE_BASE_CLASSES } from "@/components/Badge";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { Input, Select } from "@/components/Input";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
+import { TagMultiSelect } from "@/components/TagMultiSelect";
 import { useToast } from "@/components/toast/ToastProvider";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 type Hypothesis = { id: string; name: string };
+type Tag = { id: string; name: string };
 
 type Initial = {
   name: string;
   author: string;
-  targeting: string;
   segment: string;
   stage: ExperimentStage;
   startDate: string; // yyyy-mm-dd
   endDate: string;
+  funnelLevels: Tag[];
+  platforms: Tag[];
+  channels: Tag[];
+  markets: Tag[];
+  products: Tag[];
 };
 
 const emptyInitial: Initial = {
   name: "",
   author: "",
-  targeting: "",
   segment: "",
   stage: "DISCOVERY",
   startDate: "",
   endDate: "",
+  funnelLevels: [],
+  platforms: [],
+  channels: [],
+  markets: [],
+  products: [],
 };
 
 export function ExperimentForm({
   action,
   hypothesis,
   authors,
+  funnelLevels,
+  platforms,
+  channels,
+  markets,
+  products,
   initial,
   submitLabel,
 }: {
   action: (state: ExperimentFormState, formData: FormData) => Promise<ExperimentFormState>;
   hypothesis: Hypothesis;
   authors: string[];
+  funnelLevels: Tag[];
+  platforms: Tag[];
+  channels: Tag[];
+  markets: Tag[];
+  products: Tag[];
   initial?: Partial<Initial>;
   submitLabel: string;
 }) {
@@ -101,12 +128,50 @@ export function ExperimentForm({
           </Field>
         </div>
 
-        <Field label="Таргетинг" htmlFor="targeting">
-          <Input
-            id="targeting"
-            name="targeting"
-            defaultValue={values.targeting}
-            placeholder="GW, квиз"
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Funnel Level">
+            <TagMultiSelect
+              name="funnelLevel"
+              options={funnelLevels}
+              initialSelected={values.funnelLevels}
+              color={FUNNEL_LEVEL_BADGE_COLOR}
+            />
+          </Field>
+          <Field label="Platform">
+            <TagMultiSelect
+              name="platform"
+              options={platforms}
+              initialSelected={values.platforms}
+              color={PLATFORM_BADGE_COLOR}
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Channel">
+            <TagMultiSelect
+              name="channel"
+              options={channels}
+              initialSelected={values.channels}
+              color={CHANNEL_BADGE_COLOR}
+            />
+          </Field>
+          <Field label="Market">
+            <TagMultiSelect
+              name="market"
+              options={markets}
+              initialSelected={values.markets}
+              color={MARKET_BADGE_COLOR}
+            />
+          </Field>
+        </div>
+
+        <Field label="Product">
+          <TagMultiSelect
+            name="product"
+            options={products}
+            initialSelected={values.products}
+            color={PRODUCT_BADGE_COLOR}
           />
         </Field>
       </FormSection>

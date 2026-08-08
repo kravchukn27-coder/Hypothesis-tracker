@@ -127,6 +127,28 @@ changes shape things.
   default `DISCOVERY`. Same field, same colors everywhere; labeled
   "Status" in the Experiments list/form, "Stage" in the Calendar
   (context-appropriate label, not a different field).
+- `Experiment.targeting` (free text, e.g. `"GW, квиз"`) was **removed**
+  (TECH-003, 2026-08-07) — it was a flattened mix of 5 distinct tag
+  categories from the source tool. Replaced with 5 real many-to-many
+  relations on `Experiment`: `funnelLevels` (reuses the existing
+  `FunnelLevel` table, previously Hypothesis-only), `platforms`,
+  `channels`, `markets`, `products` (new tables, same shape as
+  `FunnelLevel`: `id`, `name` unique, `isCustom`, `createdAt`). Each is
+  multi-select (several tags at once per category, confirmed by the
+  user over the single-FK alternative) via Prisma implicit
+  many-to-many, edited through the new `TagMultiSelect` component
+  (chips + select-existing/add-new, one per category, each in its own
+  badge color — see `src/lib/tags.ts`). Existing `targeting` free-text
+  values were **not** backfilled into the new fields (confirmed
+  data-loss tradeoff, no automatic mapping was possible from free text
+  to structured tags) — existing experiments start with all 5 fields
+  empty unless re-tagged by hand. The Experiments list's old
+  "Таргетинг / Segment" column is now Segment-only; showing the new
+  structured tags there is a separate follow-up, not yet done. The
+  existing `"Квиз"` FunnelLevel value was renamed to `"Quiz"` as part
+  of this same change (English translations for the whole category,
+  confirmed by the user) — a rename, not a new row, so existing
+  `"Квиз"`-tagged hypotheses now read `"Quiz"`.
 
 ### Hypothesis ↔ Experiment workflow
 
@@ -227,7 +249,7 @@ list you add to; they're something you spin off *from* a hypothesis:
 | Эксперимент | `name` | auto-generated on create (PROD-006, 2026-08-06): hypothesis name, +" N" for the Nth+1 experiment off the same hypothesis; editable afterward on `/experiments/[id]` |
 | Статус | `stage` | merged with the week-column stage into one field, see Core Data Rules (TECH-002) |
 | Автор | `author` | |
-| Таргетинг | `targeting` | |
+| Таргетинг | `funnelLevels`/`platforms`/`channels`/`markets`/`products` | originally one free-text field; split into 5 many-to-many tag relations (TECH-003, 2026-08-07), see Core Data Rules |
 | Segment | `segment` | |
 | (week columns F..AF, stage as cell value) | `startDate`, `endDate`, `stage` | dates replace the week columns; stage cell value merged into the same `stage` field as the old `Статус` column, see Core Data Rules |
 | *(none — added)* | `hypothesisId` (required) | every experiment must belong to a hypothesis; see Core Data Rules |

@@ -3,6 +3,7 @@ import { ArrowRight, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
+import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
 import { Badge } from "@/components/Badge";
 import { FilterBar } from "@/components/FilterBar";
@@ -156,7 +157,7 @@ export default async function BacklogPage({
                     </Link>
                     {h.funnelLevel && (
                       <div className="mt-1">
-                        <Badge>{h.funnelLevel.name}</Badge>
+                        <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{h.funnelLevel.name}</Badge>
                       </div>
                     )}
                   </td>

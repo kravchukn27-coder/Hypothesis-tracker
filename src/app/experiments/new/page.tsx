@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createExperiment, getAuthors } from "../actions";
+import {
+  createExperiment,
+  getAuthors,
+  getChannels,
+  getFunnelLevels,
+  getMarkets,
+  getPlatforms,
+  getProducts,
+} from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 
 export default async function NewExperimentPage({
@@ -12,12 +20,17 @@ export default async function NewExperimentPage({
   const { hypothesisId } = await searchParams;
   if (!hypothesisId) redirect("/backlog");
 
-  const [hypothesis, authors] = await Promise.all([
+  const [hypothesis, authors, funnelLevels, platforms, channels, markets, products] = await Promise.all([
     prisma.hypothesis.findUnique({
       where: { id: hypothesisId },
       select: { id: true, name: true },
     }),
     getAuthors(),
+    getFunnelLevels(),
+    getPlatforms(),
+    getChannels(),
+    getMarkets(),
+    getProducts(),
   ]);
   if (!hypothesis) redirect("/backlog");
 
@@ -34,6 +47,11 @@ export default async function NewExperimentPage({
         action={createExperiment}
         hypothesis={hypothesis}
         authors={authors}
+        funnelLevels={funnelLevels}
+        platforms={platforms}
+        channels={channels}
+        markets={markets}
+        products={products}
         submitLabel="Создать"
       />
     </div>

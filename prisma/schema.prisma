@@ -42,6 +42,39 @@ model FunnelLevel {
   isCustom    Boolean      @default(false)
   createdAt   DateTime     @default(now())
   hypotheses  Hypothesis[]
+  experiments Experiment[]
+}
+
+model Platform {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  isCustom    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  experiments Experiment[]
+}
+
+model Channel {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  isCustom    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  experiments Experiment[]
+}
+
+model Market {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  isCustom    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  experiments Experiment[]
+}
+
+model Product {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  isCustom    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  experiments Experiment[]
 }
 
 model Hypothesis {
@@ -70,13 +103,17 @@ model Experiment {
   id           String          @id @default(cuid())
   name         String
   author       String?
-  targeting    String?
   segment      String?
   startDate    DateTime?
   endDate      DateTime?
   stage        ExperimentStage @default(DISCOVERY)
   hypothesis   Hypothesis      @relation(fields: [hypothesisId], references: [id])
   hypothesisId String
+  funnelLevels FunnelLevel[]
+  platforms    Platform[]
+  channels     Channel[]
+  markets      Market[]
+  products     Product[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }

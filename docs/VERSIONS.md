@@ -2,6 +2,75 @@
 
 ## Unreleased
 
+- [TECH-003] `Experiment.targeting` (free text, e.g. `"GW, квиз"`) —
+  a flattened mix of 5 distinct tag categories from the source tool —
+  replaced with 5 real multi-select tag fields on the Experiment
+  form: Funnel Level (amber, extends the existing `FunnelLevel` table/
+  UI onto Experiment as well as Hypothesis), Platform (green), Channel
+  (blue), Market (orange), Product (purple). Each is a Prisma implicit
+  many-to-many relation to a new table (`Platform`/`Channel`/`Market`/
+  `Product`, same shape as `FunnelLevel`: `id`, `name` unique,
+  `isCustom`, `createdAt`), confirmed multi-select (several tags at
+  once per category) over a single-FK alternative. New shared
+  `TagMultiSelect` component (`src/components/TagMultiSelect.tsx`) —
+  removable colored chips + a "+ Добавить" control that opens either a
+  dropdown of existing values or (via "+ Добавить новый...") a text
+  input to create one — submits two hidden fields per category
+  (`${name}Ids`, `${name}New`) that the server action resolves into a
+  connect/set list, upserting new names first. `Experiment.targeting`
+  itself was dropped from the schema (confirmed data-loss tradeoff, no
+  automatic backfill was possible from free text into structured
+  tags — ran via `prisma db push --accept-data-loss` with explicit
+  user consent, since this is a genuinely irreversible action Prisma's
+  own safety gate requires separate confirmation for). The existing
+  `"Квиз"` FunnelLevel value was renamed to `"Quiz"` in place
+  (confirmed by the user — a rename, not a new row) as part of
+  translating the category to English; 11 new tag values seeded
+  across the 5 tables via a one-off script (not committed, same
+  pattern as this session's other DB cleanup scripts). Backlog's
+  FunnelLevel badge switched from the neutral default color to amber,
+  matching the source tool. Experiments list's old "Таргетинг /
+  Segment" column is now Segment-only (showing the new structured tags
+  there is a separate follow-up, out of scope here, per the card).
+  Verified in the browser: added an existing tag (Funnel Level →
+  Paywall) and a brand-new tag (Channel → a test value) to an
+  experiment, confirmed both persisted correctly after reload with the
+  right badge colors; confirmed removing a tag (via `set`, not
+  `connect`) actually disconnects it; confirmed the Hypothesis form's
+  existing single-select Funnel Level field is unaffected and shows
+  the renamed "Quiz" value.
+
+- [PROD-017 correction] Drag-and-drop from "Без дат" onto a day-column
+  header (part of the PROD-017 entry below) does not actually work —
+  confirmed broken by the user 2026-08-07, still broken after a fix
+  attempt (`draggable={false}` on the row's `<Link>`, to stop it
+  stealing the native browser drag gesture — verified working in this
+  session's own synthetic/headless testing, but not in the user's real
+  browser). Root cause unconfirmed. Deprioritized per the user
+  2026-08-07 — see `BUG-003` in `docs/backlog/BUGS.md`; not spending
+  further time on it without new diagnostic information. The inline
+  date-input half of PROD-017 (below) is unaffected and confirmed
+  working.
+
+- [PROD-017 fix] Fixed a real bug in the inline date inputs just shipped:
+  `DateCell` (`src/app/experiments/DateCell.tsx`) saved on every
+  keystroke, so picking only a start date on a previously-undated
+  experiment saved immediately with the end still empty — the Calendar
+  then defaulted the missing end to the start, moving the row into the
+  grid as a 1-day bar before the user had a chance to pick an end date
+  (user report, 2026-08-07). Fixed by holding off the save, for a
+  row that started fully undated, until both fields are filled — a
+  `useRef` flag (`awaitingFirstCompleteRange`, seeded from whether both
+  dates were initially null) skips the save while only one field has a
+  value, then clears once both are set. Existing dated experiments
+  (Experiments list, PROD-012) are unaffected — the flag starts `false`
+  for them since they never start with both dates null, so single-field
+  edits there still save immediately as before. Verified in the
+  browser: setting only a start date on an undated row leaves it in
+  "Без дат" (input keeps the typed value); setting the end date too
+  then saves and moves it into the grid. Restored the test experiment's
+  dates back to null afterward (shared dev DB with another session).
+
 - [PROD-017] Calendar's "Без дат" section is now actionable instead of
   a plain link list — each row got inline start/end date inputs (new
   `UndatedRow`, reusing PROD-012's `DateCell` as-is) that save

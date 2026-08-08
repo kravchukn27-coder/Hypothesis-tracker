@@ -8,11 +8,23 @@ import { z } from "zod";
 const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
   author: z.string().trim().optional(),
-  targeting: z.string().trim().optional(),
   segment: z.string().trim().optional(),
   stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"]),
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
+  // TECH-003: 5 multi-select tag categories, each submitted as a pair of
+  // comma-joined hidden fields (see TagMultiSelect) — existing tag ids
+  // to connect, and new tag names to create-then-connect.
+  funnelLevelIds: z.string().trim().optional(),
+  funnelLevelNew: z.string().trim().optional(),
+  platformIds: z.string().trim().optional(),
+  platformNew: z.string().trim().optional(),
+  channelIds: z.string().trim().optional(),
+  channelNew: z.string().trim().optional(),
+  marketIds: z.string().trim().optional(),
+  marketNew: z.string().trim().optional(),
+  productIds: z.string().trim().optional(),
+  productNew: z.string().trim().optional(),
 };
 
 // Create: name is auto-generated server-side (PROD-006), never submitted.
@@ -33,6 +45,53 @@ function toDate(value: string | undefined) {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function splitCsv(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * TECH-003: resolves a tag category's submitted ids + new names into
+ * the full set of ids to connect, upserting the new names first
+ * (isCustom: true, matching FunnelLevel's existing convention).
+ */
+async function resolveTagIds(
+  delegate: { upsert: (args: { where: { name: string }; update: object; create: { name: string; isCustom: boolean } }) => Promise<{ id: string }> },
+  idsCsv: string | undefined,
+  namesCsv: string | undefined,
+): Promise<string[]> {
+  const ids = splitCsv(idsCsv);
+  const newNames = splitCsv(namesCsv);
+  const created = await Promise.all(
+    newNames.map((name) => delegate.upsert({ where: { name }, update: {}, create: { name, isCustom: true } })),
+  );
+  return [...ids, ...created.map((c) => c.id)];
+}
+
+async function resolveExperimentTagIds(data: {
+  funnelLevelIds?: string;
+  funnelLevelNew?: string;
+  platformIds?: string;
+  platformNew?: string;
+  channelIds?: string;
+  channelNew?: string;
+  marketIds?: string;
+  marketNew?: string;
+  productIds?: string;
+  productNew?: string;
+}) {
+  const [funnelLevels, platforms, channels, markets, products] = await Promise.all([
+    resolveTagIds(prisma.funnelLevel, data.funnelLevelIds, data.funnelLevelNew),
+    resolveTagIds(prisma.platform, data.platformIds, data.platformNew),
+    resolveTagIds(prisma.channel, data.channelIds, data.channelNew),
+    resolveTagIds(prisma.market, data.marketIds, data.marketNew),
+    resolveTagIds(prisma.product, data.productIds, data.productNew),
+  ]);
+  return { funnelLevels, platforms, channels, markets, products };
 }
 
 /**
@@ -61,17 +120,22 @@ export async function createExperiment(
   }
   const data = parsed.data;
   const name = await computeExperimentName(data.hypothesisId);
+  const tagIds = await resolveExperimentTagIds(data);
 
   await prisma.experiment.create({
     data: {
       name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
-      targeting: data.targeting || null,
       segment: data.segment || null,
       stage: data.stage,
       startDate: toDate(data.startDate),
       endDate: toDate(data.endDate),
+      funnelLevels: { connect: tagIds.funnelLevels.map((id) => ({ id })) },
+      platforms: { connect: tagIds.platforms.map((id) => ({ id })) },
+      channels: { connect: tagIds.channels.map((id) => ({ id })) },
+      markets: { connect: tagIds.markets.map((id) => ({ id })) },
+      products: { connect: tagIds.products.map((id) => ({ id })) },
     },
   });
 
@@ -98,6 +162,7 @@ export async function updateExperiment(
     return { error: parsed.error.issues[0]?.message ?? "Проверь поля формы" };
   }
   const data = parsed.data;
+  const tagIds = await resolveExperimentTagIds(data);
 
   await prisma.experiment.update({
     where: { id },
@@ -105,11 +170,15 @@ export async function updateExperiment(
       name: data.name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
-      targeting: data.targeting || null,
       segment: data.segment || null,
       stage: data.stage,
       startDate: toDate(data.startDate),
       endDate: toDate(data.endDate),
+      funnelLevels: { set: tagIds.funnelLevels.map((id) => ({ id })) },
+      platforms: { set: tagIds.platforms.map((id) => ({ id })) },
+      channels: { set: tagIds.channels.map((id) => ({ id })) },
+      markets: { set: tagIds.markets.map((id) => ({ id })) },
+      products: { set: tagIds.products.map((id) => ({ id })) },
     },
   });
 
@@ -152,6 +221,26 @@ export async function updateExperimentDates(
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+}
+
+export async function getFunnelLevels() {
+  return prisma.funnelLevel.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getPlatforms() {
+  return prisma.platform.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getChannels() {
+  return prisma.channel.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getMarkets() {
+  return prisma.market.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getProducts() {
+  return prisma.product.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getAuthors(): Promise<string[]> {

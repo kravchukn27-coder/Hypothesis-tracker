@@ -1,7 +1,16 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { deleteExperiment, getAuthors, updateExperiment } from "../actions";
+import {
+  deleteExperiment,
+  getAuthors,
+  getChannels,
+  getFunnelLevels,
+  getMarkets,
+  getPlatforms,
+  getProducts,
+  updateExperiment,
+} from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
@@ -18,12 +27,24 @@ export default async function ExperimentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [experiment, authors] = await Promise.all([
+  const [experiment, authors, funnelLevels, platforms, channels, markets, products] = await Promise.all([
     prisma.experiment.findUnique({
       where: { id },
-      include: { hypothesis: true },
+      include: {
+        hypothesis: true,
+        funnelLevels: true,
+        platforms: true,
+        channels: true,
+        markets: true,
+        products: true,
+      },
     }),
     getAuthors(),
+    getFunnelLevels(),
+    getPlatforms(),
+    getChannels(),
+    getMarkets(),
+    getProducts(),
   ]);
 
   if (!experiment) notFound();
@@ -53,15 +74,24 @@ export default async function ExperimentDetailPage({
         action={action}
         hypothesis={{ id: experiment.hypothesisId, name: experiment.hypothesis.name }}
         authors={authors}
+        funnelLevels={funnelLevels}
+        platforms={platforms}
+        channels={channels}
+        markets={markets}
+        products={products}
         submitLabel="Сохранить"
         initial={{
           name: experiment.name,
           author: experiment.author ?? "",
-          targeting: experiment.targeting ?? "",
           segment: experiment.segment ?? "",
           stage: experiment.stage,
           startDate: toDateInputValue(experiment.startDate),
           endDate: toDateInputValue(experiment.endDate),
+          funnelLevels: experiment.funnelLevels,
+          platforms: experiment.platforms,
+          channels: experiment.channels,
+          markets: experiment.markets,
+          products: experiment.products,
         }}
       />
     </div>

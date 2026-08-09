@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, type LucideIcon } from "lucide-react";
+import { ChevronDown, Lock, type LucideIcon } from "lucide-react";
 import { BADGE_SHAPE_CLASSES } from "./Badge";
 
 // Shared inline-edit pill-select with a leading status/stage icon
@@ -19,6 +19,7 @@ export function IconSelect<T extends string>({
   icon: Icon,
   colorClasses,
   disabled,
+  locked,
   title,
   onChange,
 }: {
@@ -33,6 +34,11 @@ export function IconSelect<T extends string>({
   icon: LucideIcon;
   colorClasses: string;
   disabled?: boolean;
+  /** BUG-005: true when disabled because editing happens elsewhere
+   * (e.g. PROD-019's week-tracked experiments) rather than a transient
+   * save-in-progress `disabled` — swaps the chevron for a lock icon so
+   * that's obvious at a glance, not just on hover via `title`. */
+  locked?: boolean;
   title?: string;
   onChange: (next: T) => void;
 }) {
@@ -42,10 +48,17 @@ export function IconSelect<T extends string>({
         aria-hidden
         className={`pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 ${colorClasses}`}
       />
-      <ChevronDown
-        aria-hidden
-        className={`pointer-events-none absolute top-1/2 right-2 size-3 -translate-y-1/2 ${colorClasses}`}
-      />
+      {locked ? (
+        <Lock
+          aria-hidden
+          className={`pointer-events-none absolute top-1/2 right-2 size-3 -translate-y-1/2 ${colorClasses}`}
+        />
+      ) : (
+        <ChevronDown
+          aria-hidden
+          className={`pointer-events-none absolute top-1/2 right-2 size-3 -translate-y-1/2 ${colorClasses}`}
+        />
+      )}
       <select
         id={id}
         name={name}

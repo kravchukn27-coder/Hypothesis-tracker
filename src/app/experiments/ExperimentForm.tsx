@@ -308,6 +308,7 @@ function StageField({ defaultValue, locked }: { defaultValue: ExperimentStage; l
         icon={STAGE_ICONS[stage]}
         colorClasses={STAGE_BADGE_CLASSES[stage]}
         disabled={locked}
+        locked={locked}
         title={locked ? "Управляется по неделям — редактируй ниже" : undefined}
         onChange={setStage}
       />

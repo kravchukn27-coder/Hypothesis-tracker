@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- [BUG-005] Locked Status/Stage pills (`IconSelect`, week-tracked
+  experiments per PROD-019) now show a lock icon in place of the
+  dropdown chevron instead of just a hover-only tooltip — confirmed
+  with the user: keep the lock (edit via Calendar/week editor), make
+  it visibly obvious rather than reachable inline. New `locked` prop
+  on `IconSelect` (`src/components/IconSelect.tsx`), separate from
+  `disabled` so a transient in-flight save (`StatusCell`'s `pending`)
+  doesn't flash the lock icon — only genuine structural locks do.
+  Wired into `src/app/experiments/StageCell.tsx` (list) and
+  `ExperimentForm.tsx`'s `StageField` (detail/create form).
 - [BUG-004] Backlog/Experiments tables now render at a genuinely fixed
   width instead of silently auto-shrinking per viewport. `table-fixed`
   alone wasn't enough — with `width: auto` a `<table>` still stretches

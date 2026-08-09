@@ -54,6 +54,7 @@ export function StageCell({
         icon={STAGE_ICONS[current]}
         colorClasses={STAGE_BADGE_CLASSES[current]}
         disabled={pending || locked}
+        locked={locked}
         onChange={handleChange}
       />
 

@@ -314,6 +314,7 @@ function StageField({ defaultValue, locked }: { defaultValue: ExperimentStage; l
         disabled={locked}
         locked={locked}
         title={locked ? "Управляется по неделям — редактируй ниже" : undefined}
+        variant="field"
         onChange={setStage}
       />
     </>

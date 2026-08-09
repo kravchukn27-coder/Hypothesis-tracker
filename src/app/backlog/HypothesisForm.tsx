@@ -130,6 +130,7 @@ export function HypothesisForm({
               labels={STATUS_LABELS}
               icon={STATUS_ICONS[status]}
               colorClasses={STATUS_BADGE_CLASSES[status]}
+              variant="field"
               onChange={setStatus}
             />
           </Field>

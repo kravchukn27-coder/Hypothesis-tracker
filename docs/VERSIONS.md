@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- [UI-017] Detail-form Status/Stage field now sized like its row
+  neighbor (Funnel Level on `/backlog/[id]`, Автор on
+  `/experiments/[id]`) instead of reading as a small pill next to a
+  full-size box. New `variant="field"` on `IconSelect`
+  (`src/components/IconSelect.tsx`, default `"pill"` — list rows'
+  `StatusCell`/`StageCell` and the per-week editor are untouched):
+  matches `Input.tsx`'s `FIELD_CLASSES` box (`w-full rounded-lg py-2
+  text-sm shadow-sm`), with `border-transparent` instead of `border-0`
+  so it keeps the same border-box height as a real bordered `<select>`
+  while its own per-status/stage color/ring still shows through.
+  Wired into `HypothesisForm.tsx`'s Status field and
+  `ExperimentForm.tsx`'s `StageField`.
 - [BUG-004 follow-up] The first BUG-004 fix made both tables genuinely
   fixed-width, but left `FUNNEL_LEVEL_COL`/`COMMENT_COL` at their old
   UI-015 values (288/288px) — wide enough that the fixed table now

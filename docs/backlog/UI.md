@@ -1,52 +1,5 @@
 # UI Backlog
 
-## UI-017 — Detail forms: Status/Stage field too small next to its row neighbor
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** On `/backlog/[id]` the Status field sits next to Funnel
-Level, and on `/experiments/[id]` the Status (Stage) field sits next
-to Автор — in both cases the same grid row, but Status renders as a
-small pill (`IconSelect`, shrink-to-content) while its neighbor is a
-full-size bordered box. Status should be sized like its row neighbor
-(same box height/width), while keeping its per-status color and icon.
-
-**Description:** Source: user screenshots 2026-08-09, on
-`/backlog/[id]` and `/experiments/[id]`. Follow-on from UI-013, which
-swapped the detail forms' plain `<select>` Status/Stage field for the
-shared `IconSelect` component to get the list rows' icon+color
-treatment — that fixed the icon/color mismatch but `IconSelect`
-(`src/components/IconSelect.tsx`) is styled compact-pill
-(`BADGE_SHAPE_CLASSES`, `w-fit`-ish) for its original list-row use, so
-next to a full-width neighbor in the same `grid gap-6 sm:grid-cols-2`
-row it reads as noticeably smaller/less prominent:
-- `HypothesisForm.tsx` (~line 119): Status next to Funnel Level
-  (`FunnelLevelField`, full-width `Select`).
-- `ExperimentForm.tsx` (~line 128): Status next to Автор
-  (`AuthorField`, also full-width) — not Funnel Level, which lives in
-  this form's separate "Таргетинг" section instead.
-
-Needs a sizing variant (or new prop) on `IconSelect` for this
-full-width form context — the compact pill used in
-`StatusCell`/`StageCell`'s list rows must not change. Note the
-Experiment side of this is currently also non-interactive for
-week-tracked experiments (see BUG-005) — sizing and clickability are
-separate concerns, both need addressing, but don't let the disabled
-state block visually validating the sizing fix (e.g. check against an
-unlocked experiment, or temporarily inspect the disabled markup).
-
-**Acceptance Criteria:**
-- Status field on `/backlog/[id]` (and create form) matches Funnel
-  Level's field box size (height and width) in the same row.
-- Status (Stage) field on `/experiments/[id]` (and create form)
-  matches Автор's field box size (height and width) in the same row.
-- Status/Stage still shows its per-value color and leading icon (not a
-  reversion to the plain unstyled `<select>` from before UI-013).
-- List rows' `StatusCell`/`StageCell` (Backlog/Experiments tables) are
-  unaffected — still the original compact pill.
-
----
-
 ## UI-018 — Experiments list: Даты column is uninformative, needs redesign
 
 **Status:** TODO

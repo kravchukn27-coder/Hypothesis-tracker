@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- [PROD-022] Calendar's stage legend (Discovery/Design/.../Done +
+  Просрочен) is now a set of clickable filters instead of static
+  labels. Two decisions confirmed with the user: (1) filtering a stage
+  dims the individual week-cells that don't match it rather than
+  hiding whole experiment rows — the row (and its non-matching cells)
+  stays in place, just visually de-emphasized (`opacity-20`), so the
+  grid layout never shifts and cells stay fully interactive; (2)
+  "Просрочен" — not a real `ExperimentStage`, a derived per-experiment
+  flag — got its own clickable filter too, using a sentinel `stage=
+  OVERDUE` query value, distinct from actual stage values but sharing
+  the same URL-param mechanism (`/calendar?stage=...`, matching
+  `/backlog`/`/experiments`'s filter convention). Clicking the active
+  filter again clears it; a "✕ Сбросить фильтр" link does the same.
+  Every other Calendar link (paging, "Сегодня") now carries the active
+  `stage` param along so it isn't silently dropped mid-browse. New
+  `dimmed?: boolean` per cell on `ExperimentWeekRow`'s `Cell` type
+  (`src/app/calendar/ExperimentWeekRow.tsx`), computed per-row in
+  `page.tsx` (`cellMatchesFilter`, stage match for stage filters, the
+  row's `overdue` flag for the Просрочен filter since it isn't a
+  per-week value).
 - [UI-021] Calendar grid's week-column headers now show the ISO
   week-of-year in parentheses next to the date, e.g. "03 авг (32)".
   New `getISOWeekNumber` in `src/lib/calendar.ts` — Monday-start ISO

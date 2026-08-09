@@ -22,6 +22,11 @@ type Cell = {
   // the experiment has.
   blockStartISO: string | null;
   blockEndISO: string | null;
+  // PROD-022: true when a Calendar legend filter is active and this
+  // cell doesn't match it — dimmed rather than removed, so the grid
+  // stays intact and the cell stays fully interactive (filtering is
+  // a view, not a read-only mode).
+  dimmed?: boolean;
 };
 
 type DragMode = "move" | "resize-right";
@@ -128,7 +133,7 @@ export function ExperimentWeekRow({
                   setOpenWeekIndex(isOpen ? null : i);
                 }}
                 title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""}`}
+                className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
               >
                 {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
                 <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>

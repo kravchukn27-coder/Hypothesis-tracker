@@ -27,12 +27,18 @@ function parseWindowStart(start: string | undefined): Date {
 /** Keeps the grid a stable height regardless of how many rows are in the current window. */
 const MIN_ROWS = 3;
 
+/** PROD-022: "Просрочен" isn't a real `ExperimentStage` — it's a
+ * derived per-experiment flag (see `overdue` on `TimelineRow`) — so
+ * the legend's filter uses this sentinel value for it instead of
+ * overloading a stage name. */
+const OVERDUE_FILTER = "OVERDUE";
+
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string }>;
+  searchParams: Promise<{ start?: string; stage?: string }>;
 }) {
-  const { start } = await searchParams;
+  const { start, stage: stageFilter } = await searchParams;
   const windowStart = parseWindowStart(start);
 
   const now = new Date();
@@ -73,9 +79,29 @@ export default async function CalendarPage({
     windowStart,
   );
 
-  const prevHref = `/calendar?start=${toDateParam(addWeeks(windowStart, -PAGE_STEP_WEEKS))}`;
-  const nextHref = `/calendar?start=${toDateParam(addWeeks(windowStart, PAGE_STEP_WEEKS))}`;
+  // PROD-022: every navigation link on this page carries the active
+  // stage filter along (URL query param, same convention `/backlog`
+  // and `/experiments` use for their filters) so paging/"Сегодня"
+  // doesn't silently drop it.
+  const stageParam = stageFilter ? `&stage=${stageFilter}` : "";
+  const prevHref = `/calendar?start=${toDateParam(addWeeks(windowStart, -PAGE_STEP_WEEKS))}${stageParam}`;
+  const nextHref = `/calendar?start=${toDateParam(addWeeks(windowStart, PAGE_STEP_WEEKS))}${stageParam}`;
+  const todayHref = stageFilter ? `/calendar?stage=${stageFilter}` : "/calendar";
   const isToday = windowStart.getTime() === startOfWeek(new Date()).getTime();
+
+  function stageFilterHref(value: string): string {
+    const params = new URLSearchParams();
+    if (start) params.set("start", start);
+    if (stageFilter !== value) params.set("stage", value);
+    const qs = params.toString();
+    return qs ? `/calendar?${qs}` : "/calendar";
+  }
+
+  function cellMatchesFilter(cellStage: string | null, overdue: boolean): boolean {
+    if (!stageFilter) return true;
+    if (stageFilter === OVERDUE_FILTER) return overdue;
+    return cellStage === stageFilter;
+  }
 
   return (
     <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -90,7 +116,7 @@ export default async function CalendarPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/calendar"
+            href={todayHref}
             aria-disabled={isToday}
             className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
               isToday ? "pointer-events-none text-zinc-300" : "text-zinc-700 hover:bg-zinc-50"
@@ -129,17 +155,36 @@ export default async function CalendarPage({
         <>
           <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
             {Object.entries(STAGE_LABELS).map(([stage, label]) => (
-              <span key={stage} className="flex items-center gap-1.5">
+              <Link
+                key={stage}
+                href={stageFilterHref(stage)}
+                className={`flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:bg-zinc-100 ${
+                  stageFilter === stage ? "bg-zinc-100 font-medium text-zinc-900" : ""
+                }`}
+              >
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${STAGE_BAR_CLASSES[stage as keyof typeof STAGE_BAR_CLASSES]}`}
                 />
                 {label}
-              </span>
+              </Link>
             ))}
-            <span className="flex items-center gap-1.5">
+            <Link
+              href={stageFilterHref(OVERDUE_FILTER)}
+              className={`flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:bg-zinc-100 ${
+                stageFilter === OVERDUE_FILTER ? "bg-zinc-100 font-medium text-zinc-900" : ""
+              }`}
+            >
               <span className="h-2.5 w-2.5 rounded-full border-2 border-red-500" />
               Просрочен
-            </span>
+            </Link>
+            {stageFilter && (
+              <Link
+                href={start ? `/calendar?start=${start}` : "/calendar"}
+                className="text-zinc-400 underline underline-offset-4 hover:text-zinc-700"
+              >
+                ✕ Сбросить фильтр
+              </Link>
+            )}
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-zinc-200">
@@ -193,6 +238,7 @@ export default async function CalendarPage({
                       stage: c.stage,
                       blockStartISO: c.blockStart ? toDateParam(c.blockStart) : null,
                       blockEndISO: c.blockEnd ? toDateParam(c.blockEnd) : null,
+                      dimmed: !cellMatchesFilter(c.stage, overdue),
                     }))}
                   />
                 </div>

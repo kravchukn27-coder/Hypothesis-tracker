@@ -67,36 +67,3 @@ on `""` for unset), but Segment can have more than one value where
   well-defined and doesn't crash/misorder (empty segments sort
   consistently to one end, same convention as unset Автор).
 
----
-
-## PROD-022 — Calendar: clickable stage legend filters the grid
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** Turn the Calendar's stage legend (the row of colored dots
-+ labels above the grid — Discovery/Design/Development/
-Experimentation/Analysis/Done) into clickable filter buttons. Clicking
-one (e.g. Analysis) filters the grid to only that stage's weeks/rows;
-clicking again (or some reset) clears the filter.
-
-**Description:** Source: user direction 2026-08-09.
-`src/app/calendar/page.tsx` (~line 114) currently renders the legend
-as static `Object.entries(STAGE_LABELS).map(...)` — colored dot + text,
-no interaction. Needs: a URL-driven filter state (matching this app's
-existing convention — see `docs/PROJECT_CONTEXT.md` → "List
-filter/sort", `/backlog` and `/experiments` both filter via query
-params, not client state), a decision on filter granularity (does
-filtering a stage hide whole experiment rows that have no week in that
-stage, or just grey out/hide the individual week-cells not matching?),
-and a decision on how "Просрочен" (overdue) interacts with a stage
-filter, since it's not itself a stage.
-
-**Acceptance Criteria:**
-- Clicking a stage in the legend filters the Calendar to show only
-  that stage's weeks (exact show/hide behavior — whole row vs.
-  individual cells — to be nailed down during implementation).
-- The active filter is clear/reversible (visibly selected legend item,
-  a way to get back to unfiltered).
-- Filter state survives navigation the same way existing filters do
-  (URL query param, per this app's established pattern).
-

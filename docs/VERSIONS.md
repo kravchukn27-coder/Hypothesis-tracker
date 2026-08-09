@@ -20,6 +20,62 @@
   Experiments) rather than starving Backlog's other columns. Both
   tables now render at exactly 1012px with no scroll, verified via
   actual measured header widths on both pages.
+- [BUG-005 follow-up] Reverted the BUG-005 fix's direction for the
+  Experiments list: the user confirmed the Status pill should be
+  clickable again for week-tracked experiments, not just visibly
+  locked. `StageCell` no longer receives a `locked` prop. First pass
+  had `updateExperimentStage` write straight to `Experiment.stage`,
+  which the user correctly called out as forking a second,
+  disconnected status — editing the list wouldn't show up on the
+  Calendar. Fixed properly: for a week-tracked experiment, the action
+  now writes through to that experiment's *latest* (furthest-future)
+  `ExperimentWeekStage` row and calls
+  `recomputeExperimentDerivedFields`, same as every other week-editing
+  path — so editing the list's Status pill updates that experiment's
+  last Calendar cell too, and `Experiment.stage` stays a pure
+  derived cache with one source of truth, not two. Dates (`DateCell`)
+  and the detail form's Status field are unchanged — still read-only
+  for week-tracked experiments, since that wasn't what was reported
+  broken.
+- [BUG-005 follow-up #2] The BUG-005 follow-up above wrote an edit to
+  the *latest* (furthest-future) `ExperimentWeekStage` row, but the
+  user clarified that's the wrong week: the list's Status pill should
+  reflect and edit *this week's* status, not wherever the plan
+  currently ends — and Calendar's current-week cell is what should
+  move, not its last one. New `getCurrentWeekStage` helper
+  (`src/lib/experiment.ts`): picks the week entry covering `now`
+  (falling back to the closest earlier week, or the earliest entry if
+  every week is still in the future). `updateExperimentStage`
+  (`src/app/experiments/actions.ts`) now upserts the entry at
+  `startOfWeek(new Date())` instead of the last row. The list
+  (`src/app/experiments/page.tsx`) now fetches each experiment's
+  `weekStages` (not just a `_count`) and uses this same helper for the
+  pill's value, the row's left-border color, and the "Status" column
+  sort — so what's displayed, what sorts, and what gets edited all
+  agree, and none of them match `Experiment.stage` (the derived cache,
+  unchanged in meaning) for a week-tracked experiment unless "now"
+  happens to be its last planned week.
+- [BUG-005 follow-up #3] Reported: an experiment that had reached
+  Done, then got its status moved back to an earlier stage, stayed
+  invisible on the Calendar even though it wasn't archived. Cause:
+  Calendar's visibility filter checked `Experiment.stage` — the
+  cache of the *furthest-future planned* week (unchanged since
+  PROD-019) — together with `calendarHiddenOnDone`. Editing an
+  earlier/current week back off Done (via the list, per BUG-005
+  follow-up #2) doesn't change which week is furthest-future, so the
+  cache stayed `DONE` and the experiment stayed hidden. Calendar
+  (`src/app/calendar/page.tsx`) now filters on each experiment's
+  *current*-week stage instead (`getCurrentWeekStage`, same helper the
+  list uses) — matches "is it Done right now," which is what
+  `calendarHiddenOnDone` is actually answering. Also: once an
+  experiment's current week moves off Done, its `calendarHiddenOnDone`
+  answer no longer applies — left stale as `true` it would silently
+  skip the "убрать из календаря?" prompt (and stay pre-hidden) the
+  next time it genuinely becomes Done again. New
+  `clearHiddenFlagIfNoLongerDone` (`src/app/experiments/actions.ts`),
+  called from both `updateExperimentStage` (list) and
+  `setExperimentWeekStage` (Calendar/detail-card week editor), resets
+  it back to `null` ("not asked yet") in that case.
 - [PROD-023] Calendar no longer silently hides a Done experiment —
   confirmed with the user this deliberately replaces PROD-018's
   unconditional auto-hide. Setting a week's stage to Done (Calendar

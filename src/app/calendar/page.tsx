@@ -10,7 +10,7 @@ import {
   toDateParam,
   WINDOW_WEEKS,
 } from "@/lib/calendar";
-import { STAGE_BAR_CLASSES, STAGE_LABELS } from "@/lib/experiment";
+import { STAGE_BAR_CLASSES, STAGE_LABELS, getCurrentWeekStage } from "@/lib/experiment";
 import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
@@ -34,20 +34,28 @@ export default async function CalendarPage({
   const { start } = await searchParams;
   const windowStart = parseWindowStart(start);
 
-  const experiments = await prisma.experiment.findMany({
-    // PROD-023: a Done experiment drops off the Calendar only once the
-    // user confirms "Да" (`calendarHiddenOnDone: true`) — replaces
-    // PROD-018's unconditional auto-hide. Stays visible while
-    // `calendarHiddenOnDone` is null (not asked yet) or false ("Нет").
-    where: {
-      OR: [
-        { stage: { not: "DONE" } },
-        { stage: "DONE", calendarHiddenOnDone: null },
-        { stage: "DONE", calendarHiddenOnDone: false },
-      ],
-    },
+  const now = new Date();
+  const allExperiments = await prisma.experiment.findMany({
     include: { hypothesis: true, weekStages: { orderBy: { weekStart: "asc" } } },
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
+  });
+
+  // PROD-023: a Done experiment drops off the Calendar only once the
+  // user confirms "Да" (`calendarHiddenOnDone: true`) — replaces
+  // PROD-018's unconditional auto-hide. Stays visible while
+  // `calendarHiddenOnDone` is null (not asked yet) or false ("Нет").
+  //
+  // BUG-005 follow-up #3: this used to key off `stage` (the cache —
+  // the *furthest-future planned* stage), so an experiment someone had
+  // pre-filled through to a future Done week stayed hidden even after
+  // its current week was edited back to an earlier stage — reported
+  // as "changed it back but it won't reappear." Keys off each
+  // experiment's *current week* stage instead (`getCurrentWeekStage`,
+  // same helper the Experiments list uses), so it's exactly whether
+  // it looks Done *right now* that decides visibility.
+  const experiments = allExperiments.filter((e) => {
+    const currentStage = e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
+    return !(currentStage === "DONE" && e.calendarHiddenOnDone === true);
   });
 
   const { weeks, rows, undated, todayColumn } = buildTimeline(

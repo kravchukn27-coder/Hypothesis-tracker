@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER, getCurrentWeekStage } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { archiveExperiments, deleteExperiments } from "./actions";
 import { BulkActionBar } from "@/components/BulkActionBar";
@@ -49,7 +49,11 @@ export default async function ExperimentsPage({
         ...(segment ? { segments: { some: { id: segment } } } : {}),
         ...(author ? { author } : {}),
       },
-      include: { hypothesis: true, segments: true, _count: { select: { weekStages: true } } },
+      include: {
+        hypothesis: true,
+        segments: true,
+        weekStages: { select: { weekStart: true, stage: true } },
+      },
     }),
     prisma.segment.findMany({ orderBy: { name: "asc" } }),
     prisma.experiment.findMany({
@@ -67,10 +71,20 @@ export default async function ExperimentsPage({
     .filter((a): a is string => Boolean(a))
     .map((a) => ({ value: a, label: a }));
 
+  // BUG-005 follow-up #2: the list shows/edits *this week's* status
+  // for week-tracked experiments, not `stage` (which caches the
+  // furthest-future week — the plan's endpoint). Sort/border color use
+  // the same value so the row stays visually consistent with its pill.
+  const now = new Date();
+  function currentStageOf(e: (typeof experiments)[number]): ExperimentStage {
+    return e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
+  }
+
   experiments.sort((a, b) => {
     let cmp = 0;
     if (sortBy === "name") cmp = a.name.localeCompare(b.name, "ru");
-    else if (sortBy === "stage") cmp = STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage);
+    else if (sortBy === "stage")
+      cmp = STAGE_ORDER.indexOf(currentStageOf(a)) - STAGE_ORDER.indexOf(currentStageOf(b));
     else if (sortBy === "author") cmp = (a.author ?? "").localeCompare(b.author ?? "", "ru");
     else if (sortBy === "createdAt") cmp = a.createdAt.getTime() - b.createdAt.getTime();
     else {
@@ -223,11 +237,12 @@ export default async function ExperimentsPage({
             <tbody className="divide-y divide-zinc-100">
               {experiments.map((e) => {
                 const isHighlighted = e.hypothesisId === hypothesisId;
+                const currentStage = currentStageOf(e);
                 return (
                 <tr
                   key={e.id}
                   data-highlighted={isHighlighted || undefined}
-                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STAGE_BORDER_CLASSES[e.stage]} ${isHighlighted ? "bg-amber-50" : ""}`}
+                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STAGE_BORDER_CLASSES[currentStage]} ${isHighlighted ? "bg-amber-50" : ""}`}
                 >
                   <td className={`${CHECKBOX_COL} px-4 py-3`}>
                     <RowCheckbox id={e.id} />
@@ -245,9 +260,8 @@ export default async function ExperimentsPage({
                     <StageCell
                       experimentId={e.id}
                       experimentName={e.name}
-                      stage={e.stage}
+                      stage={currentStage}
                       archived={e.archived}
-                      locked={e._count.weekStages > 0}
                     />
                   </td>
                   <td className={`${META_COL} px-4 py-3 text-zinc-600`}>
@@ -268,7 +282,7 @@ export default async function ExperimentsPage({
                       experimentId={e.id}
                       startDate={e.startDate}
                       endDate={e.endDate}
-                      locked={e._count.weekStages > 0}
+                      locked={e.weekStages.length > 0}
                     />
                   </td>
                 </tr>

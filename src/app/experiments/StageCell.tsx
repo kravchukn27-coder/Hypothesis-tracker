@@ -19,14 +19,11 @@ export function StageCell({
   experimentName,
   stage,
   archived,
-  locked,
 }: {
   experimentId: string;
   experimentName: string;
   stage: ExperimentStage;
   archived: boolean;
-  /** PROD-019: true once the experiment has per-week stage entries — stage is then derived, edit on the card instead. */
-  locked?: boolean;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState(stage);
@@ -46,15 +43,14 @@ export function StageCell({
   }
 
   return (
-    <span title={locked ? "Управляется по неделям — редактируй на карточке эксперимента" : undefined}>
+    <span>
       <IconSelect
         value={current}
         options={STAGE_ORDER}
         labels={STAGE_LABELS}
         icon={STAGE_ICONS[current]}
         colorClasses={STAGE_BADGE_CLASSES[current]}
-        disabled={pending || locked}
-        locked={locked}
+        disabled={pending}
         onChange={handleChange}
       />
 

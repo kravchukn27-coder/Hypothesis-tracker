@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { shouldPromptArchiveExperiment } from "@/lib/experiment";
+import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
 
 const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
@@ -264,18 +264,60 @@ async function hasWeekStages(experimentId: string): Promise<boolean> {
   return count > 0;
 }
 
+/**
+ * BUG-005 follow-up #3: PROD-023's `calendarHiddenOnDone` answer only
+ * makes sense while the experiment currently *is* Done — once its
+ * current week moves off Done, a stale `true` would otherwise keep it
+ * hidden forever even though Calendar's visibility check now looks at
+ * the *current* week (see `/calendar`'s `getCurrentWeekStage` filter),
+ * and skip re-prompting the next time it actually becomes Done again.
+ * No-op if there's nothing to reset.
+ */
+async function clearHiddenFlagIfNoLongerDone(experimentId: string) {
+  const weeks = await prisma.experimentWeekStage.findMany({
+    where: { experimentId },
+    select: { weekStart: true, stage: true },
+  });
+  if (weeks.length === 0) return;
+  if (getCurrentWeekStage(weeks) === "DONE") return;
+
+  await prisma.experiment.updateMany({
+    where: { id: experimentId, calendarHiddenOnDone: true },
+    data: { calendarHiddenOnDone: null },
+  });
+}
+
 export async function updateExperimentStage(id: string, stage: string) {
   const parsed = stageSchema.safeParse(stage);
   if (!parsed.success) return;
-  if (await hasWeekStages(id)) return;
 
-  await prisma.experiment.update({
-    where: { id },
-    data: { stage: parsed.data },
-  });
+  // BUG-005 follow-up #2: confirmed with the user — the list's Status
+  // pill shows/edits *this week's* status, not the plan's furthest-
+  // future stage, so Calendar's current-week cell for this experiment
+  // is what moves when it's edited here (same upsert-by-week shape as
+  // `setExperimentWeekStage`, just anchored at "now" instead of a
+  // week picked on the Calendar).
+  const hasWeeks = await hasWeekStages(id);
+
+  if (hasWeeks) {
+    const currentWeekStart = startOfWeek(new Date());
+    await prisma.experimentWeekStage.upsert({
+      where: { experimentId_weekStart: { experimentId: id, weekStart: currentWeekStart } },
+      update: { stage: parsed.data },
+      create: { experimentId: id, weekStart: currentWeekStart, stage: parsed.data },
+    });
+    await recomputeExperimentDerivedFields(id);
+    await clearHiddenFlagIfNoLongerDone(id);
+  } else {
+    await prisma.experiment.update({
+      where: { id },
+      data: { stage: parsed.data },
+    });
+  }
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+  revalidatePath("/calendar");
 }
 
 export async function updateExperimentDates(
@@ -317,6 +359,7 @@ export async function setExperimentWeekStage(
     create: { experimentId, weekStart, stage: parsedStage.data },
   });
   await recomputeExperimentDerivedFields(experimentId);
+  await clearHiddenFlagIfNoLongerDone(experimentId);
 
   const after = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { stage: true } });
   const becameDone = before?.stage !== "DONE" && after?.stage === "DONE";

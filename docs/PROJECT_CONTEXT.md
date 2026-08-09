@@ -151,11 +151,40 @@ changes shape things.
   every existing query/filter/sort/badge across the app (list Status
   column, filters, `StageCell`) keeps working unchanged without
   needing to know about weeks at all. Once an experiment has week
-  entries, its manual Status/date controls (`StageCell`, `DateCell`,
-  the form's Status/date fields) become read-only — both client-side
-  (a `locked` prop) and server-side (`updateExperimentStage`/
-  `updateExperimentDates` no-op if week entries exist) — edit via the
-  Calendar's week-cells or the detail card's per-week editor instead.
+  entries, its manual date controls (`DateCell`, the form's Status/
+  date fields) stay read-only — both client-side (a `locked` prop) and
+  server-side (`updateExperimentDates` no-ops if week entries exist).
+  **BUG-005 (2026-08-09):** the list's Status pill (`StageCell`) was
+  also locked this way at first, then confirmed with the user to stay
+  editable instead. `ExperimentWeekStage` stays the single source of
+  truth though — editing the pill for a week-tracked experiment writes
+  through to a week row (via `getCurrentWeekStage`/
+  `updateExperimentStage`, see below) and then runs
+  `recomputeExperimentDerivedFields`, rather than writing
+  `Experiment.stage` directly, so the edit shows up on the Calendar
+  too instead of forking into a second, disconnected value. The list
+  shows and edits *this week's* status specifically, not
+  `Experiment.stage` (which stays "the furthest-future planned
+  stage," its original PROD-019 meaning, used unchanged for the
+  Experiments Status *filter*/sort fallback and non-week-tracked
+  experiments). `getCurrentWeekStage` (`src/lib/experiment.ts`) picks
+  the week entry covering "now" (closest earlier week if this week has
+  no entry of its own, or the earliest entry if every week is still in
+  the future); the Experiments list (`page.tsx`) uses it for the
+  pill's value, the row's border color, and "Status" column sorting,
+  and `updateExperimentStage` upserts at `startOfWeek(new Date())`
+  rather than the last week — so editing the list's Status pill moves
+  Calendar's *current*-week cell for that experiment, not its last
+  one. `/calendar` (`page.tsx`) also switched its PROD-023 "hide a Done
+  experiment" visibility check to the same `getCurrentWeekStage` value
+  instead of `Experiment.stage` — otherwise an experiment pre-filled
+  through to a future Done week stayed hidden even after its current
+  week was edited back off Done. `calendarHiddenOnDone` (the "убрать
+  из календаря?" answer) resets back to `null` whenever an
+  experiment's current week moves off Done
+  (`clearHiddenFlagIfNoLongerDone` in `actions.ts`), so a later
+  genuine Done transition prompts again instead of reusing a stale
+  answer.
   Existing experiments with `startDate`/`endDate` but no week entries
   yet (not re-tagged since PROD-019) render on the Calendar via
   on-the-fly synthesis (`buildTimeline` in `src/lib/calendar.ts`, not

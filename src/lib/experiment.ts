@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ExperimentStage } from "@/generated/prisma/enums";
+import { startOfWeek } from "./calendar";
 
 // Single merged field (TECH-002): status and stage used to be two
 // separate enums that meant the same thing. Labeled "Status" in the
@@ -77,6 +78,27 @@ export const STAGE_ICONS: Record<ExperimentStage, LucideIcon> = {
  */
 export function shouldPromptArchiveExperiment(stage: ExperimentStage, archived: boolean): boolean {
   return !archived && stage === "DONE";
+}
+
+export type WeekStageEntry = { weekStart: Date; stage: ExperimentStage };
+
+/**
+ * BUG-005 follow-up #2: the Experiments list shows/edits *this week's*
+ * status for a week-tracked experiment, not `Experiment.stage` (which
+ * caches the furthest-future week's stage — the plan's endpoint, not
+ * "now"). Picks the entry for the week containing `now`, or the
+ * closest earlier week if this week has no entry of its own; falls
+ * back to the earliest entry if every one is still in the future.
+ */
+export function getCurrentWeekStage(weeks: WeekStageEntry[], now: Date = new Date()): ExperimentStage {
+  const sorted = [...weeks].sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime());
+  const todayWeekStart = startOfWeek(now).getTime();
+  let current = sorted[0];
+  for (const w of sorted) {
+    if (w.weekStart.getTime() > todayWeekStart) break;
+    current = w;
+  }
+  return current.stage;
 }
 
 export function formatDateRange(start: Date | null, end: Date | null): string {

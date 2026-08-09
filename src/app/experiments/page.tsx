@@ -165,7 +165,7 @@ export default async function ExperimentsPage({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-200">
-          <table className="w-full text-left text-sm">
+          <table className="w-max table-fixed text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className={`${CHECKBOX_COL} px-4 py-3`}>

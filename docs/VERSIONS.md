@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- [BUG-004] Backlog/Experiments tables now render at a genuinely fixed
+  width instead of silently auto-shrinking per viewport. `table-fixed`
+  alone wasn't enough — with `width: auto` a `<table>` still stretches
+  to fill its container even in fixed-layout mode; needed `w-max`
+  (`width: max-content`) alongside `table-fixed` so the table sizes to
+  the actual sum of its `tableWidths.ts` column widths instead.
+  Verified at both a normal (1280px) and narrow (700px) window: columns
+  render identically at both, and the narrow case now triggers a real
+  horizontal scrollbar via the existing `overflow-x-auto` wrapper
+  instead of squeezing the Funnel Level badge into wrapping. No width
+  rebalancing was needed — the existing `FUNNEL_LEVEL_COL`
+  (`w-72`/288px) turned out to have plenty of headroom once actually
+  honored (~123px needed for the longest real value, "Cancel
+  Subscription").
 - [BUG-006] Fixed Calendar week-blocks moving together: dragging
   (move or resize) one contiguous block of an experiment's weeks now
   only touches that block's own `ExperimentWeekStage` rows, instead of

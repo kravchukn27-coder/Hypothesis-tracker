@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ExperimentStage } from "@/generated/prisma/enums";
-import { startOfWeek } from "./calendar";
+import { getISOWeekNumber, startOfWeek } from "./calendar";
 
 // Single merged field (TECH-002): status and stage used to be two
 // separate enums that meant the same thing. Labeled "Status" in the
@@ -108,4 +108,22 @@ export function formatDateRange(start: Date | null, end: Date | null): string {
   if (start) return `с ${fmt(start)}`;
   if (end) return `до ${fmt(end)}`;
   return "—";
+}
+
+/**
+ * UI-018: compact week-range label for the Experiments list's Даты
+ * column — "32 нед." for a single week, "32–35 нед." for a range —
+ * replacing the old raw start/end date inputs, which the user found
+ * uninformative as a list display. Reuses `getISOWeekNumber` (UI-020/
+ * UI-021) so week numbers agree everywhere in the app rather than
+ * introducing a second convention.
+ */
+export function formatWeekRange(start: Date | null, end: Date | null): string {
+  if (!start && !end) return "—";
+  const startWeek = start ? getISOWeekNumber(start) : null;
+  const endWeek = end ? getISOWeekNumber(end) : null;
+  if (startWeek !== null && endWeek !== null) {
+    return startWeek === endWeek ? `${startWeek} нед.` : `${startWeek}–${endWeek} нед.`;
+  }
+  return `${startWeek ?? endWeek} нед.`;
 }

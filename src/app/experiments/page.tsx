@@ -2,7 +2,14 @@ import Link from "next/link";
 import { Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { STAGE_BORDER_CLASSES, STAGE_LABELS, STAGE_ORDER, getCurrentWeekStage } from "@/lib/experiment";
+import {
+  STAGE_BORDER_CLASSES,
+  STAGE_LABELS,
+  STAGE_ORDER,
+  formatDateRange,
+  formatWeekRange,
+  getCurrentWeekStage,
+} from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { archiveExperiments, deleteExperiments } from "./actions";
 import { BulkActionBar } from "@/components/BulkActionBar";
@@ -18,7 +25,6 @@ import {
   NAME_COL,
   STATUS_COL,
 } from "@/components/tableWidths";
-import { DateCell } from "./DateCell";
 import { StageCell } from "./StageCell";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { ExperimentStage } from "@/generated/prisma/enums";
@@ -277,13 +283,11 @@ export default async function ExperimentsPage({
                   <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
                     {e.segments.map((s) => s.name).join(", ") || "—"}
                   </td>
-                  <td className={`${DATE_COL} px-4 py-3`}>
-                    <DateCell
-                      experimentId={e.id}
-                      startDate={e.startDate}
-                      endDate={e.endDate}
-                      locked={e.weekStages.length > 0}
-                    />
+                  <td
+                    className={`${DATE_COL} px-4 py-3 text-zinc-500`}
+                    title={formatDateRange(e.startDate, e.endDate)}
+                  >
+                    {formatWeekRange(e.startDate, e.endDate)}
                   </td>
                 </tr>
                 );

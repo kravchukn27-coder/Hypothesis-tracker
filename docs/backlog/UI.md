@@ -1,34 +1,5 @@
 # UI Backlog
 
-## UI-018 — Experiments list: Даты column is uninformative, needs redesign
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** The Даты column on `/experiments` (raw start/end date
-inputs via `DateCell`) reads poorly now and needs a different display
-— not fully specified yet, needs a follow-up decision with the user.
-
-**Description:** Source: user direction 2026-08-09. Current
-`DateCell` (`src/app/experiments/DateCell.tsx`) renders a pair of
-`<input type="date">` fields for `startDate`/`endDate`; for any
-experiment with `ExperimentWeekStage` entries (the common case since
-PROD-019 — see BUG-005) these are also `locked`/disabled, since the
-dates are a derived cache from the week entries rather than directly
-editable. The user finds this uninformative/awkward as a list-column
-display and floated one direction — showing week name + week number
-instead of raw dates — but said they'll firm up the actual design
-themselves rather than locking it in now. **Do not start implementing
-against the week-name/week-number idea until the user confirms the
-direction** — this card exists to hold the "Даты column needs a
-redesign" problem statement, not a committed spec.
-
-**Acceptance Criteria:**
-- TBD — needs a design decision from the user before acceptance
-  criteria can be written. Revisit this card's scope before starting
-  work.
-
----
-
 ## UI-019 — Experiment detail card: "Гипотеза" link too small/easy to miss
 
 **Status:** TODO

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- [UI-018] Experiments list's Даты column replaced the raw start/end
+  `<input type="date">` pair (`DateCell`) with a compact, read-only
+  week-range label — e.g. "32–35 нед." — confirmed with the user
+  (format: week range as text; read-only everywhere, not just for
+  week-tracked experiments). New `formatWeekRange` in
+  `src/lib/experiment.ts`, reusing `getISOWeekNumber` (UI-020/UI-021)
+  so week numbers agree app-wide; the exact date range is still
+  available as a `title` tooltip via the existing `formatDateRange`.
+  `DateCell` itself is untouched — still used (and still editable) by
+  the Calendar's "Без дат" row for assigning dates to an undated
+  experiment, a different call site this card didn't touch.
+  `DATE_COL` (`src/components/tableWidths.ts`) shrank from `w-72`
+  (288px, sized for the old date inputs) to `w-32` (128px) to fit the
+  new short label — the Experiments/Backlog tables' matching total
+  width (a BUG-004 nicety, not a product requirement) no longer holds,
+  but shrinking a column can't reintroduce BUG-004's actual concern,
+  horizontal scroll.
 - [PROD-022] Calendar's stage legend (Discovery/Design/.../Done +
   Просрочен) is now a set of clickable filters instead of static
   labels. Two decisions confirmed with the user: (1) filtering a stage

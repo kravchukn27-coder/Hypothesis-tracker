@@ -8,22 +8,23 @@
 // need to fit their actual content without wrapping.
 //
 // `table-fixed` still lets a cell's unshrinkable content force that
-// column wider than its nominal class if the class is too small — two
-// real minimums drove the final numbers below, found by checking
-// actual rendered widths rather than trusting the nominal classes:
-// - Action column: a 36px icon button (size-9) + cell padding needs
-//   80px, not the 48px "w-12" would suggest.
-// - Experiments' Даты column: two side-by-side `<input type="date">`
-//   elements have a native rendering floor around 281px regardless of
-//   a smaller class — DATE_COL is set to clear that.
-// That Date floor is wider than anything Backlog needs, so matching
-// totals meant widening Backlog's page container to Experiments'
-// `max-w-6xl` (was `max-w-5xl`) rather than starving Backlog's columns
-// to fit the old, narrower one.
+// column wider than its nominal class if the class is too small — one
+// real minimum drove the Action column's number below, found by
+// checking actual rendered width rather than trusting the nominal
+// class: a 36px icon button (size-9) + cell padding needs 80px, not
+// the 48px "w-12" would suggest.
+// Backlog's page container was widened to `max-w-6xl` (was
+// `max-w-5xl`) to match Experiments' at the time both totals were
+// tuned to line up exactly; UI-018 (2026-08-09) shrank DATE_COL after
+// replacing its raw start/end date inputs with a compact week-range
+// label, so the two tables' totals no longer intentionally match —
+// that equality was never a product requirement, just a BUG-004
+// nicety, and shrinking a column can't reintroduce the horizontal
+// scroll BUG-004 actually cared about.
 // Backlog total = CHECKBOX+NAME+STATUS+FUNNEL_LEVEL+META+COMMENT+ACTION
 //               = 32+256+176+176+128+160+80 = 1008px
 // Experiments total = CHECKBOX+NAME+STATUS+META+LONG_TEXT+DATE
-//                    = 32+256+176+128+128+288 = 1008px
+//                    = 32+256+176+128+128+128 = 848px
 export const NAME_COL = "w-64";
 // 176px, not 160 — Experiments' longest Stage option ("Experimentation")
 // needs the extra room; applied to both tables for one shared width.
@@ -36,7 +37,10 @@ export const LONG_TEXT_COL = "w-32";
 // ~123px), not a comfortable-reading-width like Comment.
 export const FUNNEL_LEVEL_COL = "w-44";
 export const COMMENT_COL = "w-40";
-export const DATE_COL = "w-72";
+// UI-018: was `w-72` (288px) for the old side-by-side date inputs —
+// its replacement (a short week-range label, e.g. "32–35 нед.") needs
+// far less room.
+export const DATE_COL = "w-32";
 // 80px, not the 48px the class name's nominal size suggests — see the
 // Action-column note above.
 export const ACTION_COL = "w-20";

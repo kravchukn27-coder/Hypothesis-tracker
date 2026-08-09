@@ -71,10 +71,15 @@ export function ExperimentWeekRow({
   function beginDrag(mode: DragMode, cell: Cell, e: React.PointerEvent) {
     e.preventDefault();
     const row = rowRef.current;
-    // Every filled cell carries its block's start/end alongside it —
-    // only cells with a stage reach here, so these are always set.
-    const blockStartISO = cell.blockStartISO ?? cell.weekStartISO;
-    const blockEndISO = cell.blockEndISO ?? cell.weekStartISO;
+    // BUG-006 follow-up: moving a cell only ever targets that single
+    // week — no adjacency-based grouping, even when weeks sit right
+    // next to each other with no gap (confirmed with the user:
+    // "snake" dragging shouldn't happen at all, not just across
+    // gaps). Resize still operates on the true contiguous same-stage
+    // run — extending/shrinking a run is the point of resize, not the
+    // "gluing" behavior being fixed here.
+    const blockStartISO = mode === "move" ? cell.weekStartISO : (cell.blockStartISO ?? cell.weekStartISO);
+    const blockEndISO = mode === "move" ? cell.weekStartISO : (cell.blockEndISO ?? cell.weekStartISO);
     if (!row || cells.length === 0) return;
     const cellWidth = row.getBoundingClientRect().width / cells.length;
     const startX = e.clientX;

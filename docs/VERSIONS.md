@@ -145,6 +145,15 @@
   called from both `updateExperimentStage` (list) and
   `setExperimentWeekStage` (Calendar/detail-card week editor), resets
   it back to `null` ("not asked yet") in that case.
+- [BUG-006 follow-up] The original BUG-006 fix only decoupled weeks
+  separated by a gap — adjacent weeks (no gap) still moved together,
+  which the user confirmed is wrong: dragging must never move more
+  than the single week grabbed, gap or no gap. Fix: `ExperimentWeekRow`
+  now always targets just the grabbed week for the "move" drag
+  (`shiftExperimentWeeks(experimentId, weekStartISO, weekStartISO,
+  deltaWeeks)`, a 1-week range), instead of the cell's computed block
+  range. Resize is unchanged — extending/shrinking a same-stage run is
+  the intended purpose of that gesture, not the "gluing" being fixed.
 - [PROD-023] Calendar no longer silently hides a Done experiment —
   confirmed with the user this deliberately replaces PROD-018's
   unconditional auto-hide. Setting a week's stage to Done (Calendar

@@ -71,44 +71,16 @@ works well, this is just an added data point.
 `formatWeek` in `src/app/experiments/ExperimentWeekStagesEditor.tsx`
 (~line 11) formats the label as day+month only
 (`toLocaleDateString("ru-RU", { day: "2-digit", month: "long" })`).
-Needs an ISO (or otherwise well-defined) week-number calculation —
-none exists yet in `src/lib/calendar.ts` (`formatWeekLabel` there is a
-separate short day+month formatter for the Calendar grid headers, not
-a week-number function). Decide once: which week-numbering convention
-(ISO 8601 week-of-year is the common default) and whether the same
-helper should also feed the Calendar screen for consistency, or stay
-scoped to this one editor.
+UI-021 (done) added `getISOWeekNumber` to `src/lib/calendar.ts` —
+ISO 8601 week-of-year, documented in its own comment — and uses it
+for the Calendar grid headers. Reuse that helper here rather than
+introducing a second one; `formatWeek` just needs `(${n} неделя)`
+appended using it.
 
 **Acceptance Criteria:**
 - Each week row in the per-week editor shows its week number in
   parentheses after the existing date label.
-- Week-numbering convention is consistent and documented (e.g. a
-  comment noting it's ISO week-of-year) so it doesn't silently drift
-  from whatever the Calendar screen does elsewhere.
-
----
-
-## UI-021 — Calendar: show week number in the grid's week-column headers
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** The Calendar grid's column headers (e.g. "03 авг", "10
-авг", "17 авг") should also show the week number in parentheses — same
-idea as UI-020, applied to the Calendar screen instead of the
-experiment detail card's per-week editor.
-
-**Description:** Source: user direction 2026-08-09.
-`formatWeekLabel` (`src/lib/calendar.ts` ~line 24) formats each
-`WeekHeaderCell` (`src/app/calendar/WeekHeaderCell.tsx`) label as
-day+short-month only. Should reuse whatever week-numbering helper
-UI-020 introduces (same ISO-week convention) rather than inventing a
-second one — do these two together or make sure the second one reuses
-the first's helper.
-
-**Acceptance Criteria:**
-- Each week-column header on `/calendar` shows its week number in
-  parentheses alongside the existing date label.
-- Uses the same week-numbering helper/convention as UI-020, not a
-  separate implementation.
+- Uses `getISOWeekNumber` from `src/lib/calendar.ts` (the helper
+  UI-021 introduced), not a separate implementation.
 
 ---

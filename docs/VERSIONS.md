@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- [UI-021] Calendar grid's week-column headers now show the ISO
+  week-of-year in parentheses next to the date, e.g. "03 авг (32)".
+  New `getISOWeekNumber` in `src/lib/calendar.ts` — Monday-start ISO
+  8601 weeks, week 1 is the week containing the year's first Thursday
+  — wired into `/calendar`'s header row (`page.tsx`). Written so
+  UI-020 (per-week editor on `/experiments/[id]`) can reuse the same
+  helper instead of introducing a second week-numbering convention.
 - [UI-017] Detail-form Status/Stage field now sized like its row
   neighbor (Funnel Level on `/backlog/[id]`, Автор on
   `/experiments/[id]`) instead of reading as a small pill next to a

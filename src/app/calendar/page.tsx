@@ -5,6 +5,7 @@ import {
   addWeeks,
   buildTimeline,
   formatWeekLabel,
+  getISOWeekNumber,
   PAGE_STEP_WEEKS,
   startOfWeek,
   toDateParam,
@@ -153,7 +154,7 @@ export default async function CalendarPage({
                 >
                   {weeks.map((w, i) => (
                     <WeekHeaderCell key={i} weekStartISO={toDateParam(w)} isToday={i === todayColumn}>
-                      {formatWeekLabel(w)}
+                      {formatWeekLabel(w)} ({getISOWeekNumber(w)})
                     </WeekHeaderCell>
                   ))}
                 </div>

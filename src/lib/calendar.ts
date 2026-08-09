@@ -25,6 +25,20 @@ export function formatWeekLabel(date: Date): string {
   return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
 }
 
+/**
+ * UI-020/UI-021: ISO 8601 week-of-year (1–53) — Monday-start weeks,
+ * week 1 is the week containing the year's first Thursday. Shared by
+ * the Calendar grid's headers and the experiment detail card's
+ * per-week editor so the two never drift onto different conventions.
+ */
+export function getISOWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7; // Sunday (0) -> 7, so Monday=1..Sunday=7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // Thursday of the same week
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / 7);
+}
+
 /** `YYYY-MM-DD`, local — the wire format used at every server/client boundary here. */
 export function toDateParam(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;

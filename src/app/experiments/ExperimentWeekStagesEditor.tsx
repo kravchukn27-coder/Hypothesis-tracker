@@ -1,9 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addNextExperimentWeek, setExperimentWeekStage } from "./actions";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { IconSelect } from "@/components/IconSelect";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -21,18 +22,22 @@ function formatWeek(iso: string): string {
  */
 export function ExperimentWeekStagesEditor({
   experimentId,
+  experimentName,
   weeks,
 }: {
   experimentId: string;
+  experimentName: string;
   weeks: WeekEntry[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [showHidePrompt, setShowHidePrompt] = useState(false);
 
   function handleChange(weekStartISO: string, stage: ExperimentStage) {
     startTransition(async () => {
-      await setExperimentWeekStage(experimentId, weekStartISO, stage);
+      const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
       router.refresh();
+      if (becameDone) setShowHidePrompt(true);
     });
   }
 
@@ -75,6 +80,14 @@ export function ExperimentWeekStagesEditor({
       >
         + Добавить неделю
       </button>
+
+      {showHidePrompt && (
+        <HideFromCalendarModal
+          experimentId={experimentId}
+          experimentName={experimentName}
+          onDismiss={() => setShowHidePrompt(false)}
+        />
+      )}
     </div>
   );
 }

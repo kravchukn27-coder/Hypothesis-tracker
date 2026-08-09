@@ -133,6 +133,18 @@ model Experiment {
   segments     Segment[]
   archived     Boolean                @default(false)
   archivedAt   DateTime?
+  // PROD-023: when a week's stage transitions to Done, the user is
+  // asked whether to hide the experiment from the Calendar. Tri-state,
+  // not a plain boolean: null = not asked yet (stays visible, so the
+  // row — and the prompt itself — doesn't vanish out from under the
+  // user before they answer, since Next.js auto-refreshes the calling
+  // route as soon as the triggering Server Action resolves). true =
+  // "Да" (hidden). false = "Нет" (explicitly kept visible). Existing
+  // Done experiments that predate this prompt were backfilled to
+  // `true`, preserving PROD-018's old unconditional auto-hide for
+  // them specifically — everything else (not yet Done, or newly
+  // created) starts at null.
+  calendarHiddenOnDone Boolean?
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
 }

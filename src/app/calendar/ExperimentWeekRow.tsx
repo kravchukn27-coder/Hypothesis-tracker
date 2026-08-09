@@ -8,6 +8,7 @@ import {
   shiftExperimentWeeks,
 } from "@/app/experiments/actions";
 import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
+import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -36,16 +37,19 @@ type DragMode = "move" | "resize-right";
  */
 export function ExperimentWeekRow({
   experimentId,
+  experimentName,
   cells,
   overdue,
 }: {
   experimentId: string;
+  experimentName: string;
   cells: Cell[];
   overdue: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [openWeekIndex, setOpenWeekIndex] = useState<number | null>(null);
+  const [showHidePrompt, setShowHidePrompt] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
 
@@ -53,8 +57,9 @@ export function ExperimentWeekRow({
 
   function persistStage(weekStartISO: string, stage: ExperimentStage) {
     startTransition(async () => {
-      await setExperimentWeekStage(experimentId, weekStartISO, stage);
+      const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
       router.refresh();
+      if (becameDone) setShowHidePrompt(true);
     });
   }
 
@@ -157,6 +162,14 @@ export function ExperimentWeekRow({
           </div>
         );
       })}
+
+      {showHidePrompt && (
+        <HideFromCalendarModal
+          experimentId={experimentId}
+          experimentName={experimentName}
+          onDismiss={() => setShowHidePrompt(false)}
+        />
+      )}
     </div>
   );
 }

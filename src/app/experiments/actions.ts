@@ -300,10 +300,16 @@ export async function updateExperimentDates(
  * cache. Used by both the Calendar's week-cell click and the detail
  * card's per-week editor.
  */
-export async function setExperimentWeekStage(experimentId: string, weekStartISO: string, stage: string) {
+export async function setExperimentWeekStage(
+  experimentId: string,
+  weekStartISO: string,
+  stage: string,
+): Promise<{ becameDone: boolean }> {
   const parsedStage = stageSchema.safeParse(stage);
-  if (!parsedStage.success) return;
+  if (!parsedStage.success) return { becameDone: false };
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
+
+  const before = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { stage: true } });
 
   await prisma.experimentWeekStage.upsert({
     where: { experimentId_weekStart: { experimentId, weekStart } },
@@ -312,8 +318,28 @@ export async function setExperimentWeekStage(experimentId: string, weekStartISO:
   });
   await recomputeExperimentDerivedFields(experimentId);
 
+  const after = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { stage: true } });
+  const becameDone = before?.stage !== "DONE" && after?.stage === "DONE";
+
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
+
+  return { becameDone };
+}
+
+/**
+ * PROD-023: the user's answer to the "убрать задачу из календаря?"
+ * prompt shown when a week's stage newly makes the experiment's
+ * derived stage Done (see `setExperimentWeekStage`'s `becameDone`).
+ */
+export async function hideExperimentFromCalendar(experimentId: string) {
+  await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: true } });
+  revalidatePath("/calendar");
+}
+
+export async function showExperimentOnCalendarWhenDone(experimentId: string) {
+  await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: false } });
   revalidatePath("/calendar");
 }
 

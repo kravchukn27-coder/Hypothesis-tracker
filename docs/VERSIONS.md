@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- [PROD-023] Calendar no longer silently hides a Done experiment —
+  confirmed with the user this deliberately replaces PROD-018's
+  unconditional auto-hide. Setting a week's stage to Done (Calendar
+  cell or the detail card's per-week editor) now prompts "Убрать
+  задачу из календаря?" Да/Нет; Да hides it as before, Нет keeps it
+  visible with Done styling. New `Experiment.calendarHiddenOnDone`
+  (nullable tri-state, not a plain boolean: null = not asked yet,
+  true = hidden, false = kept visible) — existing Done experiments
+  were backfilled to `true` to preserve their current behavior,
+  everything else starts at `null`. The null-default was a deliberate
+  design correction found during verification: a plain
+  default-hidden boolean raced with Next.js's automatic route refresh
+  after the triggering Server Action, unmounting the row (and the
+  prompt on it) before the user could answer "Нет" — staying visible
+  by default until explicitly answered sidesteps that entirely rather
+  than fighting revalidation timing. New shared
+  `src/components/HideFromCalendarModal.tsx`;
+  `setExperimentWeekStage` now returns `{ becameDone }` so both
+  trigger points can show the prompt only on a genuine non-Done→Done
+  transition of the experiment's *derived* stage.
 - [BUG-005] Locked Status/Stage pills (`IconSelect`, week-tracked
   experiments per PROD-019) now show a lock icon in place of the
   dropdown chevron instead of just a hover-only tooltip — confirmed

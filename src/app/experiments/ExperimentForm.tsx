@@ -143,7 +143,11 @@ export function ExperimentForm({
             Стадия и даты эксперимента теперь определяются по неделям — тот же
             редактор, что и клик по квадратику на Calendar.
           </p>
-          <ExperimentWeekStagesEditor experimentId={experimentId} weeks={values.weekStages} />
+          <ExperimentWeekStagesEditor
+            experimentId={experimentId}
+            experimentName={values.name}
+            weeks={values.weekStages}
+          />
         </FormSection>
       )}
 

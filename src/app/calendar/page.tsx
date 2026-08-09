@@ -35,9 +35,17 @@ export default async function CalendarPage({
   const windowStart = parseWindowStart(start);
 
   const experiments = await prisma.experiment.findMany({
-    // PROD-018: a Done experiment drops off the Calendar as soon as it
-    // reaches that stage — independent of whether it's been archived.
-    where: { stage: { not: "DONE" } },
+    // PROD-023: a Done experiment drops off the Calendar only once the
+    // user confirms "Да" (`calendarHiddenOnDone: true`) — replaces
+    // PROD-018's unconditional auto-hide. Stays visible while
+    // `calendarHiddenOnDone` is null (not asked yet) or false ("Нет").
+    where: {
+      OR: [
+        { stage: { not: "DONE" } },
+        { stage: "DONE", calendarHiddenOnDone: null },
+        { stage: "DONE", calendarHiddenOnDone: false },
+      ],
+    },
     include: { hypothesis: true, weekStages: { orderBy: { weekStart: "asc" } } },
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
   });
@@ -168,6 +176,7 @@ export default async function CalendarPage({
                   <ExperimentWeekRow
                     key={`${e.id}-${toDateParam(windowStart)}`}
                     experimentId={e.id}
+                    experimentName={e.name}
                     overdue={overdue}
                     cells={cells.map((c) => ({
                       weekIndex: c.weekIndex,

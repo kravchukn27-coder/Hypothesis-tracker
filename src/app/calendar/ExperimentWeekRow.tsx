@@ -11,7 +11,17 @@ import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
-type Cell = { weekIndex: number; weekStartISO: string; stage: string | null };
+type Cell = {
+  weekIndex: number;
+  weekStartISO: string;
+  stage: string | null;
+  // BUG-006: the contiguous block this cell belongs to (its true
+  // start/end, which may fall outside the visible window) — lets drag
+  // and resize target exactly one block instead of every week entry
+  // the experiment has.
+  blockStartISO: string | null;
+  blockEndISO: string | null;
+};
 
 type DragMode = "move" | "resize-right";
 
@@ -20,8 +30,9 @@ type DragMode = "move" | "resize-right";
  * week-cell per window week. Click an empty cell to assign it a
  * stage, click a filled cell to change it (including re-picking the
  * same stage, to mean "this stage continued"). Drag a filled cell's
- * body to shift the whole block by whole weeks; drag the rightmost
- * cell's edge to extend/shrink it.
+ * body to shift that cell's whole block by whole weeks — gapped
+ * blocks on the same experiment move independently (BUG-006); drag a
+ * block's own rightmost cell's edge to extend/shrink just that block.
  */
 export function ExperimentWeekRow({
   experimentId,
@@ -47,9 +58,13 @@ export function ExperimentWeekRow({
     });
   }
 
-  function beginDrag(mode: DragMode, e: React.PointerEvent) {
+  function beginDrag(mode: DragMode, cell: Cell, e: React.PointerEvent) {
     e.preventDefault();
     const row = rowRef.current;
+    // Every filled cell carries its block's start/end alongside it —
+    // only cells with a stage reach here, so these are always set.
+    const blockStartISO = cell.blockStartISO ?? cell.weekStartISO;
+    const blockEndISO = cell.blockEndISO ?? cell.weekStartISO;
     if (!row || cells.length === 0) return;
     const cellWidth = row.getBoundingClientRect().width / cells.length;
     const startX = e.clientX;
@@ -69,8 +84,8 @@ export function ExperimentWeekRow({
       const weekDelta = weekDeltaFrom(ev.clientX);
       if (weekDelta !== 0) {
         startTransition(async () => {
-          if (mode === "move") await shiftExperimentWeeks(experimentId, weekDelta);
-          else await resizeExperimentWeeks(experimentId, weekDelta);
+          if (mode === "move") await shiftExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
+          else await resizeExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
           router.refresh();
         });
       }
@@ -99,7 +114,7 @@ export function ExperimentWeekRow({
             {cell.stage ? (
               <button
                 type="button"
-                onPointerDown={(e) => beginDrag("move", e)}
+                onPointerDown={(e) => beginDrag("move", cell, e)}
                 onClick={() => {
                   if (didDragRef.current) {
                     didDragRef.current = false;
@@ -112,11 +127,11 @@ export function ExperimentWeekRow({
               >
                 {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
                 <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
-                {i === lastFilledIndex && (
+                {cell.weekStartISO === cell.blockEndISO && (
                   <span
                     onPointerDown={(e) => {
                       e.stopPropagation();
-                      beginDrag("resize-right", e);
+                      beginDrag("resize-right", cell, e);
                     }}
                     className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
                   />

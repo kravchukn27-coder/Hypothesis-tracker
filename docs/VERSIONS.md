@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- [BUG-006] Fixed Calendar week-blocks moving together: dragging
+  (move or resize) one contiguous block of an experiment's weeks now
+  only touches that block's own `ExperimentWeekStage` rows, instead of
+  shifting every week entry the experiment has. `buildTimeline`
+  (`src/lib/calendar.ts`) now groups each experiment's full week list
+  into contiguous blocks (consecutive `weekStart`, no gaps) before
+  windowing, tagging each `WeekCell` with its block's true start/end
+  even when that falls outside the visible window; the resize handle
+  moved from "last filled cell in the row" to "the cell that is its
+  own block's end," so each block gets its own handle independently.
+  `shiftExperimentWeeks`/`resizeExperimentWeeks`
+  (`src/app/experiments/actions.ts`) now scope their queries/mutations
+  to one block's `weekStart` range instead of the whole experiment,
+  with a new collision guard that no-ops a move/resize instead of
+  throwing if it would land on another block's already-occupied weeks.
 - [PROD-015] Calendar week-bars (`ExperimentWeekRow.tsx`) now show the
   stage's icon (`STAGE_ICONS` from `src/lib/experiment.ts`) next to
   the label, matching the Backlog/Experiments list pill-selects —

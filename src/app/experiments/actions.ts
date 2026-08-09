@@ -344,21 +344,78 @@ export async function addNextExperimentWeek(experimentId: string) {
   revalidatePath("/calendar");
 }
 
+function parseISODate(iso: string): Date {
+  return new Date(`${iso}T00:00:00`);
+}
+
 /**
- * PROD-019: drag-to-move a whole block of weeks (Calendar). Shifts
- * every existing week entry by `deltaWeeks`. Deletes and recreates
- * rather than updating in place, since shifting could otherwise
- * transiently collide with the `[experimentId, weekStart]` unique
- * constraint mid-update.
+ * BUG-006: an experiment can have several gapped blocks of weeks
+ * (e.g. weeks of Aug 3 and Aug 24, nothing between); dragging one
+ * block must only touch its own entries. `blockStartISO`/
+ * `blockEndISO` scope every query/mutation below to
+ * `weekStart` within that one block's range.
  */
-export async function shiftExperimentWeeks(experimentId: string, deltaWeeks: number) {
+async function getBlockEntries(experimentId: string, blockStartISO: string, blockEndISO: string) {
+  return prisma.experimentWeekStage.findMany({
+    where: {
+      experimentId,
+      weekStart: { gte: parseISODate(blockStartISO), lte: parseISODate(blockEndISO) },
+    },
+    orderBy: { weekStart: "asc" },
+  });
+}
+
+/**
+ * BUG-006: true if any of `experimentId`'s week entries fall within
+ * `[start, end]` — used to reject a move/resize that would otherwise
+ * land on top of a different block and hit the
+ * `[experimentId, weekStart]` unique constraint.
+ */
+async function hasEntriesInRange(experimentId: string, start: Date, end: Date): Promise<boolean> {
+  const count = await prisma.experimentWeekStage.count({
+    where: { experimentId, weekStart: { gte: start, lte: end } },
+  });
+  return count > 0;
+}
+
+/**
+ * PROD-019, scoped per-block by BUG-006: drag-to-move one contiguous
+ * block of weeks (Calendar), identified by its own start/end rather
+ * than every week entry the experiment has — gapped blocks on the
+ * same experiment move independently. Deletes and recreates rather
+ * than updating in place, since shifting could otherwise transiently
+ * collide with the `[experimentId, weekStart]` unique constraint
+ * mid-update.
+ */
+export async function shiftExperimentWeeks(
+  experimentId: string,
+  blockStartISO: string,
+  blockEndISO: string,
+  deltaWeeks: number,
+) {
   if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return;
 
-  const entries = await prisma.experimentWeekStage.findMany({ where: { experimentId } });
+  const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
   if (entries.length === 0) return;
 
+  const newStart = new Date(parseISODate(blockStartISO).getTime() + deltaWeeks * 7 * MS_PER_DAY);
+  const newEnd = new Date(parseISODate(blockEndISO).getTime() + deltaWeeks * 7 * MS_PER_DAY);
+  // Exclude this block's own current range from the collision check —
+  // shifting by e.g. 1 week naturally overlaps its own old range.
+  const collisionEntries = await prisma.experimentWeekStage.findMany({
+    where: {
+      experimentId,
+      weekStart: { gte: newStart, lte: newEnd },
+      NOT: { weekStart: { gte: parseISODate(blockStartISO), lte: parseISODate(blockEndISO) } },
+    },
+    select: { id: true },
+  });
+  if (collisionEntries.length > 0) return; // would land on another block — no-op
+
   await prisma.$transaction([
-    prisma.experimentWeekStage.deleteMany({ where: { experimentId } }),
+    prisma.experimentWeekStage.deleteMany({
+      where: { id: { in: entries.map((e) => e.id) } },
+    }),
     ...entries.map((e) =>
       prisma.experimentWeekStage.create({
         data: {
@@ -377,22 +434,30 @@ export async function shiftExperimentWeeks(experimentId: string, deltaWeeks: num
 }
 
 /**
- * PROD-019: drag-to-resize the end of a block of weeks (Calendar).
- * `deltaWeeks > 0` appends that many weeks (repeating the last stage);
- * `deltaWeeks < 0` removes that many trailing weeks, keeping at least
- * one.
+ * PROD-019, scoped per-block by BUG-006: drag-to-resize the end of
+ * one contiguous block of weeks (Calendar), identified by its own
+ * start/end. `deltaWeeks > 0` appends that many weeks after the
+ * block's own last entry (repeating its last stage); `deltaWeeks < 0`
+ * removes that many trailing weeks from the block, keeping at least
+ * one entry in it.
  */
-export async function resizeExperimentWeeks(experimentId: string, deltaWeeks: number) {
+export async function resizeExperimentWeeks(
+  experimentId: string,
+  blockStartISO: string,
+  blockEndISO: string,
+  deltaWeeks: number,
+) {
   if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return;
 
-  const entries = await prisma.experimentWeekStage.findMany({
-    where: { experimentId },
-    orderBy: { weekStart: "asc" },
-  });
+  const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
   if (entries.length === 0) return;
 
   if (deltaWeeks > 0) {
     const last = entries[entries.length - 1];
+    const rangeStart = new Date(last.weekStart.getTime() + MS_PER_DAY * 7);
+    const rangeEnd = new Date(last.weekStart.getTime() + deltaWeeks * 7 * MS_PER_DAY);
+    if (await hasEntriesInRange(experimentId, rangeStart, rangeEnd)) return; // would reach another block — no-op
+
     const additions = Array.from({ length: deltaWeeks }, (_, i) => ({
       experimentId,
       stage: last.stage,

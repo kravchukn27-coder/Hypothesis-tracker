@@ -173,6 +173,8 @@ export default async function CalendarPage({
                       weekIndex: c.weekIndex,
                       weekStartISO: toDateParam(c.weekStart),
                       stage: c.stage,
+                      blockStartISO: c.blockStart ? toDateParam(c.blockStart) : null,
+                      blockEndISO: c.blockEnd ? toDateParam(c.blockEnd) : null,
                     }))}
                   />
                 </div>

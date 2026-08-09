@@ -50,7 +50,51 @@ export type WeekCell = {
   weekIndex: number; // 0-based, matches the window's `weeks` array
   weekStart: Date;
   stage: string | null; // null = no entry for this experiment this week
+  // BUG-006: the contiguous block (run of consecutive weeks, no gaps)
+  // this cell belongs to, computed from the experiment's FULL
+  // weekStages list (not just the visible window) so drag/resize can
+  // target exactly one block even when its true start/end falls
+  // outside the current window. Null when the cell itself is empty.
+  blockStart: Date | null;
+  blockEnd: Date | null;
 };
+
+/**
+ * BUG-006: groups a (possibly gapped) list of week entries into
+ * contiguous runs — consecutive `weekStart` values exactly one week
+ * apart — and returns each entry's block start/end keyed by its
+ * `weekStart` time, so cells can be tagged with the true block they
+ * belong to regardless of what's visible in the current window.
+ */
+function computeWeekBlocks(entries: WeekStageEntry[]): Map<number, { blockStart: Date; blockEnd: Date }> {
+  const sorted = [...entries].sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime());
+  const result = new Map<number, { blockStart: Date; blockEnd: Date }>();
+
+  let blockStart: Date | null = null;
+  let blockTimes: number[] = [];
+  let prevTime: number | null = null;
+
+  function flush(blockEnd: Date) {
+    if (blockStart === null) return;
+    for (const t of blockTimes) result.set(t, { blockStart, blockEnd });
+  }
+
+  for (const entry of sorted) {
+    const t = entry.weekStart.getTime();
+    if (prevTime !== null && t - prevTime !== MS_PER_WEEK) {
+      flush(new Date(prevTime));
+      blockStart = entry.weekStart;
+      blockTimes = [];
+    } else if (blockStart === null) {
+      blockStart = entry.weekStart;
+    }
+    blockTimes.push(t);
+    prevTime = t;
+  }
+  if (prevTime !== null) flush(new Date(prevTime));
+
+  return result;
+}
 
 export type TimelineRow = {
   experiment: TimelineExperiment;
@@ -92,12 +136,18 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
         entries = Array.from({ length: count }, (_, i) => ({ weekStart: addWeeks(s, i), stage: e.stage }));
       }
       const byWeek = new Map(entries.map((en) => [en.weekStart.getTime(), en.stage]));
+      const blocks = computeWeekBlocks(entries);
 
-      const cells: WeekCell[] = weekList.map((w, i) => ({
-        weekIndex: i,
-        weekStart: w,
-        stage: byWeek.get(w.getTime()) ?? null,
-      }));
+      const cells: WeekCell[] = weekList.map((w, i) => {
+        const block = blocks.get(w.getTime());
+        return {
+          weekIndex: i,
+          weekStart: w,
+          stage: byWeek.get(w.getTime()) ?? null,
+          blockStart: block?.blockStart ?? null,
+          blockEnd: block?.blockEnd ?? null,
+        };
+      });
 
       if (!cells.some((c) => c.stage !== null)) return null; // nothing in this window
 

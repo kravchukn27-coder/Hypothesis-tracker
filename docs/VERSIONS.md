@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [BUG-004 follow-up] The first BUG-004 fix made both tables genuinely
+  fixed-width, but left `FUNNEL_LEVEL_COL`/`COMMENT_COL` at their old
+  UI-015 values (288/288px) — wide enough that the fixed table now
+  overflowed its container and forced a permanent horizontal
+  scrollbar, which the user explicitly doesn't want, and Funnel
+  Level/Segment still read as too wide for short tag content. Redid
+  the actual pixel budget in `src/components/tableWidths.ts` against
+  measured rendered widths (not nominal class assumptions — `table-
+  fixed` still lets unshrinkable content, like the Action column's
+  36px icon button or Experiments' two side-by-side native date
+  inputs, force a column wider than a too-small class): Funnel Level
+  down to 176px, Segment down to 128px, both comfortably fit their
+  real content. Experiments' date-input floor (~281px) is wider than
+  anything Backlog needs, so hitting equal totals meant widening
+  Backlog's page container from `max-w-5xl` to `max-w-6xl` (matching
+  Experiments) rather than starving Backlog's other columns. Both
+  tables now render at exactly 1012px with no scroll, verified via
+  actual measured header widths on both pages.
 - [PROD-023] Calendar no longer silently hides a Done experiment —
   confirmed with the user this deliberately replaces PROD-018's
   unconditional auto-hide. Setting a week's stage to Done (Calendar

@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addNextExperimentWeek, setExperimentWeekStage } from "./actions";
+import { addNextExperimentWeek, deleteExperimentWeek, setExperimentWeekStage } from "./actions";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { IconSelect } from "@/components/IconSelect";
 import type { ExperimentStage } from "@/generated/prisma/enums";
@@ -67,6 +68,14 @@ export function ExperimentWeekStagesEditor({
                 colorClasses={STAGE_BADGE_CLASSES[w.stage]}
                 disabled={pending}
                 onChange={(next) => handleChange(w.weekStartISO, next)}
+              />
+              <ConfirmDeleteButton
+                triggerLabel="×"
+                pendingLabel="…"
+                confirmTitle="Удалить неделю?"
+                confirmMessage={`Удалить неделю от ${formatWeek(w.weekStartISO)}? Это затронет и отображение на Calendar.`}
+                triggerClassName="shrink-0 px-1 text-base leading-none text-zinc-400 hover:text-red-600"
+                onConfirm={() => deleteExperimentWeek(experimentId, w.weekStartISO)}
               />
             </li>
           ))}

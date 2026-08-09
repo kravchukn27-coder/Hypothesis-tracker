@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- [PROD-024] Each week row in the experiment detail card's "По
+  неделям" editor (`ExperimentWeekStagesEditor`) now has a "×" delete
+  control, using the app's existing generic `ConfirmDeleteButton`
+  rather than a bespoke modal. New `deleteExperimentWeek` server
+  action (`src/app/experiments/actions.ts`) removes that
+  `ExperimentWeekStage` row, then runs the same
+  `recomputeExperimentDerivedFields`/`clearHiddenFlagIfNoLongerDone`
+  pair every other week-mutating action does, so the Calendar (which
+  reads the same rows fresh on next load) reflects the removal without
+  extra sync code. Deleting a middle week leaves a gap rather than
+  shifting later weeks — matches BUG-006's existing gap-tolerant
+  drag/resize behavior, and was the direction the backlog card itself
+  reasoned through and recommended.
 - [UI-018] Experiments list's Даты column replaced the raw start/end
   `<input type="date">` pair (`DateCell`) with a compact, read-only
   week-range label — e.g. "32–35 нед." — confirmed with the user

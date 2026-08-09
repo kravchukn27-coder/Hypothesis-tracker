@@ -372,6 +372,29 @@ export async function setExperimentWeekStage(
 }
 
 /**
+ * PROD-024: removes a single week entry outright (not just
+ * re-assigning its stage) — the detail card's "По неделям" editor's
+ * delete control. `ExperimentWeekRow`/Calendar reads the same rows
+ * fresh on next load, so no separate sync is needed there. Leaves a
+ * gap rather than shifting subsequent weeks, matching BUG-006's
+ * existing gap-tolerant drag/resize behavior. No-ops if the week
+ * doesn't exist (already deleted, e.g. a stale double-click).
+ */
+export async function deleteExperimentWeek(experimentId: string, weekStartISO: string) {
+  const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
+
+  await prisma.experimentWeekStage.deleteMany({
+    where: { experimentId, weekStart },
+  });
+  await recomputeExperimentDerivedFields(experimentId);
+  await clearHiddenFlagIfNoLongerDone(experimentId);
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
+}
+
+/**
  * PROD-023: the user's answer to the "убрать задачу из календаря?"
  * prompt shown when a week's stage newly makes the experiment's
  * derived stage Done (see `setExperimentWeekStage`'s `becameDone`).

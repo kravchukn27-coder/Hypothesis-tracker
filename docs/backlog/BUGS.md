@@ -2,31 +2,6 @@
 
 ---
 
-## BUG-008 — Calendar drag/stage-change mutations fail silently
-
-**Status:** TODO
-**Priority:** HIGH
-**Summary:** Dragging a week block (move/resize) or picking a new
-stage on the Calendar grid gives no feedback if the underlying server
-action fails — the UI just looks unchanged, with no way to tell
-whether the edit landed.
-
-**Description:** Source: `/impeccable critique` of `src/app/calendar/page.tsx`
-(2026-08-09), P0 finding. `shiftExperimentWeeks`, `resizeExperimentWeeks`,
-and `setExperimentWeekStage` (`ExperimentWeekRow.tsx`, ~lines 101-106)
-are awaited inside `startTransition` with no `.catch`, no toast, and no
-rollback of any optimistic UI state. If the server action throws
-(network blip, stale record, constraint violation), the failure is
-invisible to the user.
-
-**Acceptance Criteria:**
-- A failed drag-move, drag-resize, or stage-change surfaces a visible
-  error (e.g. toast) to the user.
-- Any optimistic/pending UI state is rolled back on failure so the
-  grid doesn't show a stale or incorrect result.
-- Successful mutations are unaffected — this only changes the failure
-  path.
-
 ---
 
 ## BUG-009 — Experiments scheduled via raw start/end dates can't be dragged on the Calendar

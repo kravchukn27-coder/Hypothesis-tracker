@@ -10,6 +10,7 @@ import {
 import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
+import { useToast } from "@/components/toast/ToastProvider";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 type Cell = {
@@ -54,7 +55,8 @@ export function ExperimentWeekRow({
   overdueWeekStartISO: string | null;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
   const [openWeekIndex, setOpenWeekIndex] = useState<number | null>(null);
   const [showHidePrompt, setShowHidePrompt] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -62,13 +64,18 @@ export function ExperimentWeekRow({
 
   function persistStage(weekStartISO: string, stage: ExperimentStage) {
     startTransition(async () => {
-      const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
-      router.refresh();
-      if (becameDone) setShowHidePrompt(true);
+      try {
+        const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
+        router.refresh();
+        if (becameDone) setShowHidePrompt(true);
+      } catch {
+        showToast("Не удалось обновить стадию. Попробуйте ещё раз.", "error");
+      }
     });
   }
 
   function beginDrag(mode: DragMode, cell: Cell, e: React.PointerEvent) {
+    if (isPending) return;
     e.preventDefault();
     const row = rowRef.current;
     // BUG-006 follow-up: moving a cell only ever targets that single
@@ -99,9 +106,18 @@ export function ExperimentWeekRow({
       const weekDelta = weekDeltaFrom(ev.clientX);
       if (weekDelta !== 0) {
         startTransition(async () => {
-          if (mode === "move") await shiftExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
-          else await resizeExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
-          router.refresh();
+          try {
+            if (mode === "move") await shiftExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
+            else await resizeExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
+            router.refresh();
+          } catch {
+            showToast(
+              mode === "move"
+                ? "Не удалось переместить неделю. Попробуйте ещё раз."
+                : "Не удалось изменить длительность этапа. Попробуйте ещё раз.",
+              "error",
+            );
+          }
         });
       }
     }
@@ -129,6 +145,7 @@ export function ExperimentWeekRow({
             {cell.stage ? (
               <button
                 type="button"
+                disabled={isPending}
                 onPointerDown={(e) => beginDrag("move", cell, e)}
                 onClick={() => {
                   if (didDragRef.current) {
@@ -138,7 +155,7 @@ export function ExperimentWeekRow({
                   setOpenWeekIndex(isOpen ? null : i);
                 }}
                 title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
+                className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
               >
                 {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
                 <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
@@ -155,9 +172,10 @@ export function ExperimentWeekRow({
             ) : (
               <button
                 type="button"
+                disabled={isPending}
                 onClick={() => setOpenWeekIndex(isOpen ? null : i)}
                 aria-label="Назначить стадию на эту неделю"
-                className="my-2 h-8 w-full rounded-md border border-dashed border-transparent hover:border-zinc-300"
+                className="my-2 h-8 w-full rounded-md border border-dashed border-transparent hover:border-zinc-300 disabled:cursor-wait disabled:opacity-60"
               />
             )}
             {isOpen && (

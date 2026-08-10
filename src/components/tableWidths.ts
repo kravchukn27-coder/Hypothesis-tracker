@@ -21,22 +21,19 @@
 // that equality was never a product requirement, just a BUG-004
 // nicety, and shrinking a column can't reintroduce the horizontal
 // scroll BUG-004 actually cared about.
-// Backlog total = CHECKBOX+NAME+STATUS+FUNNEL_LEVEL+META+COMMENT+ACTION
-//               = 32+256+176+176+128+160+80 = 1008px
-// Experiments total = CHECKBOX+NAME+STATUS+META+LONG_TEXT+DATE
-//                    = 32+256+176+128+128+128 = 848px
-export const NAME_COL = "w-64";
-// 176px, not 160 — Experiments' longest Stage option ("Experimentation")
-// needs the extra room; applied to both tables for one shared width.
-export const STATUS_COL = "w-44";
-export const META_COL = "w-32";
-// Experiments' Segment column — narrow tag/badge content, not prose.
-export const LONG_TEXT_COL = "w-32";
+// UI-025 keeps the same 1008px Backlog total but moves compact metadata
+// toward the name and assigns the released space to readable comments.
+// In Experiments, the wider Segment column absorbs the same released
+// width so the Dates column stays in its existing position.
+export const NAME_COL = "w-56";
+export const STATUS_COL = "w-36";
+export const META_COL = "w-28";
+export const LONG_TEXT_COL = "w-52";
 // Backlog's Funnel Level column (UI-015) — sized for its `Badge`
 // content (longest real value so far, "Cancel Subscription", is
 // ~123px), not a comfortable-reading-width like Comment.
 export const FUNNEL_LEVEL_COL = "w-44";
-export const COMMENT_COL = "w-40";
+export const COMMENT_COL = "w-60";
 // UI-018: was `w-72` (288px) for the old side-by-side date inputs —
 // its replacement (a short week-range label, e.g. "32–35 нед.") needs
 // far less room.
@@ -51,6 +48,6 @@ export const CHECKBOX_COL = "w-8";
 // UI-023: the Backlog table with two rows is the visual reference for
 // every tabular screen. The outer surface is vertically scrollable;
 // table data must never resize it or introduce horizontal scrolling.
-export const TABLE_SURFACE_WIDTH = "w-full min-w-0 max-w-[1014px]";
+export const TABLE_SURFACE_WIDTH = "mx-auto w-full min-w-0 max-w-[1014px]";
 export const TABLE_CONTENT_WIDTH = "w-full min-w-0";
 export const TABLE_SURFACE_HEIGHT = "h-[164px]";

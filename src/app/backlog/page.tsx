@@ -179,17 +179,19 @@ export default async function BacklogPage({
                     />
                   </div>
                 </th>
-                <th className={`${STATUS_COL} px-4 py-3`}>
-                  <SortableHeader
-                    label="Status"
-                    active={sort === "status"}
-                    dir={currentDir}
-                    defaultDir="asc"
-                    href={(d) => sortHref("status", d)}
-                  />
+                <th className={`${STATUS_COL} px-4 py-3 text-center`}>
+                  <div className="flex justify-center">
+                    <SortableHeader
+                      label="Status"
+                      active={sort === "status"}
+                      dir={currentDir}
+                      defaultDir="asc"
+                      href={(d) => sortHref("status", d)}
+                    />
+                  </div>
                 </th>
                 <th className={`${FUNNEL_LEVEL_COL} px-4 py-3`}>Funnel Level</th>
-                <th className={`${META_COL} px-4 py-3 text-right`}>
+                <th className={`${META_COL} px-4 py-3 text-left`}>
                   <SortableHeader
                     label="Score"
                     active={sort === "score"}
@@ -219,7 +221,7 @@ export default async function BacklogPage({
                       {h.name}
                     </Link>
                   </td>
-                  <td className={`${STATUS_COL} px-4 py-3`}>
+                  <td className={`${STATUS_COL} px-4 py-3 text-center`}>
                     <StatusCell
                       hypothesisId={h.id}
                       hypothesisName={h.name}
@@ -237,7 +239,7 @@ export default async function BacklogPage({
                       <span className="text-zinc-500">—</span>
                     )}
                   </td>
-                  <td className={`${META_COL} px-4 py-3 text-right font-medium tabular-nums text-zinc-900`}>
+                  <td className={`${META_COL} px-4 py-3 text-left font-medium tabular-nums text-zinc-900`}>
                     {h.score.toFixed(2)}
                   </td>
                   <td className={`${COMMENT_COL} px-4 py-3`}>

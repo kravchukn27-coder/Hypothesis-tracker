@@ -59,7 +59,7 @@ export function IconSelect<T extends string>({
 }) {
   const isField = variant === "field";
   return (
-    <span className={`relative ${isField ? "block w-full" : "inline-block"}`} title={title}>
+    <span className={`relative ${isField ? "block w-full" : "inline-block max-w-full"}`} title={title}>
       <Icon
         aria-hidden
         className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${colorClasses} ${
@@ -89,7 +89,7 @@ export function IconSelect<T extends string>({
         onChange={(e) => onChange(e.target.value as T)}
         onClick={(e) => e.stopPropagation()}
         className={`${
-          isField ? FIELD_VARIANT_CLASSES : `${BADGE_SHAPE_CLASSES} border-0 py-1 pr-7 pl-8`
+          isField ? FIELD_VARIANT_CLASSES : `${BADGE_SHAPE_CLASSES} max-w-full truncate border-0 py-1 pr-7 pl-8`
         } cursor-pointer appearance-none outline-none disabled:cursor-default disabled:opacity-60 [-webkit-appearance:none] ${colorClasses}`}
       >
         {options.map((o) => (

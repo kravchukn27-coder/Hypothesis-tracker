@@ -143,7 +143,7 @@ export function ExperimentWeekRow({
   return (
     <div
       ref={rowRef}
-      className="relative grid flex-1"
+      className="relative grid min-w-0 flex-1"
       style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}
     >
       {cells.map((cell, i) => {

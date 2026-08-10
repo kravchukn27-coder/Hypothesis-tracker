@@ -18,6 +18,7 @@ import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
 import { ScrollToCalendarExperiment } from "./ScrollToCalendarExperiment";
+import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_HEIGHT, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -28,7 +29,7 @@ function parseWindowStart(start: string | undefined): Date {
 }
 
 /** Keeps the grid a stable height regardless of how many rows are in the current window. */
-const MIN_ROWS = 3;
+const MIN_ROWS = 2;
 
 /** PROD-022: "Просрочен" isn't a real `ExperimentStage` — it's a
  * derived per-experiment flag (see `overdue` on `TimelineRow`) — so
@@ -122,7 +123,7 @@ export default async function CalendarPage({
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Calendar</h1>
@@ -162,7 +163,7 @@ export default async function CalendarPage({
       {experimentId && <ScrollToCalendarExperiment experimentId={experimentId} />}
 
       {experiments.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
+        <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
           <Link
             href="/experiments/new"
@@ -209,14 +210,14 @@ export default async function CalendarPage({
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-zinc-200">
-            <div className="w-fit min-w-full">
+          <div className={`${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200`}>
+            <div className={TABLE_CONTENT_WIDTH}>
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <div className="sticky left-0 z-10 w-56 shrink-0 bg-zinc-50 px-4 py-3">
                   Эксперимент
                 </div>
                 <div
-                  className="grid flex-1"
+                  className="grid min-w-0 flex-1"
                   style={{ gridTemplateColumns: `repeat(${WINDOW_WEEKS}, minmax(0, 1fr))` }}
                 >
                   {weeks.map((w, i) => (

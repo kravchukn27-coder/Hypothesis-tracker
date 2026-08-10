@@ -40,7 +40,7 @@ export function WeekHeaderCell({
           router.refresh();
         });
       }}
-      className={`border-l border-zinc-100 px-1 py-2 text-center leading-tight ${
+      className={`min-w-0 overflow-hidden border-l border-zinc-100 px-1 py-2 text-center leading-tight ${
         isDragOver ? "bg-zinc-900/10" : isToday ? "bg-blue-50/60 text-blue-700" : ""
       }`}
     >

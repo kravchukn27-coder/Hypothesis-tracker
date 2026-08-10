@@ -24,6 +24,9 @@ import {
   META_COL,
   NAME_COL,
   STATUS_COL,
+  TABLE_CONTENT_WIDTH,
+  TABLE_SURFACE_HEIGHT,
+  TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { StageCell } from "./StageCell";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
@@ -126,7 +129,7 @@ export default async function ExperimentsPage({
   const isFiltered = Boolean(stage || segment || author);
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
       <Suspense fallback={null}>
         <SavedToastGate />
       </Suspense>
@@ -178,7 +181,7 @@ export default async function ExperimentsPage({
         />
 
       {experiments.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
+        <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
             {isFiltered
               ? "Нет экспериментов под текущий фильтр."
@@ -194,8 +197,8 @@ export default async function ExperimentsPage({
           </Link>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200">
-          <table className="w-max table-fixed text-left text-sm">
+        <div className={`${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200`}>
+          <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className={`${CHECKBOX_COL} px-4 py-3`}>
@@ -271,10 +274,10 @@ export default async function ExperimentsPage({
                   <td className={`${CHECKBOX_COL} px-4 py-3`}>
                     <RowCheckbox id={e.id} />
                   </td>
-                  <td className={`${NAME_COL} px-4 py-3`}>
+                  <td className={`${NAME_COL} min-w-0 px-4 py-3`}>
                     <Link
                       href={`/experiments/${e.id}`}
-                      className="font-medium text-zinc-900 hover:underline"
+                      className="block truncate font-medium text-zinc-900 hover:underline"
                     >
                       {e.name}
                     </Link>
@@ -288,11 +291,11 @@ export default async function ExperimentsPage({
                       archived={e.archived}
                     />
                   </td>
-                  <td className={`${META_COL} px-4 py-3 text-zinc-600`}>
+                  <td className={`${META_COL} min-w-0 px-4 py-3 text-zinc-600`}>
                     {e.author ? (
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Avatar name={e.author} />
-                        {e.author}
+                        <span className="truncate">{e.author}</span>
                       </span>
                     ) : (
                       "—"

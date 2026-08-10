@@ -19,6 +19,9 @@ import {
   META_COL,
   NAME_COL,
   STATUS_COL,
+  TABLE_CONTENT_WIDTH,
+  TABLE_SURFACE_HEIGHT,
+  TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
@@ -74,7 +77,7 @@ export default async function BacklogPage({
   const isFiltered = Boolean(funnelLevel || status);
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
       <Suspense fallback={null}>
         <SavedToastGate />
       </Suspense>
@@ -132,7 +135,7 @@ export default async function BacklogPage({
         />
 
       {rows.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
+        <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
             {isFiltered
               ? "Нет гипотез под текущий фильтр."
@@ -150,8 +153,8 @@ export default async function BacklogPage({
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200">
-          <table className="w-max table-fixed text-left text-sm">
+        <div className={`${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200`}>
+          <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className={`${CHECKBOX_COL} px-4 py-3`}>
@@ -208,10 +211,10 @@ export default async function BacklogPage({
                   <td className={`${CHECKBOX_COL} px-4 py-3`}>
                     <RowCheckbox id={h.id} />
                   </td>
-                  <td className={`${NAME_COL} px-4 py-3`}>
+                  <td className={`${NAME_COL} min-w-0 px-4 py-3`}>
                     <Link
                       href={`/backlog/${h.id}`}
-                      className="font-medium text-zinc-900 hover:underline"
+                      className="block truncate font-medium text-zinc-900 hover:underline"
                     >
                       {h.name}
                     </Link>
@@ -225,9 +228,11 @@ export default async function BacklogPage({
                       archived={h.archived}
                     />
                   </td>
-                  <td className={`${FUNNEL_LEVEL_COL} px-4 py-3`}>
+                  <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-3`}>
                     {h.funnelLevel ? (
-                      <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{h.funnelLevel.name}</Badge>
+                      <Badge color={FUNNEL_LEVEL_BADGE_COLOR} className="max-w-full truncate">
+                        {h.funnelLevel.name}
+                      </Badge>
                     ) : (
                       <span className="text-zinc-500">—</span>
                     )}

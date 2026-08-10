@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [TECH-004 follow-up] Creating a new experiment now picks a starting
+  week instead of raw start/end dates, confirmed with the user after
+  noticing new experiments still went through the legacy
+  `startDate`/`endDate` flow post-TECH-004. `/experiments/new`'s
+  "Расписание" section is now a single "Неделя начала" `<input
+  type="date">`, client-snapped to that week's Monday on change
+  (reuses `startOfWeek`/`toDateParam` from `src/lib/calendar.ts`
+  rather than reimplementing). New `createExperimentSchema` (`src/app/
+  experiments/actions.ts`, scoped to create only — `updateExperiment`
+  and its schema are untouched, still the live start/end-date path for
+  an existing pre-TECH-004 experiment with no weeks yet) accepts
+  `startWeek`; `createExperiment` creates one `ExperimentWeekStage`
+  entry at that week (stage mirrors the Status field, no separate
+  picker) and runs the same `recomputeExperimentDerivedFields` every
+  other week-mutating action does — so a new experiment is
+  week-tracked from birth when a starting week is given, and undated
+  (add weeks later via "+ Добавить неделю") when left blank, same as
+  before.
 - [TECH-004] Resolved the open question: the experiment detail card's
   "Расписание" (Дата начала/окончания) section is dropped entirely
   once an experiment has week entries, confirmed with the user —

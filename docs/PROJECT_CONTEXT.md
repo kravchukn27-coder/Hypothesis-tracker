@@ -189,6 +189,14 @@ changes shape things.
   yet (not re-tagged since PROD-019) render on the Calendar via
   on-the-fly synthesis (`buildTimeline` in `src/lib/calendar.ts`, not
   persisted) rather than forcing a backfill on every read path.
+  **TECH-004 follow-up (2026-08-10):** creation (`/experiments/new`)
+  no longer feeds this legacy path going forward — it picks a starting
+  week instead (client-snapped to that week's Monday), creating one
+  `ExperimentWeekStage` entry directly (`createExperiment` in
+  `src/app/experiments/actions.ts`) so a new experiment is
+  week-tracked from birth, or undated if left blank. The
+  `startDate`/`endDate` scalar fields stay in the schema purely as the
+  derived cache and for pre-existing experiments that predate this.
 - `Experiment.targeting` (free text, e.g. `"GW, квиз"`) was **removed**
   (TECH-003, 2026-08-07) — it was a flattened mix of 5 distinct tag
   categories from the source tool. Replaced with 5 real many-to-many

@@ -30,8 +30,18 @@ const baseExperimentFields = {
   segmentNew: z.string().trim().optional(),
 };
 
-// Create: name is auto-generated server-side (PROD-006), never submitted.
-const createExperimentSchema = z.object(baseExperimentFields);
+// Create: name is auto-generated server-side (PROD-006), never
+// submitted. `startWeek` (TECH-004 follow-up) replaces the old
+// startDate/endDate pair for creation specifically — picks the
+// experiment's first ExperimentWeekStage entry instead of the legacy
+// scalar dates; scoped to this schema only so `baseExperimentFields`'
+// startDate/endDate keep working unchanged for updateExperimentSchema
+// (still the live fields when editing an existing, not-yet-week-
+// tracked experiment).
+const createExperimentSchema = z.object({
+  ...baseExperimentFields,
+  startWeek: z.string().trim().optional(),
+});
 
 // Update: name is user-editable (confirmed by user 2026-08-06) once the
 // experiment exists.
@@ -165,14 +175,12 @@ export async function createExperiment(
   const name = await computeExperimentName(data.hypothesisId);
   const tagIds = await resolveExperimentTagIds(data);
 
-  await prisma.experiment.create({
+  const experiment = await prisma.experiment.create({
     data: {
       name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
       stage: data.stage,
-      startDate: toDate(data.startDate),
-      endDate: toDate(data.endDate),
       funnelLevels: { connect: tagIds.funnelLevels.map((id) => ({ id })) },
       platforms: { connect: tagIds.platforms.map((id) => ({ id })) },
       channels: { connect: tagIds.channels.map((id) => ({ id })) },
@@ -181,6 +189,21 @@ export async function createExperiment(
       segments: { connect: tagIds.segments.map((id) => ({ id })) },
     },
   });
+
+  // TECH-004 follow-up: creation picks a starting week instead of raw
+  // start/end dates — one ExperimentWeekStage entry at the chosen
+  // week, stage mirrors the Status field above (no separate picker
+  // for it), then the same recompute every other week-mutating action
+  // runs so Experiment.stage/startDate/endDate reflect it immediately.
+  // No week picked (still-undated experiment) is a no-op here, same
+  // as today.
+  if (data.startWeek) {
+    const weekStart = startOfWeek(new Date(`${data.startWeek}T00:00:00`));
+    await prisma.experimentWeekStage.create({
+      data: { experimentId: experiment.id, weekStart, stage: data.stage },
+    });
+    await recomputeExperimentDerivedFields(experiment.id);
+  }
 
   // Converting a hypothesis into an experiment means testing has started.
   await prisma.hypothesis.update({
@@ -191,6 +214,7 @@ export async function createExperiment(
   revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${data.hypothesisId}`);
+  revalidatePath("/calendar");
   redirect("/experiments?saved=1");
 }
 

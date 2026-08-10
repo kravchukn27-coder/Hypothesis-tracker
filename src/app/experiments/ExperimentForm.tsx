@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { startOfWeek, toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import {
   CHANNEL_BADGE_COLOR,
@@ -91,6 +92,20 @@ export function ExperimentForm({
   // manual Status/date fields below become read-only, edit via the
   // per-week editor (or the Calendar's week-cells) instead.
   const weekLocked = values.weekStages.length > 0;
+
+  // TECH-004 follow-up: creation picks a starting week (snapped to
+  // that week's Monday) instead of raw start/end dates — reuses the
+  // same startOfWeek/toDateParam the Calendar and week editors use,
+  // rather than a second date-math implementation.
+  const [startWeek, setStartWeek] = useState("");
+
+  function handleStartWeekChange(raw: string) {
+    if (!raw) {
+      setStartWeek("");
+      return;
+    }
+    setStartWeek(toDateParam(startOfWeek(new Date(`${raw}T00:00:00`))));
+  }
 
   useEffect(() => {
     if (state.error) showToast(state.error, "error");
@@ -210,22 +225,45 @@ export function ExperimentForm({
         </div>
       </FormSection>
 
-      {/* TECH-004: once week entries exist, startDate/endDate are a
-          derived cache from them (see `updateExperiment`'s
-          `locked` guard below) — this section just duplicated
-          "По неделям" as two disabled inputs, so it's dropped
-          entirely rather than shown read-only. Still the live way to
-          set dates for an experiment with no week entries yet. */}
-      {!weekLocked && (
+      {experimentId ? (
+        // TECH-004: once week entries exist, startDate/endDate are a
+        // derived cache from them (see `updateExperiment`'s `locked`
+        // guard below) — this section just duplicated "По неделям" as
+        // two disabled inputs, so it's dropped entirely rather than
+        // shown read-only. Still the live way to set dates for an
+        // existing experiment that has no week entries yet.
+        !weekLocked && (
+          <FormSection title="Расписание">
+            <div className="grid gap-6 sm:grid-cols-2">
+              <Field label="Дата начала" htmlFor="startDate">
+                <Input id="startDate" name="startDate" type="date" defaultValue={values.startDate} />
+              </Field>
+              <Field label="Дата окончания" htmlFor="endDate">
+                <Input id="endDate" name="endDate" type="date" defaultValue={values.endDate} />
+              </Field>
+            </div>
+          </FormSection>
+        )
+      ) : (
+        // TECH-004 follow-up: a brand-new experiment picks a starting
+        // week instead — creates its first ExperimentWeekStage entry
+        // (stage from Status above) rather than the legacy scalar
+        // dates. Leave empty for a still-undated experiment, same as
+        // today.
         <FormSection title="Расписание">
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Field label="Дата начала" htmlFor="startDate">
-              <Input id="startDate" name="startDate" type="date" defaultValue={values.startDate} />
-            </Field>
-            <Field label="Дата окончания" htmlFor="endDate">
-              <Input id="endDate" name="endDate" type="date" defaultValue={values.endDate} />
-            </Field>
-          </div>
+          <Field label="Неделя начала" htmlFor="startWeek">
+            <Input
+              id="startWeek"
+              name="startWeek"
+              type="date"
+              value={startWeek}
+              onChange={(e) => handleStartWeekChange(e.target.value)}
+            />
+            <p className="mt-1.5 text-xs text-zinc-500">
+              Дата округляется до понедельника этой недели; стадия — как в Status
+              выше. Оставь пустым, если пока без даты.
+            </p>
+          </Field>
         </FormSection>
       )}
 

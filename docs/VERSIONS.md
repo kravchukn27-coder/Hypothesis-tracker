@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- [TECH-004] Resolved the open question: the experiment detail card's
+  "Расписание" (Дата начала/окончания) section is dropped entirely
+  once an experiment has week entries, confirmed with the user —
+  `startDate`/`endDate` are a derived cache from `ExperimentWeekStage`
+  at that point (`updateExperiment` already ignored form input for
+  them when locked), so the section was just two disabled inputs
+  duplicating "По неделям" above it. Still shown (and still editable)
+  for an experiment with no week entries yet — the one case where
+  these fields are the live source of truth. `ExperimentForm.tsx`'s
+  "Расписание" `FormSection` is now conditional on `!weekLocked`
+  instead of rendering with `disabled` inputs.
 - [PROD-024] Each week row in the experiment detail card's "По
   неделям" editor (`ExperimentWeekStagesEditor`) now has a "×" delete
   control, using the app's existing generic `ConfirmDeleteButton`

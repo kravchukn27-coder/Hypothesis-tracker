@@ -210,30 +210,24 @@ export function ExperimentForm({
         </div>
       </FormSection>
 
-      <FormSection title="Расписание">
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Дата начала" htmlFor="startDate">
-            <Input
-              id="startDate"
-              name="startDate"
-              type="date"
-              defaultValue={values.startDate}
-              disabled={weekLocked}
-              title={weekLocked ? "Управляется по неделям — редактируй выше" : undefined}
-            />
-          </Field>
-          <Field label="Дата окончания" htmlFor="endDate">
-            <Input
-              id="endDate"
-              name="endDate"
-              type="date"
-              defaultValue={values.endDate}
-              disabled={weekLocked}
-              title={weekLocked ? "Управляется по неделям — редактируй выше" : undefined}
-            />
-          </Field>
-        </div>
-      </FormSection>
+      {/* TECH-004: once week entries exist, startDate/endDate are a
+          derived cache from them (see `updateExperiment`'s
+          `locked` guard below) — this section just duplicated
+          "По неделям" as two disabled inputs, so it's dropped
+          entirely rather than shown read-only. Still the live way to
+          set dates for an experiment with no week entries yet. */}
+      {!weekLocked && (
+        <FormSection title="Расписание">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Field label="Дата начала" htmlFor="startDate">
+              <Input id="startDate" name="startDate" type="date" defaultValue={values.startDate} />
+            </Field>
+            <Field label="Дата окончания" htmlFor="endDate">
+              <Input id="endDate" name="endDate" type="date" defaultValue={values.endDate} />
+            </Field>
+          </div>
+        </FormSection>
+      )}
 
       <StickyFormSubmit pending={pending} label={submitLabel} />
     </form>

@@ -63,9 +63,9 @@ export default async function ExperimentDetailPage({
   const action = updateExperiment.bind(null, experiment.id);
   const currentStage = experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages) : experiment.stage;
   const isHiddenFromCalendar = currentStage === "DONE" && experiment.calendarHiddenOnDone === true;
-  const firstWeek = experiment.weekStages[0];
-  const calendarHref = firstWeek
-    ? `/calendar?experimentId=${experiment.id}&start=${toDateParam(firstWeek.weekStart)}`
+  const calendarStart = experiment.weekStages[0]?.weekStart ?? experiment.startDate;
+  const calendarHref = calendarStart
+    ? `/calendar?experimentId=${experiment.id}&start=${toDateParam(calendarStart)}`
     : null;
 
   return (

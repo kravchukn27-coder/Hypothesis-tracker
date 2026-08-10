@@ -30,6 +30,7 @@ import {
 } from "@/components/tableWidths";
 import { StageCell } from "./StageCell";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
+import { toDateParam } from "@/lib/calendar";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 export default async function ExperimentsPage({
@@ -61,7 +62,7 @@ export default async function ExperimentsPage({
       include: {
         hypothesis: true,
         segments: true,
-        weekStages: { select: { weekStart: true, stage: true } },
+        weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
       },
     }),
     prisma.segment.findMany({ orderBy: { name: "asc" } }),
@@ -265,6 +266,10 @@ export default async function ExperimentsPage({
               {experiments.map((e) => {
                 const isHighlighted = e.hypothesisId === hypothesisId;
                 const currentStage = currentStageOf(e);
+                const calendarStart = e.weekStages[0]?.weekStart ?? e.startDate;
+                const calendarHref = calendarStart
+                  ? `/calendar?experimentId=${e.id}&start=${toDateParam(calendarStart)}`
+                  : null;
                 return (
                 <tr
                   key={e.id}
@@ -308,7 +313,13 @@ export default async function ExperimentsPage({
                     className={`${DATE_COL} px-4 py-3 text-zinc-500`}
                     title={formatDateRange(e.startDate, e.endDate)}
                   >
-                    {formatWeekRange(e.startDate, e.endDate)}
+                    {calendarHref ? (
+                      <Link href={calendarHref} className="font-medium text-zinc-700 hover:underline">
+                        {formatWeekRange(e.startDate, e.endDate)}
+                      </Link>
+                    ) : (
+                      formatWeekRange(e.startDate, e.endDate)
+                    )}
                   </td>
                 </tr>
                 );

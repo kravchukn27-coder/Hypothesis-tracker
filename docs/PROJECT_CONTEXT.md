@@ -34,7 +34,9 @@ Source of truth for the original data model: a Google Sheet exported as
    `/experiments/[id]` (its "Гипотеза" field links to
    `/backlog/[hypothesisId]`), not the list's primary click target
    anymore. A week-tracked experiment's detail card also links directly
-   to its row in Calendar, opening a window from the first planned week.
+   to its focused Calendar view, opening a window from the first planned
+   week. The focused view shows only that experiment and has an explicit
+   control to return to the full Calendar without losing the week window.
 3. **Calendar** ✅ — `/calendar`, week-granularity grid (PROD-019,
    2026-08-08 — day-granularity per PROD-014/016/017 was a
    misunderstanding of the domain, since experiment stages actually

@@ -17,7 +17,6 @@ import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
-import { ScrollToCalendarExperiment } from "./ScrollToCalendarExperiment";
 import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_HEIGHT, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
 
 function parseWindowStart(start: string | undefined): Date {
@@ -69,7 +68,9 @@ export default async function CalendarPage({
     return !(currentStage === "DONE" && e.calendarHiddenOnDone === true);
   });
 
-  const timelineExperiments = experiments.map((e) => ({
+  const focusedExperiment = experimentId ? experiments.find((experiment) => experiment.id === experimentId) : null;
+  const displayedExperiments = focusedExperiment ? [focusedExperiment] : experiments;
+  const timelineExperiments = displayedExperiments.map((e) => ({
     id: e.id,
     name: e.name,
     hypothesisId: e.hypothesisId,
@@ -98,22 +99,33 @@ export default async function CalendarPage({
       : [];
   });
 
-  // PROD-022: every navigation link on this page carries the active
-  // stage filter along (URL query param, same convention `/backlog`
-  // and `/experiments` use for their filters) so paging/"Сегодня"
-  // doesn't silently drop it.
-  const stageParam = stageFilter ? `&stage=${stageFilter}` : "";
-  const prevHref = `/calendar?start=${toDateParam(addWeeks(windowStart, -PAGE_STEP_WEEKS))}${stageParam}`;
-  const nextHref = `/calendar?start=${toDateParam(addWeeks(windowStart, PAGE_STEP_WEEKS))}${stageParam}`;
-  const todayHref = stageFilter ? `/calendar?stage=${stageFilter}` : "/calendar";
+  function calendarHref({
+    start: nextStart,
+    stage: requestedStage,
+    focused = Boolean(focusedExperiment),
+  }: {
+    start?: Date;
+    stage?: string | null;
+    focused?: boolean;
+  } = {}): string {
+    const nextStage = requestedStage === undefined ? stageFilter : requestedStage;
+    const params = new URLSearchParams();
+    if (nextStart) params.set("start", toDateParam(nextStart));
+    if (nextStage) params.set("stage", nextStage);
+    if (focused && focusedExperiment) params.set("experimentId", focusedExperiment.id);
+    const query = params.toString();
+    return query ? `/calendar?${query}` : "/calendar";
+  }
+
+  // Every navigation keeps both the active stage filter and focused
+  // experiment. The focused view is a view mode, not a filter reset.
+  const prevHref = calendarHref({ start: addWeeks(windowStart, -PAGE_STEP_WEEKS) });
+  const nextHref = calendarHref({ start: addWeeks(windowStart, PAGE_STEP_WEEKS) });
+  const todayHref = calendarHref();
   const isToday = windowStart.getTime() === startOfWeek(new Date()).getTime();
 
   function stageFilterHref(value: string): string {
-    const params = new URLSearchParams();
-    if (start) params.set("start", start);
-    if (stageFilter !== value) params.set("stage", value);
-    const qs = params.toString();
-    return qs ? `/calendar?${qs}` : "/calendar";
+    return calendarHref({ start: start ? windowStart : undefined, stage: stageFilter === value ? null : value });
   }
 
   function cellMatchesFilter(cellStage: string | null, overdue: boolean): boolean {
@@ -128,7 +140,7 @@ export default async function CalendarPage({
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Calendar</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {experiments.length === 0
+            {displayedExperiments.length === 0
               ? "Пока нет экспериментов"
               : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}`}
           </p>
@@ -160,9 +172,7 @@ export default async function CalendarPage({
         </div>
       </div>
 
-      {experimentId && <ScrollToCalendarExperiment experimentId={experimentId} />}
-
-      {experiments.length === 0 ? (
+      {displayedExperiments.length === 0 ? (
         <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
           <Link
@@ -174,6 +184,16 @@ export default async function CalendarPage({
         </div>
       ) : (
         <>
+          {focusedExperiment && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
+              <p className="min-w-0 truncate text-zinc-600">
+                Просмотр: <span className="font-medium text-zinc-900">{focusedExperiment.name}</span>
+              </p>
+              <Link href={calendarHref({ start: windowStart, focused: false })} className="shrink-0 font-medium text-zinc-700 underline underline-offset-4 hover:text-zinc-900">
+                Показать все эксперименты
+              </Link>
+            </div>
+          )}
           <OverdueExperimentReminder reminders={overdueReminders} />
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
@@ -202,7 +222,7 @@ export default async function CalendarPage({
             </Link>
             {stageFilter && (
               <Link
-                href={start ? `/calendar?start=${start}` : "/calendar"}
+                href={calendarHref({ start: start ? windowStart : undefined, stage: null })}
                 className="text-zinc-400 underline underline-offset-4 hover:text-zinc-700"
               >
                 ✕ Сбросить фильтр

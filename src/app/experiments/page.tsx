@@ -86,12 +86,22 @@ export default async function ExperimentsPage({
     return e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
   }
 
+  // PROD-021: a multi-segment experiment sorts by the same stable,
+  // alphabetically ordered string shown in the table.
+  function segmentLabel(e: (typeof experiments)[number]): string {
+    return e.segments
+      .map((segment) => segment.name)
+      .sort((a, b) => a.localeCompare(b, "ru"))
+      .join(", ");
+  }
+
   experiments.sort((a, b) => {
     let cmp = 0;
     if (sortBy === "name") cmp = a.name.localeCompare(b.name, "ru");
     else if (sortBy === "stage")
       cmp = STAGE_ORDER.indexOf(currentStageOf(a)) - STAGE_ORDER.indexOf(currentStageOf(b));
     else if (sortBy === "author") cmp = (a.author ?? "").localeCompare(b.author ?? "", "ru");
+    else if (sortBy === "segment") cmp = segmentLabel(a).localeCompare(segmentLabel(b), "ru");
     else if (sortBy === "createdAt") cmp = a.createdAt.getTime() - b.createdAt.getTime();
     else {
       const at = a.startDate ? a.startDate.getTime() : Infinity;
@@ -228,7 +238,15 @@ export default async function ExperimentsPage({
                     href={(d) => sortHref("author", d)}
                   />
                 </th>
-                <th className={`${LONG_TEXT_COL} px-4 py-3`}>Segment</th>
+                <th className={`${LONG_TEXT_COL} px-4 py-3`}>
+                  <SortableHeader
+                    label="Segment"
+                    active={sortBy === "segment"}
+                    dir={currentDir}
+                    defaultDir="asc"
+                    href={(d) => sortHref("segment", d)}
+                  />
+                </th>
                 <th className={`${DATE_COL} px-4 py-3`}>
                   <SortableHeader
                     label="Даты"
@@ -281,7 +299,7 @@ export default async function ExperimentsPage({
                     )}
                   </td>
                   <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
-                    {e.segments.map((s) => s.name).join(", ") || "—"}
+                    {segmentLabel(e) || "—"}
                   </td>
                   <td
                     className={`${DATE_COL} px-4 py-3 text-zinc-500`}

@@ -1,34 +1,5 @@
 # Product Backlog
 
-## PROD-021 — Experiments list: sortable Segment column
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** Add ascending/descending sort to the Segment column on
-`/experiments`, matching the existing click-to-sort mechanism already
-on Name/Status/Автор/Даты.
-
-**Description:** Source: user direction 2026-08-09.
-`src/app/experiments/page.tsx`'s Segment `<th>` (line ~211) is a plain
-`<th>Segment</th>` — no `SortableHeader`, unlike every other column
-header on this table. The in-memory sort in the same file (`sortBy ===
-"name" | "stage" | "author" | "createdAt"`, else falls through to
-`startDate`) needs a `"segment"` branch. `segments` is a many-to-many
-relation (an experiment can have 0+ `Segment` tags, joined `", "` for
-display) rather than a single scalar, so the comparator needs a
-decision on what "sorting by segment" means for multi-value rows (e.g.
-sort by the first/alphabetically-first segment name, or by the joined
-display string) — same shape of question as `author` (`localeCompare`
-on `""` for unset), but Segment can have more than one value where
-Автор can't.
-
-**Acceptance Criteria:**
-- Segment column header is clickable and toggles asc/desc like the
-  other sortable columns (`?sortBy=segment&dir=asc|desc`).
-- Sort behavior for experiments with zero or multiple segments is
-  well-defined and doesn't crash/misorder (empty segments sort
-  consistently to one end, same convention as unset Автор).
-
 ---
 
 ---

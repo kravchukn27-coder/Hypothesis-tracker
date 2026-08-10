@@ -1,43 +1,5 @@
 # Product Backlog
 
-## PROD-020 — Hypothesis detail card: add a way to create another experiment
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** On `/backlog/[id]`, once a hypothesis already has an
-experiment, its only action button is "Показать эксперимент" — there's
-no way to start a second experiment off the same hypothesis from the
-detail card, even though the app already supports multiple experiments
-per hypothesis (PROD-006). Add a small secondary "Добавить
-эксперимент" button next to "Показать эксперимент" (not replacing it).
-
-**Description:** Source: user direction 2026-08-09.
-`src/app/backlog/[id]/page.tsx` currently renders one of two mutually
-exclusive buttons based on `hypothesis._count.experiments > 0`:
-"Показать эксперимент" (links to `/experiments?hypothesisId=...`) or
-"Создать эксперимент" (links to `/experiments/new?hypothesisId=...`).
-Once the count is `> 0`, the create path becomes unreachable from this
-card — the only way to add a second experiment today is via
-`/experiments/new?hypothesisId=...` typed/linked manually, which isn't
-exposed anywhere once the first experiment exists. `PROD-006`'s naming
-scheme (hypothesis name + " N" suffix for the Nth+1 experiment) and
-`computeExperimentName` already assume this is a supported flow — the
-UI entry point is just missing. Per the user, this is a secondary
-action, so it should read as visually lighter/smaller than "Показать
-эксперимент", not equally prominent.
-
-**Acceptance Criteria:**
-- When a hypothesis has one or more experiments, `/backlog/[id]` shows
-  both "Показать эксперимент" and a smaller "Добавить эксперимент"
-  button (linking to `/experiments/new?hypothesisId=...`, same as
-  today's zero-experiments "Создать эксперимент" path).
-- "Добавить эксперимент" is visually secondary (smaller/lighter) next
-  to "Показать эксперимент".
-- Zero-experiments state is unchanged (still just "Создать
-  эксперимент").
-
----
-
 ## PROD-021 — Experiments list: sortable Segment column
 
 **Status:** TODO
@@ -227,4 +189,3 @@ existing undated flow.
   week-tagged experiment.
 - Skipping the field still works — creating without picking a week
   leaves the experiment undated, same as today.
-

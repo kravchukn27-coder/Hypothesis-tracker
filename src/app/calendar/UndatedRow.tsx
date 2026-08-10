@@ -1,23 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { DateCell } from "@/app/experiments/DateCell";
+import { UndatedWeekPicker } from "./UndatedWeekPicker";
 
 /**
  * One row in the Calendar's "Без дат" list (PROD-017). The
  * name/hypothesis block is the drag handle — dragging it onto a
- * `DayHeaderCell` schedules the experiment there. `draggable` is
+ * `WeekHeaderCell` schedules the experiment there. `draggable` is
  * scoped to that block only, not the whole row, so it doesn't
- * interfere with clicking into the `DateCell` inputs.
+ * interfere with the manual week picker.
  */
 export function UndatedRow({
   experimentId,
   name,
   hypothesisName,
+  weekOptions,
 }: {
   experimentId: string;
   name: string;
   hypothesisName: string;
+  weekOptions: { value: string; label: string }[];
 }) {
   return (
     <li className="flex items-center justify-between gap-3">
@@ -41,7 +43,7 @@ export function UndatedRow({
         </Link>
         <span className="ml-2 text-xs text-zinc-400">{hypothesisName}</span>
       </div>
-      <DateCell experimentId={experimentId} startDate={null} endDate={null} />
+      <UndatedWeekPicker experimentId={experimentId} weekOptions={weekOptions} />
     </li>
   );
 }

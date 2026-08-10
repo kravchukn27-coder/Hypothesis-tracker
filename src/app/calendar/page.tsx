@@ -79,6 +79,10 @@ export default async function CalendarPage({
     weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage, completed: w.completed })),
   }));
   const { weeks, rows, undated, todayColumn } = buildTimeline(timelineExperiments, windowStart);
+  const weekOptions = weeks.map((week) => ({
+    value: toDateParam(week),
+    label: `${formatWeekLabel(week)} (${getISOWeekNumber(week)})`,
+  }));
   const overdueReminders = timelineExperiments.flatMap((experiment) => {
     const overdueWeek = getOverdueWeek(experiment, now);
     return overdueWeek
@@ -289,7 +293,13 @@ export default async function CalendarPage({
               </p>
               <ul className="flex flex-col gap-2">
                 {undated.map((e) => (
-                  <UndatedRow key={e.id} experimentId={e.id} name={e.name} hypothesisName={e.hypothesisName} />
+                  <UndatedRow
+                    key={e.id}
+                    experimentId={e.id}
+                    name={e.name}
+                    hypothesisName={e.hypothesisName}
+                    weekOptions={weekOptions}
+                  />
                 ))}
               </ul>
             </div>

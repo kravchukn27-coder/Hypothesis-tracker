@@ -152,8 +152,8 @@ changes shape things.
   every existing query/filter/sort/badge across the app (list Status
   column, filters, `StageCell`) keeps working unchanged without
   needing to know about weeks at all. Once an experiment has week
-  entries, its manual date controls (`DateCell`, the form's Status/
-  date fields) stay read-only — both client-side (a `locked` prop) and
+  entries, its remaining manual date controls (the form's Status/date
+  fields) stay read-only — both client-side (a `locked` prop) and
   server-side (`updateExperimentDates` no-ops if week entries exist).
   **BUG-005 (2026-08-09):** the list's Status pill (`StageCell`) was
   also locked this way at first, then confirmed with the user to stay

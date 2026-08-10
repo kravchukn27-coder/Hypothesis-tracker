@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addNextExperimentWeek, deleteExperimentWeek, setExperimentWeekStage } from "./actions";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { getISOWeekNumber } from "@/lib/calendar";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { IconSelect } from "@/components/IconSelect";
@@ -13,7 +14,8 @@ type WeekEntry = { weekStartISO: string; stage: ExperimentStage };
 
 function formatWeek(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long" });
+  const date = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long" });
+  return `${date} (${getISOWeekNumber(d)} неделя)`;
 }
 
 /**

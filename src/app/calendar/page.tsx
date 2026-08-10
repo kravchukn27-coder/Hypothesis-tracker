@@ -82,6 +82,9 @@ export default async function CalendarPage({
     weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage, completed: w.completed })),
   }));
   const { weeks, rows, undated, todayColumn } = buildTimeline(timelineExperiments, windowStart);
+  const activeExperimentCounts = weeks.map((_, weekIndex) =>
+    rows.reduce((count, row) => count + (row.cells[weekIndex]?.stage ? 1 : 0), 0),
+  );
   const weekOptions = weeks.map((week) => ({
     value: toDateParam(week),
     label: `${formatWeekLabel(week)} (${getISOWeekNumber(week)})`,
@@ -242,7 +245,12 @@ export default async function CalendarPage({
                   style={{ gridTemplateColumns: `repeat(${WINDOW_WEEKS}, minmax(0, 1fr))` }}
                 >
                   {weeks.map((w, i) => (
-                    <WeekHeaderCell key={i} weekStartISO={toDateParam(w)} isToday={i === todayColumn}>
+                    <WeekHeaderCell
+                      key={i}
+                      weekStartISO={toDateParam(w)}
+                      isToday={i === todayColumn}
+                      activeExperimentCount={activeExperimentCounts[i]}
+                    >
                       {formatWeekLabel(w)} ({getISOWeekNumber(w)})
                     </WeekHeaderCell>
                   ))}

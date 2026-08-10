@@ -2,7 +2,7 @@
 
 ## UI-023 — Сделать редактирование недельного плана в Calendar обнаружимым и безопасным
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / UX
 - **Type:** Enhancement

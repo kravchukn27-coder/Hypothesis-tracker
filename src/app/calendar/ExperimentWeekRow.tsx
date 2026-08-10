@@ -10,9 +10,11 @@ import {
 } from "@/app/experiments/actions";
 import { X } from "lucide-react";
 import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
+import { formatWeekLabel } from "@/lib/calendar";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
 import { useToast } from "@/components/toast/ToastProvider";
+import { CalendarPlanChangeDialog } from "./CalendarPlanChangeDialog";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 type Cell = {
@@ -33,6 +35,30 @@ type Cell = {
 };
 
 type DragMode = "move" | "resize-right";
+
+type PendingPlanChange = {
+  mode: DragMode;
+  blockStartISO: string;
+  blockEndISO: string;
+  deltaWeeks: number;
+  nextStartISO: string;
+  nextEndISO: string;
+};
+
+const GESTURE_HINT_STORAGE_KEY = "calendar-week-plan-gesture-hint";
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+function shiftWeekISO(weekStartISO: string, deltaWeeks: number): string {
+  const date = new Date(`${weekStartISO}T00:00:00`);
+  date.setDate(date.getDate() + deltaWeeks * 7);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatRange(startISO: string, endISO: string): string {
+  const start = new Date(`${startISO}T00:00:00`);
+  const end = new Date(`${endISO}T00:00:00`);
+  return startISO === endISO ? formatWeekLabel(start) : `${formatWeekLabel(start)} — ${formatWeekLabel(end)}`;
+}
 
 /**
  * One experiment's interactive row on the Calendar (PROD-019) — a
@@ -61,6 +87,7 @@ export function ExperimentWeekRow({
   const { showToast } = useToast();
   const [openWeekIndex, setOpenWeekIndex] = useState<number | null>(null);
   const [showHidePrompt, setShowHidePrompt] = useState(false);
+  const [pendingPlanChange, setPendingPlanChange] = useState<PendingPlanChange | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
 
@@ -69,6 +96,7 @@ export function ExperimentWeekRow({
       try {
         const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
         router.refresh();
+        showToast("Стадия недели обновлена.");
         if (becameDone) setShowHidePrompt(true);
       } catch {
         showToast("Не удалось обновить стадию. Попробуйте ещё раз.", "error");
@@ -106,6 +134,21 @@ export function ExperimentWeekRow({
     const startX = e.clientX;
     didDragRef.current = false;
 
+    let shouldShowHint = false;
+    try {
+      shouldShowHint = !window.localStorage.getItem(GESTURE_HINT_STORAGE_KEY);
+      if (shouldShowHint) window.localStorage.setItem(GESTURE_HINT_STORAGE_KEY, "1");
+    } catch {
+      shouldShowHint = true;
+    }
+    if (shouldShowHint) {
+      showToast(
+        mode === "move"
+          ? "Перетащите этап на нужную неделю, затем подтвердите новый диапазон."
+          : "Потяните за правый край, затем подтвердите новую длительность.",
+      );
+    }
+
     function weekDeltaFrom(clientX: number) {
       return Math.round((clientX - startX) / cellWidth);
     }
@@ -119,25 +162,52 @@ export function ExperimentWeekRow({
       window.removeEventListener("pointerup", onUp);
       const weekDelta = weekDeltaFrom(ev.clientX);
       if (weekDelta !== 0) {
-        startTransition(async () => {
-          try {
-            if (mode === "move") await shiftExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
-            else await resizeExperimentWeeks(experimentId, blockStartISO, blockEndISO, weekDelta);
-            router.refresh();
-          } catch {
-            showToast(
-              mode === "move"
-                ? "Не удалось переместить неделю. Попробуйте ещё раз."
-                : "Не удалось изменить длительность этапа. Попробуйте ещё раз.",
-              "error",
-            );
-          }
+        const blockLength = Math.round(
+          (new Date(`${blockEndISO}T00:00:00`).getTime() - new Date(`${blockStartISO}T00:00:00`).getTime()) / MS_PER_WEEK,
+        ) + 1;
+        const deltaWeeks = mode === "resize-right" ? Math.max(weekDelta, -(blockLength - 1)) : weekDelta;
+        if (deltaWeeks === 0) return;
+        setPendingPlanChange({
+          mode,
+          blockStartISO,
+          blockEndISO,
+          deltaWeeks,
+          nextStartISO: mode === "move" ? shiftWeekISO(blockStartISO, deltaWeeks) : blockStartISO,
+          nextEndISO: mode === "move" ? shiftWeekISO(blockEndISO, deltaWeeks) : shiftWeekISO(blockEndISO, deltaWeeks),
         });
       }
     }
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+  }
+
+  function confirmPlanChange() {
+    if (!pendingPlanChange) return;
+    const change = pendingPlanChange;
+    startTransition(async () => {
+      try {
+        const result =
+          change.mode === "move"
+            ? await shiftExperimentWeeks(experimentId, change.blockStartISO, change.blockEndISO, change.deltaWeeks)
+            : await resizeExperimentWeeks(experimentId, change.blockStartISO, change.blockEndISO, change.deltaWeeks);
+        setPendingPlanChange(null);
+        if (!result.changed) {
+          showToast("Не удалось сохранить: новый диапазон пересекается с другим этапом этого эксперимента.", "error");
+          return;
+        }
+        router.refresh();
+        showToast(change.mode === "move" ? "Этап перенесён." : "Длительность этапа обновлена.");
+      } catch {
+        setPendingPlanChange(null);
+        showToast(
+          change.mode === "move"
+            ? "Не удалось переместить этап. Попробуйте ещё раз."
+            : "Не удалось изменить длительность этапа. Попробуйте ещё раз.",
+          "error",
+        );
+      }
+    });
   }
 
   return (
@@ -169,8 +239,9 @@ export function ExperimentWeekRow({
                     }
                     setOpenWeekIndex(isOpen ? null : i);
                   }}
+                  aria-label={`${STAGE_LABELS[cell.stage as ExperimentStage]}. Перетащите, чтобы перенести неделю.`}
                   title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                  className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
+                  className={`relative my-2 flex h-8 w-full cursor-grab items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
                 >
                   {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
                   <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
@@ -180,7 +251,8 @@ export function ExperimentWeekRow({
                         e.stopPropagation();
                         beginDrag("resize-right", cell, e);
                       }}
-                      className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
+                      aria-hidden="true"
+                      className="absolute right-0 top-0 z-20 h-full w-2 cursor-ew-resize border-r-2 border-white/80 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                     />
                   )}
                 </button>
@@ -223,6 +295,18 @@ export function ExperimentWeekRow({
           experimentId={experimentId}
           experimentName={experimentName}
           onDismiss={() => setShowHidePrompt(false)}
+        />
+      )}
+
+      {pendingPlanChange && (
+        <CalendarPlanChangeDialog
+          mode={pendingPlanChange.mode}
+          experimentName={experimentName}
+          previousRange={formatRange(pendingPlanChange.blockStartISO, pendingPlanChange.blockEndISO)}
+          nextRange={formatRange(pendingPlanChange.nextStartISO, pendingPlanChange.nextEndISO)}
+          pending={isPending}
+          onCancel={() => setPendingPlanChange(null)}
+          onConfirm={confirmPlanChange}
         />
       )}
     </div>

@@ -527,11 +527,11 @@ export async function shiftExperimentWeeks(
   blockStartISO: string,
   blockEndISO: string,
   deltaWeeks: number,
-) {
-  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return;
+) : Promise<{ changed: boolean }> {
+  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return { changed: false };
 
   const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
-  if (entries.length === 0) return;
+  if (entries.length === 0) return { changed: false };
 
   const newStart = new Date(parseISODate(blockStartISO).getTime() + deltaWeeks * 7 * MS_PER_DAY);
   const newEnd = new Date(parseISODate(blockEndISO).getTime() + deltaWeeks * 7 * MS_PER_DAY);
@@ -545,7 +545,7 @@ export async function shiftExperimentWeeks(
     },
     select: { id: true },
   });
-  if (collisionEntries.length > 0) return; // would land on another block — no-op
+  if (collisionEntries.length > 0) return { changed: false }; // would land on another block — no-op
 
   await prisma.$transaction([
     prisma.experimentWeekStage.deleteMany({
@@ -567,6 +567,7 @@ export async function shiftExperimentWeeks(
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
+  return { changed: true };
 }
 
 /**
@@ -582,17 +583,17 @@ export async function resizeExperimentWeeks(
   blockStartISO: string,
   blockEndISO: string,
   deltaWeeks: number,
-) {
-  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return;
+) : Promise<{ changed: boolean }> {
+  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return { changed: false };
 
   const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
-  if (entries.length === 0) return;
+  if (entries.length === 0) return { changed: false };
 
   if (deltaWeeks > 0) {
     const last = entries[entries.length - 1];
     const rangeStart = new Date(last.weekStart.getTime() + MS_PER_DAY * 7);
     const rangeEnd = new Date(last.weekStart.getTime() + deltaWeeks * 7 * MS_PER_DAY);
-    if (await hasEntriesInRange(experimentId, rangeStart, rangeEnd)) return; // would reach another block — no-op
+    if (await hasEntriesInRange(experimentId, rangeStart, rangeEnd)) return { changed: false }; // would reach another block — no-op
 
     const additions = Array.from({ length: deltaWeeks }, (_, i) => ({
       experimentId,
@@ -614,6 +615,7 @@ export async function resizeExperimentWeeks(
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
+  return { changed: true };
 }
 
 export async function getFunnelLevels() {

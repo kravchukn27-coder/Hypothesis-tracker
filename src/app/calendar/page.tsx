@@ -46,6 +46,7 @@ export default async function CalendarPage({
 
   const now = new Date();
   const allExperiments = await prisma.experiment.findMany({
+    where: { archived: false },
     include: { hypothesis: true, weekStages: { orderBy: { weekStart: "asc" } } },
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
   });

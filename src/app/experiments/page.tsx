@@ -51,11 +51,10 @@ export default async function ExperimentsPage({
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
 
-  const [experiments, segments, authorRows] = await Promise.all([
+  const [allExperiments, segments, authorRows] = await Promise.all([
     prisma.experiment.findMany({
       where: {
         archived: showArchived,
-        ...(stage ? { stage: stage as ExperimentStage } : {}),
         ...(segment ? { segments: { some: { id: segment } } } : {}),
         ...(author ? { author } : {}),
       },
@@ -74,6 +73,17 @@ export default async function ExperimentsPage({
     }),
   ]);
 
+  const now = new Date();
+  function currentStageOf(e: (typeof allExperiments)[number]): ExperimentStage {
+    return e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
+  }
+
+  // PROD-030: `Experiment.stage` is a future-plan cache once weekly
+  // entries exist. Filter by the same current stage the list displays.
+  const experiments = stage
+    ? allExperiments.filter((experiment) => currentStageOf(experiment) === stage)
+    : allExperiments;
+
   const segmentOptions = segments.map((s) => ({ value: s.id, label: s.name }));
 
   const authorOptions = authorRows
@@ -85,10 +95,6 @@ export default async function ExperimentsPage({
   // for week-tracked experiments, not `stage` (which caches the
   // furthest-future week — the plan's endpoint). Sort/border color use
   // the same value so the row stays visually consistent with its pill.
-  const now = new Date();
-  function currentStageOf(e: (typeof experiments)[number]): ExperimentStage {
-    return e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
-  }
 
   // PROD-021: a multi-segment experiment sorts by the same stable,
   // alphabetically ordered string shown in the table.

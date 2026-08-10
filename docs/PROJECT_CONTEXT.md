@@ -89,7 +89,10 @@ below for why Backlog only has one of each.
   relation (`Segment.id` as the filter value, since 2026-08-07's
   follow-up to TECH-003), but each filter is still a `<select>` of the
   *distinct existing values* in the data, not a text search box,
-  matching how Funnel Level already works. Experiments never had a sort dropdown, so PROD-007 didn't
+  matching how Funnel Level already works. For week-tracked experiments,
+  the Status filter uses the same current-week stage as the pill and row
+  color; legacy experiments continue to use their scalar `stage`.
+  Experiments never had a sort dropdown, so PROD-007 didn't
   need to remove anything there — just added headers and switched the
   Prisma `orderBy` to the same in-memory sort so there's one code path.
 - A "Сбросить" link (from `FilterBar`) appears once any *filter* field

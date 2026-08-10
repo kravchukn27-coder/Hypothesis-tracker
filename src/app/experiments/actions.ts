@@ -696,6 +696,7 @@ export async function archiveExperiment(id: string) {
   });
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+  revalidatePath("/calendar");
 }
 
 export async function unarchiveExperiment(id: string) {
@@ -705,6 +706,7 @@ export async function unarchiveExperiment(id: string) {
   });
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+  revalidatePath("/calendar");
 }
 
 export async function archiveExperiments(ids: string[]): Promise<{ error?: string } | void> {
@@ -714,6 +716,7 @@ export async function archiveExperiments(ids: string[]): Promise<{ error?: strin
     data: { archived: true, archivedAt: new Date() },
   });
   revalidatePath("/experiments");
+  revalidatePath("/calendar");
 }
 
 export async function deleteExperiments(ids: string[]): Promise<{ error?: string } | void> {

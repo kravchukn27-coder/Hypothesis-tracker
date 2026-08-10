@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -15,8 +16,28 @@ export function StageOptionsMenu({
   onSelect: (stage: ExperimentStage) => void;
   onClose: () => void;
 }) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) onClose();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
     <div
+      ref={menuRef}
       onMouseLeave={onClose}
       className="absolute left-0 top-full z-20 mt-1 w-36 rounded-md border border-zinc-200 bg-white p-1 shadow-lg"
     >

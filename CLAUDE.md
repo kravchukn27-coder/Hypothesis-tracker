@@ -1,8 +1,9 @@
 # Hypothesis Tracker — Working Rules
 
-Read `docs/PROJECT_CONTEXT.md` first — it's the project map (stack,
-screens, data model, origin-data mapping). Read the relevant canonical
-backlog card in `docs/backlog/` before starting a task.
+Read `docs/CANONICAL_RULES.md` first for domain invariants, then
+`docs/PROJECT_CONTEXT.md` for the project map (stack, screens, data
+model, origin-data mapping). Read the relevant canonical backlog card
+in `docs/backlog/` before starting a task.
 
 ## Hard Rules
 

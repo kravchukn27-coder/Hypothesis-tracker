@@ -33,7 +33,8 @@ Source of truth for the original data model: a Google Sheet exported as
    parent hypothesis is a second step, reached from inside
    `/experiments/[id]` (its "Гипотеза" field links to
    `/backlog/[hypothesisId]`), not the list's primary click target
-   anymore.
+   anymore. A week-tracked experiment's detail card also links directly
+   to its row in Calendar, opening a window from the first planned week.
 3. **Calendar** ✅ — `/calendar`, week-granularity grid (PROD-019,
    2026-08-08 — day-granularity per PROD-014/016/017 was a
    misunderstanding of the domain, since experiment stages actually

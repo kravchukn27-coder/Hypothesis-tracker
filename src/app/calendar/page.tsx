@@ -17,6 +17,7 @@ import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
+import { ScrollToCalendarExperiment } from "./ScrollToCalendarExperiment";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -38,9 +39,9 @@ const OVERDUE_FILTER = "OVERDUE";
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string; stage?: string }>;
+  searchParams: Promise<{ start?: string; stage?: string; experimentId?: string }>;
 }) {
-  const { start, stage: stageFilter } = await searchParams;
+  const { start, stage: stageFilter, experimentId } = await searchParams;
   const windowStart = parseWindowStart(start);
 
   const now = new Date();
@@ -154,6 +155,8 @@ export default async function CalendarPage({
         </div>
       </div>
 
+      {experimentId && <ScrollToCalendarExperiment experimentId={experimentId} />}
+
       {experiments.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 py-24 text-center">
           <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
@@ -221,7 +224,11 @@ export default async function CalendarPage({
               </div>
 
               {rows.map(({ experiment: e, cells, overdue, overdueWeekStart }) => (
-                <div key={e.id} className="flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50">
+                <div
+                  key={e.id}
+                  data-experiment-id={e.id}
+                  className="flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50"
+                >
                   <div className="sticky left-0 z-10 w-56 shrink-0 bg-white px-4 py-3">
                     {/* PROD-019: previously the colored bar itself linked to
                         /experiments/[id] — now that each week is its own

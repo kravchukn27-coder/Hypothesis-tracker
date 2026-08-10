@@ -4,38 +4,6 @@
 
 ---
 
-## PROD-026 — Experiment detail card: "Показать на календаре" button
-
-**Status:** TODO
-**Priority:** LOW
-**Summary:** Add a "Показать на календаре" button to the experiment
-detail card (`src/app/experiments/[id]/page.tsx`) that opens `/calendar`
-scrolled/positioned to that experiment's row, so you don't have to hunt
-for it manually in the grid.
-
-**Description:** Source: user direction 2026-08-09. Right now the only
-route from a detail card to the Calendar is indirect (navigate to
-`/calendar` and scan the rows yourself). `/calendar` already computes a
-fixed weeks window per `buildTimeline`
-(`src/lib/calendar.ts:132`, `windowStart` param) — the button needs a
-way to tell the Calendar page which experiment/week to land on, e.g. an
-`?experimentId=` query param that both scrolls the row into view and
-(if the experiment's weeks fall outside the default window) shifts
-`windowStart` so at least one of its weeks is visible. Needs a decision
-on the "row not in default window" case specifically — jump the window
-to the experiment's own start week, vs. just scroll/highlight if
-already visible and no-op the window shift otherwise.
-
-**Acceptance Criteria:**
-- Experiment detail card shows a "Показать на календаре" button/link
-  (only meaningful once the experiment has at least one scheduled
-  week — hide or disable it for fully undated experiments, same
-  condition as `buildTimeline`'s `undated` filter).
-- Clicking it opens `/calendar` with that experiment's row visible
-  (scrolled into view and/or window shifted so it's not empty/hidden).
-- No effect on Calendar's existing filter/window behavior for other
-  experiments.
-
 ---
 
 ## PROD-027 — New experiment: pick a starting week at creation time

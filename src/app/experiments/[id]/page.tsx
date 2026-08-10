@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Suspense } from "react";
+import { CalendarDays } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   archiveExperiment,
@@ -20,6 +22,7 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { toDateParam } from "@/lib/calendar";
+import { getCurrentWeekStage } from "@/lib/experiment";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -58,6 +61,12 @@ export default async function ExperimentDetailPage({
   if (!experiment) notFound();
 
   const action = updateExperiment.bind(null, experiment.id);
+  const currentStage = experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages) : experiment.stage;
+  const isHiddenFromCalendar = currentStage === "DONE" && experiment.calendarHiddenOnDone === true;
+  const firstWeek = experiment.weekStages[0];
+  const calendarHref = firstWeek
+    ? `/calendar?experimentId=${experiment.id}&start=${toDateParam(firstWeek.weekStart)}`
+    : null;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
@@ -83,6 +92,15 @@ export default async function ExperimentDetailPage({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          {calendarHref && !isHiddenFromCalendar && (
+            <Link
+              href={calendarHref}
+              className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              <CalendarDays className="size-4" aria-hidden />
+              Показать на календаре
+            </Link>
+          )}
           {experiment.archived ? (
             <ConfirmDeleteButton
               onConfirm={unarchiveExperiment.bind(null, experiment.id)}

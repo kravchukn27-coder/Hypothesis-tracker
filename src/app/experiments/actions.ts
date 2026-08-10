@@ -395,6 +395,19 @@ export async function setExperimentWeekStage(
   return { becameDone };
 }
 
+/** PROD-025: completes only the dangling weekly stage from the Calendar reminder. */
+export async function completeExperimentWeek(experimentId: string, weekStartISO: string) {
+  const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
+  await prisma.experimentWeekStage.updateMany({
+    where: { experimentId, weekStart },
+    data: { completed: true },
+  });
+
+  revalidatePath("/experiments");
+  revalidatePath(`/experiments/${experimentId}`);
+  revalidatePath("/calendar");
+}
+
 /**
  * PROD-024: removes a single week entry outright (not just
  * re-assigning its stage) — the detail card's "По неделям" editor's
@@ -537,6 +550,7 @@ export async function shiftExperimentWeeks(
         data: {
           experimentId,
           stage: e.stage,
+          completed: e.completed,
           weekStart: new Date(e.weekStart.getTime() + deltaWeeks * 7 * MS_PER_DAY),
         },
       }),

@@ -45,11 +45,13 @@ export function ExperimentWeekRow({
   experimentName,
   cells,
   overdue,
+  overdueWeekStartISO,
 }: {
   experimentId: string;
   experimentName: string;
   cells: Cell[];
   overdue: boolean;
+  overdueWeekStartISO: string | null;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -57,8 +59,6 @@ export function ExperimentWeekRow({
   const [showHidePrompt, setShowHidePrompt] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
-
-  const lastFilledIndex = cells.reduce((acc, c, i) => (c.stage ? i : acc), -1);
 
   function persistStage(weekStartISO: string, stage: ExperimentStage) {
     startTransition(async () => {
@@ -118,7 +118,7 @@ export function ExperimentWeekRow({
     >
       {cells.map((cell, i) => {
         const isOpen = openWeekIndex === i;
-        const isOverdueCell = overdue && i === lastFilledIndex;
+        const isOverdueCell = overdue && cell.weekStartISO === overdueWeekStartISO;
         const StageIcon = cell.stage ? STAGE_ICONS[cell.stage as ExperimentStage] : null;
         return (
           <div

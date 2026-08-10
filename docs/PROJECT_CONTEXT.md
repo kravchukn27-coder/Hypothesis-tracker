@@ -143,7 +143,7 @@ changes shape things.
   weeks, then Design, etc.) — TECH-002 was right that *status* and
   *stage* aren't two different concepts, but wrong to assume a single
   snapshot value was enough. New `ExperimentWeekStage` table
-  (`experimentId`, `weekStart`, `stage`) is now the source of truth
+  (`experimentId`, `weekStart`, `stage`, `completed`) is now the source of truth
   for progress; `Experiment.stage`/`startDate`/`endDate` are a
   **derived cache** — automatically recomputed from the latest/
   earliest/latest week entries (`recomputeExperimentDerivedFields` in
@@ -197,6 +197,13 @@ changes shape things.
   week-tracked from birth, or undated if left blank. The
   `startDate`/`endDate` scalar fields stay in the schema purely as the
   derived cache and for pre-existing experiments that predate this.
+  **PROD-025 (2026-08-10):** `ExperimentWeekStage.completed` records
+  that one specific week's stage has been explicitly completed; it
+  does not change the experiment's overall stage. Calendar reminders
+  use the same gap rule as their red outline: the latest real week
+  entry is before the current week, the current week has no entry, and
+  that latest entry is not completed. Legacy date-only experiments
+  never trigger this reminder.
 - `Experiment.targeting` (free text, e.g. `"GW, квиз"`) was **removed**
   (TECH-003, 2026-08-07) — it was a flattened mix of 5 distinct tag
   categories from the source tool. Replaced with 5 real many-to-many

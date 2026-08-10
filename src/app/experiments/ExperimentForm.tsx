@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { startOfWeek, toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import {
@@ -136,9 +137,11 @@ export function ExperimentForm({
           <input type="hidden" name="hypothesisId" value={hypothesis.id} />
           <Link
             href={`/backlog/${hypothesis.id}`}
-            className="w-fit text-sm text-zinc-900 underline underline-offset-4"
+            aria-label={`Открыть гипотезу: ${hypothesis.name}`}
+            className="group flex w-full items-center justify-between gap-3 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 transition-colors hover:border-zinc-400 hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
           >
-            {hypothesis.name}
+            <span className="min-w-0 text-base font-semibold leading-snug break-words">{hypothesis.name}</span>
+            <ArrowRight className="size-5 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-900" />
           </Link>
         </div>
 

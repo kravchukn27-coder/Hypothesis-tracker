@@ -161,6 +161,9 @@ model ExperimentWeekStage {
   experimentId String
   weekStart    DateTime
   stage        ExperimentStage
+  // PROD-025: completes this specific weekly stage without changing
+  // the experiment's overall derived stage.
+  completed    Boolean         @default(false)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 

@@ -47,6 +47,7 @@ export function toDateParam(date: Date): string {
 export type WeekStageEntry = {
   weekStart: Date;
   stage: string;
+  completed: boolean;
 };
 
 export type TimelineExperiment = {
@@ -114,7 +115,32 @@ export type TimelineRow = {
   experiment: TimelineExperiment;
   cells: WeekCell[]; // one per window week, in order
   overdue: boolean;
+  overdueWeekStart: Date | null;
 };
+
+/**
+ * PROD-025: the Calendar's single overdue source of truth. A reminder
+ * is due only when a real (not legacy synthesized) last week entry is
+ * before the current week, this week has no entry, and that last entry
+ * has not been explicitly completed.
+ */
+export function getOverdueWeek(experiment: TimelineExperiment, now: Date = new Date()): WeekStageEntry | null {
+  if (experiment.stage === "DONE" || experiment.weekStages.length === 0) return null;
+
+  const currentWeekStart = startOfWeek(now).getTime();
+  const entries = [...experiment.weekStages].sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime());
+  const last = entries[entries.length - 1];
+
+  if (
+    last.weekStart.getTime() >= currentWeekStart ||
+    last.completed ||
+    entries.some((entry) => entry.weekStart.getTime() === currentWeekStart)
+  ) {
+    return null;
+  }
+
+  return last;
+}
 
 /**
  * PROD-019: builds a fixed-size week-granularity window starting at
@@ -147,7 +173,7 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
         const s = startOfWeek(e.startDate);
         const en = startOfWeek(e.endDate);
         const count = Math.max(weeksBetween(s, en) + 1, 1);
-        entries = Array.from({ length: count }, (_, i) => ({ weekStart: addWeeks(s, i), stage: e.stage }));
+        entries = Array.from({ length: count }, (_, i) => ({ weekStart: addWeeks(s, i), stage: e.stage, completed: false }));
       }
       const byWeek = new Map(entries.map((en) => [en.weekStart.getTime(), en.stage]));
       const blocks = computeWeekBlocks(entries);
@@ -165,9 +191,9 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
 
       if (!cells.some((c) => c.stage !== null)) return null; // nothing in this window
 
-      const overdue = e.stage !== "DONE" && !!e.endDate && startOfWeek(e.endDate) < today;
+      const overdueWeek = getOverdueWeek(e, today);
 
-      return { experiment: e, cells, overdue };
+      return { experiment: e, cells, overdue: overdueWeek !== null, overdueWeekStart: overdueWeek?.weekStart ?? null };
     })
     .filter((r): r is TimelineRow => r !== null);
 

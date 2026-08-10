@@ -5,6 +5,7 @@ import {
   addWeeks,
   buildTimeline,
   formatWeekLabel,
+  getOverdueWeek,
   getISOWeekNumber,
   PAGE_STEP_WEEKS,
   startOfWeek,
@@ -15,6 +16,7 @@ import { STAGE_BAR_CLASSES, STAGE_LABELS, getCurrentWeekStage } from "@/lib/expe
 import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
+import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -65,19 +67,30 @@ export default async function CalendarPage({
     return !(currentStage === "DONE" && e.calendarHiddenOnDone === true);
   });
 
-  const { weeks, rows, undated, todayColumn } = buildTimeline(
-    experiments.map((e) => ({
-      id: e.id,
-      name: e.name,
-      hypothesisId: e.hypothesisId,
-      hypothesisName: e.hypothesis.name,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      stage: e.stage,
-      weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage })),
-    })),
-    windowStart,
-  );
+  const timelineExperiments = experiments.map((e) => ({
+    id: e.id,
+    name: e.name,
+    hypothesisId: e.hypothesisId,
+    hypothesisName: e.hypothesis.name,
+    startDate: e.startDate,
+    endDate: e.endDate,
+    stage: e.stage,
+    weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage, completed: w.completed })),
+  }));
+  const { weeks, rows, undated, todayColumn } = buildTimeline(timelineExperiments, windowStart);
+  const overdueReminders = timelineExperiments.flatMap((experiment) => {
+    const overdueWeek = getOverdueWeek(experiment, now);
+    return overdueWeek
+      ? [
+          {
+            experimentId: experiment.id,
+            experimentName: experiment.name,
+            lastWeekStartISO: toDateParam(overdueWeek.weekStart),
+            lastStage: overdueWeek.stage as keyof typeof STAGE_LABELS,
+          },
+        ]
+      : [];
+  });
 
   // PROD-022: every navigation link on this page carries the active
   // stage filter along (URL query param, same convention `/backlog`
@@ -153,6 +166,8 @@ export default async function CalendarPage({
         </div>
       ) : (
         <>
+          <OverdueExperimentReminder reminders={overdueReminders} />
+
           <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
             {Object.entries(STAGE_LABELS).map(([stage, label]) => (
               <Link
@@ -205,7 +220,7 @@ export default async function CalendarPage({
                 </div>
               </div>
 
-              {rows.map(({ experiment: e, cells, overdue }) => (
+              {rows.map(({ experiment: e, cells, overdue, overdueWeekStart }) => (
                 <div key={e.id} className="flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50">
                   <div className="sticky left-0 z-10 w-56 shrink-0 bg-white px-4 py-3">
                     {/* PROD-019: previously the colored bar itself linked to
@@ -232,6 +247,7 @@ export default async function CalendarPage({
                     experimentId={e.id}
                     experimentName={e.name}
                     overdue={overdue}
+                    overdueWeekStartISO={overdueWeekStart ? toDateParam(overdueWeekStart) : null}
                     cells={cells.map((c) => ({
                       weekIndex: c.weekIndex,
                       weekStartISO: toDateParam(c.weekStart),

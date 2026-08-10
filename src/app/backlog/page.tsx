@@ -3,6 +3,7 @@ import { ArrowRight, Clock, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
+import { getCurrentWeekStage, STAGE_LABELS } from "@/lib/experiment";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
 import { archiveHypotheses, deleteHypotheses } from "./actions";
@@ -20,11 +21,10 @@ import {
   NAME_COL,
   STATUS_COL,
   TABLE_CONTENT_WIDTH,
-  TABLE_SURFACE_HEIGHT,
   TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
-import type { HypothesisStatus } from "@/generated/prisma/enums";
+import type { ExperimentStage, HypothesisStatus } from "@/generated/prisma/enums";
 
 export default async function BacklogPage({
   searchParams,
@@ -49,7 +49,18 @@ export default async function BacklogPage({
         ...(funnelLevel ? { funnelLevelId: funnelLevel } : {}),
         ...(status ? { status: status as HypothesisStatus } : {}),
       },
-      include: { funnelLevel: true, _count: { select: { experiments: true } } },
+      include: {
+        funnelLevel: true,
+        experiments: {
+          select: {
+            id: true,
+            name: true,
+            stage: true,
+            archived: true,
+            weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
+          },
+        },
+      },
     }),
     prisma.funnelLevel.findMany({ orderBy: { name: "asc" } }),
   ]);
@@ -75,6 +86,11 @@ export default async function BacklogPage({
   }
 
   const isFiltered = Boolean(funnelLevel || status);
+  const now = new Date();
+
+  function currentStageOf(experiment: (typeof hypotheses)[number]["experiments"][number]): ExperimentStage {
+    return experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages, now) : experiment.stage;
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -135,7 +151,7 @@ export default async function BacklogPage({
         />
 
       {rows.length === 0 ? (
-        <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+        <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
             {isFiltered
               ? "Нет гипотез под текущий фильтр."
@@ -153,7 +169,7 @@ export default async function BacklogPage({
           )}
         </div>
       ) : (
-        <div className={`${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200`}>
+        <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
           <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
@@ -205,8 +221,15 @@ export default async function BacklogPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {rows.map((h) => (
-                <tr
+              {rows.map((h) => {
+                const activeExperiments = h.experiments.filter((experiment) => !experiment.archived);
+                const stageSummary = activeExperiments
+                  .map((experiment) => STAGE_LABELS[currentStageOf(experiment)])
+                  .filter((stage, index, stages) => stages.indexOf(stage) === index)
+                  .join(", ");
+
+                return (
+                  <tr
                   key={h.id}
                   className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]}`}
                 >
@@ -216,25 +239,39 @@ export default async function BacklogPage({
                   <td className={`${NAME_COL} min-w-0 px-4 py-3`}>
                     <Link
                       href={`/backlog/${h.id}`}
+                      title={h.name}
                       className="block truncate font-medium text-zinc-900 hover:underline"
                     >
                       {h.name}
                     </Link>
+                    {h.experiments.length > 0 && (
+                      <Link
+                        href={`/experiments?hypothesisId=${h.id}`}
+                        title={stageSummary || "Все связанные эксперименты в архиве"}
+                        className="mt-1 block truncate text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
+                      >
+                        {activeExperiments.length > 0
+                          ? `${activeExperiments.length} ${activeExperiments.length === 1 ? "эксперимент" : "экспериментов"} · ${stageSummary}`
+                          : "Связанные эксперименты в архиве"}
+                      </Link>
+                    )}
                   </td>
                   <td className={`${STATUS_COL} px-4 py-3 text-center`}>
                     <StatusCell
                       hypothesisId={h.id}
                       hypothesisName={h.name}
                       status={h.status}
-                      hasExperiments={h._count.experiments > 0}
+                      hasExperiments={h.experiments.length > 0}
                       archived={h.archived}
                     />
                   </td>
                   <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-3`}>
                     {h.funnelLevel ? (
-                      <Badge color={FUNNEL_LEVEL_BADGE_COLOR} className="max-w-full truncate">
-                        {h.funnelLevel.name}
-                      </Badge>
+                      <span className="block max-w-full" title={h.funnelLevel.name}>
+                        <Badge color={FUNNEL_LEVEL_BADGE_COLOR} className="max-w-full truncate">
+                          {h.funnelLevel.name}
+                        </Badge>
+                      </span>
                     ) : (
                       <span className="text-zinc-500">—</span>
                     )}
@@ -246,6 +283,7 @@ export default async function BacklogPage({
                     {h.comment ? (
                       <Link
                         href={`/backlog/${h.id}`}
+                        title={h.comment}
                         className="block overflow-hidden whitespace-nowrap text-zinc-500 hover:text-zinc-900 hover:underline [mask-image:linear-gradient(to_right,black_85%,transparent_100%)]"
                       >
                         {h.comment}
@@ -255,7 +293,7 @@ export default async function BacklogPage({
                     )}
                   </td>
                   <td className={`${ACTION_COL} px-4 py-3 text-right`}>
-                    {h._count.experiments > 0 ? (
+                    {h.experiments.length > 0 ? (
                       <Link
                         href={`/experiments?hypothesisId=${h.id}`}
                         aria-label="Перейти к эксперименту"
@@ -275,8 +313,9 @@ export default async function BacklogPage({
                       </Link>
                     )}
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -25,7 +25,6 @@ import {
   NAME_COL,
   STATUS_COL,
   TABLE_CONTENT_WIDTH,
-  TABLE_SURFACE_HEIGHT,
   TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { StageCell } from "./StageCell";
@@ -188,7 +187,7 @@ export default async function ExperimentsPage({
         />
 
       {experiments.length === 0 ? (
-        <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+        <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
             {isFiltered
               ? "Нет экспериментов под текущий фильтр."
@@ -204,7 +203,7 @@ export default async function ExperimentsPage({
           </Link>
         </div>
       ) : (
-        <div className={`${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200`}>
+        <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
           <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
@@ -288,11 +287,18 @@ export default async function ExperimentsPage({
                   <td className={`${NAME_COL} min-w-0 px-4 py-3`}>
                     <Link
                       href={`/experiments/${e.id}`}
+                      title={e.name}
                       className="block truncate font-medium text-zinc-900 hover:underline"
                     >
                       {e.name}
                     </Link>
-                    <p className="mt-0.5 truncate text-xs text-zinc-400">{e.hypothesis.name}</p>
+                    <Link
+                      href={`/backlog/${e.hypothesisId}`}
+                      title={e.hypothesis.name}
+                      className="mt-0.5 block truncate text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
+                    >
+                      {e.hypothesis.name}
+                    </Link>
                   </td>
                   <td className={`${STATUS_COL} px-4 py-3`}>
                     <StageCell
@@ -306,14 +312,16 @@ export default async function ExperimentsPage({
                     {e.author ? (
                       <span className="flex min-w-0 items-center gap-2">
                         <Avatar name={e.author} />
-                        <span className="truncate">{e.author}</span>
+                        <span className="truncate" title={e.author}>{e.author}</span>
                       </span>
                     ) : (
                       "—"
                     )}
                   </td>
-                  <td className={`${LONG_TEXT_COL} truncate px-4 py-3 text-zinc-500`}>
-                    {segmentLabel(e) || "—"}
+                  <td className={`${LONG_TEXT_COL} px-4 py-3 text-zinc-500`}>
+                    <span className="block truncate" title={segmentLabel(e) || undefined}>
+                      {segmentLabel(e) || "—"}
+                    </span>
                   </td>
                   <td
                     className={`${DATE_COL} px-4 py-3 text-zinc-500`}

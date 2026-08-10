@@ -20,7 +20,7 @@
 
 ## UI-022 — Сделать таблицы Backlog и Experiments рабочим инструментом сканирования
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / UX
 - **Type:** Enhancement

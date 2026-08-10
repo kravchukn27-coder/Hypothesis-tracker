@@ -9,7 +9,7 @@ import {
   shiftExperimentWeeks,
 } from "@/app/experiments/actions";
 import { X } from "lucide-react";
-import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
+import { STAGE_BAR_CLASSES, STAGE_LABELS } from "@/lib/experiment";
 import { formatWeekLabel } from "@/lib/calendar";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
@@ -219,7 +219,6 @@ export function ExperimentWeekRow({
       {cells.map((cell, i) => {
         const isOpen = openWeekIndex === i;
         const isOverdueCell = overdue && cell.weekStartISO === overdueWeekStartISO;
-        const StageIcon = cell.stage ? STAGE_ICONS[cell.stage as ExperimentStage] : null;
         return (
           <div
             key={i}
@@ -241,10 +240,11 @@ export function ExperimentWeekRow({
                   }}
                   aria-label={`${STAGE_LABELS[cell.stage as ExperimentStage]}. Перетащите, чтобы перенести неделю.`}
                   title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                  className={`relative my-2 flex h-8 w-full cursor-grab items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
+                  className={`relative my-2 flex h-11 w-full cursor-grab items-center justify-center rounded-md px-3 text-[11px] font-medium text-white shadow-sm transition-opacity active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
                 >
-                  {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
-                  <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
+                  <span className="w-full text-center leading-[1.15] break-words">
+                    {STAGE_LABELS[cell.stage as ExperimentStage]}
+                  </span>
                   {cell.weekStartISO === cell.blockEndISO && (
                     <span
                       onPointerDown={(e) => {
@@ -252,7 +252,7 @@ export function ExperimentWeekRow({
                         beginDrag("resize-right", cell, e);
                       }}
                       aria-hidden="true"
-                      className="absolute right-0 top-0 z-20 h-full w-2 cursor-ew-resize border-r-2 border-white/80 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                      className="absolute right-0 top-0 z-20 h-full w-3 cursor-ew-resize border-r-2 border-white/80 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                     />
                   )}
                 </button>
@@ -263,7 +263,7 @@ export function ExperimentWeekRow({
                   onClick={() => deleteWeek(cell.weekStartISO)}
                   aria-label="Удалить стадию этой недели"
                   title="Удалить стадию этой недели"
-                  className="absolute right-0 top-1 z-10 rounded-sm bg-white/90 p-0.5 text-zinc-500 opacity-0 shadow-sm transition-opacity hover:text-red-600 focus:opacity-100 focus:outline-2 focus:outline-offset-1 focus:outline-zinc-900 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
+                  className="absolute -left-1 top-1 z-10 flex size-6 items-center justify-center rounded-md bg-white/95 text-zinc-500 opacity-0 shadow-sm ring-1 ring-zinc-200 transition-opacity hover:text-red-600 focus:opacity-100 focus:outline-2 focus:outline-offset-1 focus:outline-zinc-900 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
                 >
                   <X aria-hidden className="size-3" />
                 </button>

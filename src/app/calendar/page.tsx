@@ -17,7 +17,7 @@ import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
-import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_HEIGHT, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
+import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -177,7 +177,7 @@ export default async function CalendarPage({
       </div>
 
       {displayedExperiments.length === 0 ? (
-        <div className={`flex ${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+        <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
           <Link
             href="/experiments/new"
@@ -234,7 +234,7 @@ export default async function CalendarPage({
             )}
           </div>
 
-          <div className={`${TABLE_SURFACE_WIDTH} ${TABLE_SURFACE_HEIGHT} overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200`}>
+          <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
             <div className={TABLE_CONTENT_WIDTH}>
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <div className="sticky left-0 z-10 w-56 shrink-0 bg-zinc-50 px-4 py-3">

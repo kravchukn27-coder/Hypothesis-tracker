@@ -650,6 +650,28 @@ export async function getAuthors(): Promise<string[]> {
   return rows.map((r) => r.author).filter((a): a is string => Boolean(a));
 }
 
+/**
+ * PROD-029: creating an experiment moves its hypothesis to In progress;
+ * after deletion, return only hypotheses with no remaining experiments
+ * to their base New state. Shared by the detail and bulk delete paths.
+ */
+async function resetEmptyHypotheses(hypothesisIds: string[]) {
+  const ids = [...new Set(hypothesisIds)];
+  if (ids.length === 0) return;
+
+  const hypotheses = await prisma.hypothesis.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, _count: { select: { experiments: true } } },
+  });
+  const emptyIds = hypotheses.filter((hypothesis) => hypothesis._count.experiments === 0).map((hypothesis) => hypothesis.id);
+  if (emptyIds.length === 0) return;
+
+  await prisma.hypothesis.updateMany({
+    where: { id: { in: emptyIds } },
+    data: { status: "NEW" },
+  });
+}
+
 export async function deleteExperiment(id: string): Promise<{ error?: string }> {
   const experiment = await prisma.experiment.findUnique({
     where: { id },
@@ -658,10 +680,12 @@ export async function deleteExperiment(id: string): Promise<{ error?: string }> 
   if (!experiment) return {};
 
   await prisma.experiment.delete({ where: { id } });
+  await resetEmptyHypotheses([experiment.hypothesisId]);
 
   revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${experiment.hypothesisId}`);
+  revalidatePath("/calendar");
   redirect("/experiments");
 }
 
@@ -694,7 +718,17 @@ export async function archiveExperiments(ids: string[]): Promise<{ error?: strin
 
 export async function deleteExperiments(ids: string[]): Promise<{ error?: string } | void> {
   if (ids.length === 0) return;
+  const experiments = await prisma.experiment.findMany({
+    where: { id: { in: ids } },
+    select: { hypothesisId: true },
+  });
   await prisma.experiment.deleteMany({ where: { id: { in: ids } } });
+  const hypothesisIds = experiments.map((experiment) => experiment.hypothesisId);
+  await resetEmptyHypotheses(hypothesisIds);
   revalidatePath("/experiments");
   revalidatePath("/backlog");
+  revalidatePath("/calendar");
+  for (const hypothesisId of new Set(hypothesisIds)) {
+    revalidatePath(`/backlog/${hypothesisId}`);
+  }
 }

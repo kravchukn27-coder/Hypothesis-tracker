@@ -272,9 +272,11 @@ list you add to; they're something you spin off *from* a hypothesis:
   status change (not repeated nagging once an experiment exists).
 - Creating an experiment from a hypothesis automatically sets that
   hypothesis's status to `IN_PROGRESS` (`createExperiment` in
-  `src/app/experiments/actions.ts` also updates the `Hypothesis` row) —
-  the reciprocal link the user asked for: converting to an experiment
-  is itself a status transition, not just a side effect.
+  `src/app/experiments/actions.ts` also updates the `Hypothesis` row).
+  The inverse is also automatic: deleting the last experiment resets
+  its hypothesis to `NEW`, while deleting one of several leaves its
+  status unchanged — experiment presence and this lifecycle status
+  cannot drift apart.
 
 ## Origin Data Model (Excel → Prisma mapping)
 

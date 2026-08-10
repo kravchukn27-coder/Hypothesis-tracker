@@ -76,14 +76,20 @@ function startOfWeek(date: Date): Date {
  * ExperimentWeekStage rows (latest week's stage; earliest/latest week
  * as the date span) — the denormalized cache that keeps every
  * existing query/filter/sort/badge across the app working unchanged.
- * No-op if there are no week entries (nothing to derive from yet).
+ * With no week entries, restores the experiment's undated baseline.
  */
 async function recomputeExperimentDerivedFields(experimentId: string) {
   const weeks = await prisma.experimentWeekStage.findMany({
     where: { experimentId },
     orderBy: { weekStart: "asc" },
   });
-  if (weeks.length === 0) return;
+  if (weeks.length === 0) {
+    await prisma.experiment.update({
+      where: { id: experimentId },
+      data: { stage: "DISCOVERY", startDate: null, endDate: null, calendarHiddenOnDone: null },
+    });
+    return;
+  }
 
   const first = weeks[0];
   const last = weeks[weeks.length - 1];

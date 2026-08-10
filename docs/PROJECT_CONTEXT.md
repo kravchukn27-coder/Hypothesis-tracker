@@ -148,7 +148,8 @@ changes shape things.
   for progress; `Experiment.stage`/`startDate`/`endDate` are a
   **derived cache** — automatically recomputed from the latest/
   earliest/latest week entries (`recomputeExperimentDerivedFields` in
-  `src/app/experiments/actions.ts`) whenever a week entry changes, so
+  `src/app/experiments/actions.ts`) whenever a week entry changes. If
+  the last week is deleted, it resets to Discovery with no dates, so
   every existing query/filter/sort/badge across the app (list Status
   column, filters, `StageCell`) keeps working unchanged without
   needing to know about weeks at all. Once an experiment has week

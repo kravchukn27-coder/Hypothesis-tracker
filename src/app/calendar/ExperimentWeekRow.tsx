@@ -3,10 +3,12 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  deleteExperimentWeek,
   resizeExperimentWeeks,
   setExperimentWeekStage,
   shiftExperimentWeeks,
 } from "@/app/experiments/actions";
+import { X } from "lucide-react";
 import { STAGE_BAR_CLASSES, STAGE_ICONS, STAGE_LABELS } from "@/lib/experiment";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import { StageOptionsMenu } from "@/components/StageOptionsMenu";
@@ -70,6 +72,18 @@ export function ExperimentWeekRow({
         if (becameDone) setShowHidePrompt(true);
       } catch {
         showToast("Не удалось обновить стадию. Попробуйте ещё раз.", "error");
+      }
+    });
+  }
+
+  function deleteWeek(weekStartISO: string) {
+    setOpenWeekIndex(null);
+    startTransition(async () => {
+      try {
+        await deleteExperimentWeek(experimentId, weekStartISO);
+        router.refresh();
+      } catch {
+        showToast("Не удалось удалить стадию. Попробуйте ещё раз.", "error");
       }
     });
   }
@@ -139,36 +153,49 @@ export function ExperimentWeekRow({
         return (
           <div
             key={i}
-            className="relative border-l border-zinc-100"
+            className="group relative border-l border-zinc-100"
             style={{ gridColumn: i + 1, gridRow: 1 }}
           >
             {cell.stage ? (
-              <button
-                type="button"
-                disabled={isPending}
-                onPointerDown={(e) => beginDrag("move", cell, e)}
-                onClick={() => {
-                  if (didDragRef.current) {
-                    didDragRef.current = false;
-                    return;
-                  }
-                  setOpenWeekIndex(isOpen ? null : i);
-                }}
-                title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
-              >
-                {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
-                <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
-                {cell.weekStartISO === cell.blockEndISO && (
-                  <span
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      beginDrag("resize-right", cell, e);
-                    }}
-                    className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
-                  />
-                )}
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onPointerDown={(e) => beginDrag("move", cell, e)}
+                  onClick={() => {
+                    if (didDragRef.current) {
+                      didDragRef.current = false;
+                      return;
+                    }
+                    setOpenWeekIndex(isOpen ? null : i);
+                  }}
+                  title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
+                  className={`relative my-2 flex h-8 w-full items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium text-white transition-opacity disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
+                >
+                  {StageIcon && <StageIcon aria-hidden className="size-3 shrink-0" />}
+                  <span className="truncate">{STAGE_LABELS[cell.stage as ExperimentStage]}</span>
+                  {cell.weekStartISO === cell.blockEndISO && (
+                    <span
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        beginDrag("resize-right", cell, e);
+                      }}
+                      className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
+                    />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => deleteWeek(cell.weekStartISO)}
+                  aria-label="Удалить стадию этой недели"
+                  title="Удалить стадию этой недели"
+                  className="absolute right-0 top-1 z-10 rounded-sm bg-white/90 p-0.5 text-zinc-500 opacity-0 shadow-sm transition-opacity hover:text-red-600 focus:opacity-100 focus:outline-2 focus:outline-offset-1 focus:outline-zinc-900 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <X aria-hidden className="size-3" />
+                </button>
+              </>
             ) : (
               <button
                 type="button"

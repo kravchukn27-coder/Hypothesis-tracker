@@ -34,10 +34,12 @@ export default async function BacklogPage({
     dir?: string;
     funnelLevel?: string;
     status?: string;
+    q?: string;
+    view?: string;
     archived?: string;
   }>;
 }) {
-  const { sort = "score", dir, funnelLevel, status, archived } = await searchParams;
+  const { sort = "score", dir, funnelLevel, status, q, view, archived } = await searchParams;
   const showArchived = archived === "1";
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" || sort === "createdAt" ? "desc" : "asc";
@@ -48,6 +50,15 @@ export default async function BacklogPage({
         archived: showArchived,
         ...(funnelLevel ? { funnelLevelId: funnelLevel } : {}),
         ...(status ? { status: status as HypothesisStatus } : {}),
+        ...(view === "without-experiment" ? { experiments: { none: {} } } : {}),
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { comment: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
       },
       include: {
         funnelLevel: true,
@@ -79,13 +90,28 @@ export default async function BacklogPage({
     const params = new URLSearchParams();
     if (funnelLevel) params.set("funnelLevel", funnelLevel);
     if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    if (view) params.set("view", view);
     if (showArchived) params.set("archived", "1");
     params.set("sort", field);
     params.set("dir", nextDir);
     return `/backlog?${params.toString()}`;
   }
 
-  const isFiltered = Boolean(funnelLevel || status);
+  function archiveHref() {
+    const params = new URLSearchParams();
+    if (funnelLevel) params.set("funnelLevel", funnelLevel);
+    if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    if (view) params.set("view", view);
+    if (sort) params.set("sort", sort);
+    if (dir) params.set("dir", dir);
+    if (!showArchived) params.set("archived", "1");
+    const query = params.toString();
+    return query ? `/backlog?${query}` : "/backlog";
+  }
+
+  const isFiltered = Boolean(funnelLevel || status || q || view);
   const now = new Date();
 
   function currentStageOf(experiment: (typeof hypotheses)[number]["experiments"][number]): ExperimentStage {
@@ -108,7 +134,7 @@ export default async function BacklogPage({
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href={showArchived ? "/backlog" : "/backlog?archived=1"}
+            href={archiveHref()}
             className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
           >
             {showArchived ? "Скрыть архив" : "Показать архив"}
@@ -126,6 +152,11 @@ export default async function BacklogPage({
         <div className="flex items-center justify-between gap-3">
           <Suspense fallback={null}>
             <FilterBar
+              search={{ name: "q", placeholder: "Поиск по названию и комментарию", ariaLabel: "Поиск гипотез" }}
+              quickFilters={{
+                name: "view",
+                options: [{ value: "without-experiment", label: "Без эксперимента" }],
+              }}
               fields={[
                 {
                   name: "funnelLevel",
@@ -153,7 +184,9 @@ export default async function BacklogPage({
       {rows.length === 0 ? (
         <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
-            {isFiltered
+            {q
+              ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
+              : isFiltered
               ? "Нет гипотез под текущий фильтр."
               : showArchived
                 ? "В архиве пока пусто."

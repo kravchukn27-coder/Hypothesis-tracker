@@ -40,12 +40,14 @@ export default async function ExperimentsPage({
     segment?: string;
     author?: string;
     hypothesisId?: string;
+    q?: string;
+    view?: string;
     sortBy?: string;
     dir?: string;
     archived?: string;
   }>;
 }) {
-  const { stage, segment, author, hypothesisId, sortBy = "startDate", dir, archived } = await searchParams;
+  const { stage, segment, author, hypothesisId, q, view, sortBy = "startDate", dir, archived } = await searchParams;
   const showArchived = archived === "1";
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
@@ -56,6 +58,7 @@ export default async function ExperimentsPage({
         archived: showArchived,
         ...(segment ? { segments: { some: { id: segment } } } : {}),
         ...(author ? { author } : {}),
+        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
       },
       include: {
         hypothesis: true,
@@ -79,9 +82,13 @@ export default async function ExperimentsPage({
 
   // PROD-030: `Experiment.stage` is a future-plan cache once weekly
   // entries exist. Filter by the same current stage the list displays.
-  const experiments = stage
-    ? allExperiments.filter((experiment) => currentStageOf(experiment) === stage)
-    : allExperiments;
+  const experiments = allExperiments.filter((experiment) => {
+    const currentStage = currentStageOf(experiment);
+    if (stage && currentStage !== stage) return false;
+    if (view === "active" && currentStage === "DONE") return false;
+    if (view === "completed" && currentStage !== "DONE") return false;
+    return true;
+  });
 
   const segmentOptions = segments.map((s) => ({ value: s.id, label: s.name }));
 
@@ -126,13 +133,30 @@ export default async function ExperimentsPage({
     if (segment) params.set("segment", segment);
     if (author) params.set("author", author);
     if (hypothesisId) params.set("hypothesisId", hypothesisId);
+    if (q) params.set("q", q);
+    if (view) params.set("view", view);
     if (showArchived) params.set("archived", "1");
     params.set("sortBy", field);
     params.set("dir", nextDir);
     return `/experiments?${params.toString()}`;
   }
 
-  const isFiltered = Boolean(stage || segment || author);
+  function archiveHref() {
+    const params = new URLSearchParams();
+    if (stage) params.set("stage", stage);
+    if (segment) params.set("segment", segment);
+    if (author) params.set("author", author);
+    if (hypothesisId) params.set("hypothesisId", hypothesisId);
+    if (q) params.set("q", q);
+    if (view) params.set("view", view);
+    if (sortBy) params.set("sortBy", sortBy);
+    if (dir) params.set("dir", dir);
+    if (!showArchived) params.set("archived", "1");
+    const query = params.toString();
+    return query ? `/experiments?${query}` : "/experiments";
+  }
+
+  const isFiltered = Boolean(stage || segment || author || q || view);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -150,7 +174,7 @@ export default async function ExperimentsPage({
           </p>
         </div>
         <Link
-          href={showArchived ? "/experiments" : "/experiments?archived=1"}
+          href={archiveHref()}
           className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
         >
           {showArchived ? "Скрыть архив" : "Показать архив"}
@@ -161,6 +185,14 @@ export default async function ExperimentsPage({
         <div className="flex items-center justify-between gap-3">
           <Suspense fallback={null}>
             <FilterBar
+              search={{ name: "q", placeholder: "Поиск по названию", ariaLabel: "Поиск экспериментов" }}
+              quickFilters={{
+                name: "view",
+                options: [
+                  { value: "active", label: "Активные" },
+                  { value: "completed", label: "Завершённые" },
+                ],
+              }}
               fields={[
                 {
                   name: "stage",
@@ -189,7 +221,9 @@ export default async function ExperimentsPage({
       {experiments.length === 0 ? (
         <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
-            {isFiltered
+            {q
+              ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
+              : isFiltered
               ? "Нет экспериментов под текущий фильтр."
               : showArchived
                 ? "В архиве пока пусто."

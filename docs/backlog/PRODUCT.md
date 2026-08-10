@@ -6,7 +6,7 @@
 
 ## PROD-027 — Быстрый поиск и фиксированные рабочие срезы таблиц
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Product / UI
 - **Type:** Enhancement

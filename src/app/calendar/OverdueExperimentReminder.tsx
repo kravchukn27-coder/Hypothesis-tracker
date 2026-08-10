@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Plus } from "lucide-react";
 import { completeExperimentWeek, setExperimentWeekStage } from "@/app/experiments/actions";
 import { addWeeks, formatWeekLabel, startOfWeek, toDateParam } from "@/lib/calendar";
 import { STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import { useToast } from "@/components/toast/ToastProvider";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 type Reminder = {
@@ -15,6 +17,8 @@ type Reminder = {
 };
 
 function ReminderRow({ reminder }: { reminder: Reminder }) {
+  const router = useRouter();
+  const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [isScheduling, setIsScheduling] = useState(false);
   const [stage, setStage] = useState<ExperimentStage>(reminder.lastStage);
@@ -26,6 +30,8 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
       setError(null);
       try {
         await completeExperimentWeek(reminder.experimentId, reminder.lastWeekStartISO);
+        router.refresh();
+        showToast("Этап отмечен как завершённый.");
       } catch {
         setError("Не удалось завершить этап. Попробуйте ещё раз.");
       }
@@ -39,6 +45,8 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
       try {
         await setExperimentWeekStage(reminder.experimentId, date, stage);
         setIsScheduling(false);
+        router.refresh();
+        showToast("Следующий этап запланирован.");
       } catch {
         setError("Не удалось запланировать этап. Попробуйте ещё раз.");
       }

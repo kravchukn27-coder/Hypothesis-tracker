@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setExperimentWeekStage } from "@/app/experiments/actions";
+import { useToast } from "@/components/toast/ToastProvider";
 
 function activeExperimentLabel(count: number): string {
   const remainder = count % 100;
@@ -31,7 +32,8 @@ export function WeekHeaderCell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const { showToast } = useToast();
+  const [isPending, startTransition] = useTransition();
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
@@ -45,15 +47,21 @@ export function WeekHeaderCell({
         e.preventDefault();
         setIsDragOver(false);
         const experimentId = e.dataTransfer.getData("text/plain");
-        if (!experimentId) return;
+        if (!experimentId || isPending) return;
         startTransition(async () => {
-          await setExperimentWeekStage(experimentId, weekStartISO, "DISCOVERY");
-          router.refresh();
+          try {
+            await setExperimentWeekStage(experimentId, weekStartISO, "DISCOVERY");
+            router.refresh();
+            showToast("Эксперимент запланирован на эту неделю.");
+          } catch {
+            showToast("Не удалось запланировать эксперимент. Попробуйте ещё раз.", "error");
+          }
         });
       }}
-      className={`min-w-0 overflow-hidden border-l border-zinc-100 px-1 py-2 text-center leading-tight ${
+      aria-busy={isPending}
+      className={`min-w-0 overflow-hidden border-l border-zinc-100 px-1 py-2 text-center leading-tight transition-opacity ${
         isDragOver ? "bg-zinc-900/10" : isToday ? "bg-blue-50/60 text-blue-700" : ""
-      }`}
+      } ${isPending ? "opacity-60" : ""}`}
     >
       <div>{children}</div>
       <span

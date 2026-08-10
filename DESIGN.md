@@ -34,6 +34,11 @@ typography:
     fontWeight: 600
     lineHeight: "16px"
     letterSpacing: "0.05em"
+  micro:
+    fontFamily: "Arial, Helvetica, sans-serif"
+    fontSize: "10px"
+    fontWeight: 400
+    lineHeight: "12px"
 rounded:
   md: "6px"
   lg: "8px"
@@ -155,6 +160,8 @@ Hypothesis Tracker — спокойная, строгая рабочая пов�
 - **Body:** основной размер таблиц, форм, кнопок и навигации.
 - **Label:** компактные uppercase заголовки таблиц и form sections; tracking
   помогает отделить служебную структуру от данных.
+- **Micro:** вторичный счётчик активных экспериментов в заголовке недели;
+  используется только как поддерживающий сигнал Calendar.
 
 **The Scan-First Rule.** Табличные данные, статусы и действия должны быть
 проще считать взглядом, чем прочитать объясняющий текст рядом с ними.

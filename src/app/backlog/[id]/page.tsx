@@ -15,6 +15,9 @@ import { ArchivePromptGate } from "../ArchivePromptGate";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
+import { Badge } from "@/components/Badge";
+import { computeScore, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
+import { getCurrentWeekStage, STAGE_LABELS } from "@/lib/experiment";
 
 export default async function HypothesisDetailPage({
   params,
@@ -25,7 +28,7 @@ export default async function HypothesisDetailPage({
   const [hypothesis, funnelLevels] = await Promise.all([
     prisma.hypothesis.findUnique({
       where: { id },
-      include: { funnelLevel: true, _count: { select: { experiments: true } } },
+      include: { funnelLevel: true, experiments: { include: { weekStages: { orderBy: { weekStart: "asc" } } } } },
     }),
     getFunnelLevels(),
   ]);
@@ -33,6 +36,12 @@ export default async function HypothesisDetailPage({
   if (!hypothesis) notFound();
 
   const action = updateHypothesis.bind(null, hypothesis.id);
+  const currentExperiments = hypothesis.experiments.map((experiment) => ({
+    ...experiment,
+    currentStage: experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages) : experiment.stage,
+  }));
+  const activeExperiment = currentExperiments.find((experiment) => experiment.currentStage !== "DONE");
+  const score = computeScore(hypothesis);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
@@ -58,7 +67,7 @@ export default async function HypothesisDetailPage({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          {hypothesis._count.experiments > 0 ? (
+          {hypothesis.experiments.length > 0 ? (
             <>
               <Link
                 href={`/experiments?hypothesisId=${hypothesis.id}`}
@@ -111,6 +120,31 @@ export default async function HypothesisDetailPage({
           />
         </div>
       </div>
+
+      <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge color={STATUS_BADGE_CLASSES[hypothesis.status]}>{STATUS_LABELS[hypothesis.status]}</Badge>
+          <span className="text-sm font-medium text-zinc-900">Score {score.toFixed(2)}</span>
+          {hypothesis.funnelLevel && <Badge>{hypothesis.funnelLevel.name}</Badge>}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-600">
+          <p>
+            {currentExperiments.length === 0
+              ? "Экспериментов пока нет."
+              : currentExperiments.length === 1
+                ? `Эксперимент: ${currentExperiments[0].name} · ${STAGE_LABELS[currentExperiments[0].currentStage]}`
+                : `${currentExperiments.length} связанных эксперимента${activeExperiment ? ` · есть активные` : " · все завершены"}`}
+          </p>
+          {currentExperiments.length === 0 ? (
+            <Link href={`/experiments/new?hypothesisId=${hypothesis.id}`} className="font-medium text-zinc-900 underline underline-offset-4">Создать эксперимент</Link>
+          ) : activeExperiment ? (
+            <Link href={`/calendar?experimentId=${activeExperiment.id}`} className="font-medium text-zinc-900 underline underline-offset-4">Открыть в Calendar</Link>
+          ) : (
+            <span className="font-medium text-zinc-900">Все проверки завершены — можно архивировать</span>
+          )}
+        </div>
+        {hypothesis.result && <p className="mt-3 border-t border-zinc-200 pt-3 text-sm text-zinc-600">Result: {hypothesis.result}</p>}
+      </section>
 
       <Suspense fallback={null}>
         <ExperimentPromptGate

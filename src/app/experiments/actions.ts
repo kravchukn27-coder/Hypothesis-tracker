@@ -103,6 +103,25 @@ async function recomputeExperimentDerivedFields(experimentId: string) {
   });
 }
 
+async function syncHypothesisStatusForExperiment(experimentId: string) {
+  const experiment = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { hypothesisId: true } });
+  if (!experiment) return;
+  const experiments = await prisma.experiment.findMany({
+    where: { hypothesisId: experiment.hypothesisId },
+    select: { stage: true, weekStages: { select: { weekStart: true, stage: true } } },
+  });
+  if (experiments.length === 0) return;
+  const hasActive = experiments.some((item) =>
+    (item.weekStages.length > 0 ? getCurrentWeekStage(item.weekStages) : item.stage) !== "DONE",
+  );
+  await prisma.hypothesis.update({
+    where: { id: experiment.hypothesisId },
+    data: { status: hasActive ? "IN_PROGRESS" : "DONE" },
+  });
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${experiment.hypothesisId}`);
+}
+
 function splitCsv(value: string | undefined): string[] {
   return (value ?? "")
     .split(",")
@@ -211,11 +230,7 @@ export async function createExperiment(
     await recomputeExperimentDerivedFields(experiment.id);
   }
 
-  // Converting a hypothesis into an experiment means testing has started.
-  await prisma.hypothesis.update({
-    where: { id: data.hypothesisId },
-    data: { status: "IN_PROGRESS" },
-  });
+  await syncHypothesisStatusForExperiment(experiment.id);
 
   revalidatePath("/experiments");
   revalidatePath("/backlog");
@@ -260,6 +275,7 @@ export async function updateExperiment(
       segments: { set: tagIds.segments.map((id) => ({ id })) },
     },
   });
+  await syncHypothesisStatusForExperiment(id);
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
@@ -348,6 +364,7 @@ export async function updateExperimentStage(id: string, stage: string) {
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
+  await syncHypothesisStatusForExperiment(id);
 }
 
 export async function updateExperimentDates(
@@ -390,6 +407,7 @@ export async function setExperimentWeekStage(
   });
   await recomputeExperimentDerivedFields(experimentId);
   await clearHiddenFlagIfNoLongerDone(experimentId);
+  await syncHypothesisStatusForExperiment(experimentId);
 
   const after = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { stage: true } });
   const becameDone = before?.stage !== "DONE" && after?.stage === "DONE";
@@ -431,6 +449,7 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
   });
   await recomputeExperimentDerivedFields(experimentId);
   await clearHiddenFlagIfNoLongerDone(experimentId);
+  await syncHypothesisStatusForExperiment(experimentId);
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
@@ -473,6 +492,7 @@ export async function addNextExperimentWeek(experimentId: string) {
     create: { experimentId, weekStart: nextWeekStart, stage },
   });
   await recomputeExperimentDerivedFields(experimentId);
+  await syncHypothesisStatusForExperiment(experimentId);
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
@@ -563,6 +583,7 @@ export async function shiftExperimentWeeks(
     ),
   ]);
   await recomputeExperimentDerivedFields(experimentId);
+  await syncHypothesisStatusForExperiment(experimentId);
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
@@ -611,6 +632,7 @@ export async function resizeExperimentWeeks(
     }
   }
   await recomputeExperimentDerivedFields(experimentId);
+  await syncHypothesisStatusForExperiment(experimentId);
 
   revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);

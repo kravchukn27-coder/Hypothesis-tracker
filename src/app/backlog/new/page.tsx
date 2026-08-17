@@ -6,7 +6,7 @@ export default async function NewHypothesisPage() {
   const funnelLevels = await getFunnelLevels();
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
       <div>
         <Link href="/backlog" className="text-sm text-zinc-500 hover:text-zinc-900">
           ← Backlog

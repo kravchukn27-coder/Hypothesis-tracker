@@ -12,7 +12,8 @@ import {
   toDateParam,
   WINDOW_WEEKS,
 } from "@/lib/calendar";
-import { STAGE_BAR_CLASSES, STAGE_LABELS, getCurrentWeekStage } from "@/lib/experiment";
+import { STAGE_LABELS, getCurrentWeekStage } from "@/lib/experiment";
+import { CalendarStageFilter } from "./CalendarStageFilter";
 import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
@@ -128,10 +129,6 @@ export default async function CalendarPage({
   const todayHref = calendarHref();
   const isToday = windowStart.getTime() === startOfWeek(new Date()).getTime();
 
-  function stageFilterHref(value: string): string {
-    return calendarHref({ start: start ? windowStart : undefined, stage: stageFilter === value ? null : value });
-  }
-
   function cellMatchesFilter(cellStage: string | null, overdue: boolean): boolean {
     if (!stageFilter) return true;
     if (stageFilter === OVERDUE_FILTER) return overdue;
@@ -200,38 +197,9 @@ export default async function CalendarPage({
           )}
           <OverdueExperimentReminder reminders={overdueReminders} />
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
-            {Object.entries(STAGE_LABELS).map(([stage, label]) => (
-              <Link
-                key={stage}
-                href={stageFilterHref(stage)}
-                className={`flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:bg-zinc-100 ${
-                  stageFilter === stage ? "bg-zinc-100 font-medium text-zinc-900" : ""
-                }`}
-              >
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${STAGE_BAR_CLASSES[stage as keyof typeof STAGE_BAR_CLASSES]}`}
-                />
-                {label}
-              </Link>
-            ))}
-            <Link
-              href={stageFilterHref(OVERDUE_FILTER)}
-              className={`flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:bg-zinc-100 ${
-                stageFilter === OVERDUE_FILTER ? "bg-zinc-100 font-medium text-zinc-900" : ""
-              }`}
-            >
-              <span className="h-2.5 w-2.5 rounded-full border-2 border-red-500" />
-              Просрочен
-            </Link>
-            {stageFilter && (
-              <Link
-                href={calendarHref({ start: start ? windowStart : undefined, stage: null })}
-                className="text-zinc-400 underline underline-offset-4 hover:text-zinc-700"
-              >
-                ✕ Сбросить фильтр
-              </Link>
-            )}
+          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500">
+            <span>Фильтры:</span>
+            <CalendarStageFilter value={stageFilter} options={[...Object.entries(STAGE_LABELS).map(([value, label]) => ({ value, label })), { value: OVERDUE_FILTER, label: "Просрочен" }]} />
           </div>
 
           <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>

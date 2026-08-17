@@ -15,6 +15,7 @@ import { archiveExperiments, deleteExperiments } from "./actions";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
+import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
@@ -36,28 +37,29 @@ export default async function ExperimentsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    stage?: string;
-    segment?: string;
-    author?: string;
+    stage?: string | string[];
+    segment?: string | string[];
+    author?: string | string[];
     hypothesisId?: string;
     q?: string;
     view?: string;
     sortBy?: string;
     dir?: string;
-    archived?: string;
   }>;
 }) {
-  const { stage, segment, author, hypothesisId, q, view, sortBy = "startDate", dir, archived } = await searchParams;
-  const showArchived = archived === "1";
+  const { stage, segment, author, hypothesisId, q, view, sortBy = "startDate", dir } = await searchParams;
+  const stages = Array.isArray(stage) ? stage : stage ? [stage] : [];
+  const segmentsFilter = Array.isArray(segment) ? segment : segment ? [segment] : [];
+  const authors = Array.isArray(author) ? author : author ? [author] : [];
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
 
   const [allExperiments, segments, authorRows] = await Promise.all([
     prisma.experiment.findMany({
       where: {
-        archived: showArchived,
-        ...(segment ? { segments: { some: { id: segment } } } : {}),
-        ...(author ? { author } : {}),
+        archived: false,
+        ...(segmentsFilter.length ? { segments: { some: { id: { in: segmentsFilter } } } } : {}),
+        ...(authors.length ? { author: { in: authors } } : {}),
         ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
       },
       include: {
@@ -84,7 +86,7 @@ export default async function ExperimentsPage({
   // entries exist. Filter by the same current stage the list displays.
   const experiments = allExperiments.filter((experiment) => {
     const currentStage = currentStageOf(experiment);
-    if (stage && currentStage !== stage) return false;
+    if (stages.length && !stages.includes(currentStage)) return false;
     if (view === "active" && currentStage === "DONE") return false;
     if (view === "completed" && currentStage !== "DONE") return false;
     return true;
@@ -129,34 +131,18 @@ export default async function ExperimentsPage({
 
   function sortHref(field: string, nextDir: SortDir) {
     const params = new URLSearchParams();
-    if (stage) params.set("stage", stage);
-    if (segment) params.set("segment", segment);
-    if (author) params.set("author", author);
+    stages.forEach((value) => params.append("stage", value));
+    segmentsFilter.forEach((value) => params.append("segment", value));
+    authors.forEach((value) => params.append("author", value));
     if (hypothesisId) params.set("hypothesisId", hypothesisId);
     if (q) params.set("q", q);
     if (view) params.set("view", view);
-    if (showArchived) params.set("archived", "1");
     params.set("sortBy", field);
     params.set("dir", nextDir);
     return `/experiments?${params.toString()}`;
   }
 
-  function archiveHref() {
-    const params = new URLSearchParams();
-    if (stage) params.set("stage", stage);
-    if (segment) params.set("segment", segment);
-    if (author) params.set("author", author);
-    if (hypothesisId) params.set("hypothesisId", hypothesisId);
-    if (q) params.set("q", q);
-    if (view) params.set("view", view);
-    if (sortBy) params.set("sortBy", sortBy);
-    if (dir) params.set("dir", dir);
-    if (!showArchived) params.set("archived", "1");
-    const query = params.toString();
-    return query ? `/experiments?${query}` : "/experiments";
-  }
-
-  const isFiltered = Boolean(stage || segment || author || q || view);
+  const isFiltered = Boolean(stages.length || segmentsFilter.length || authors.length || q || view);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -169,16 +155,9 @@ export default async function ExperimentsPage({
           <h1 className="text-2xl font-semibold text-zinc-900">Experiments</h1>
           <p className="mt-1 text-sm text-zinc-500">
             {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
-            {showArchived ? " в архиве" : ""}
             {isFiltered ? " (с фильтром)" : ""}
           </p>
         </div>
-        <Link
-          href={archiveHref()}
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-        >
-          {showArchived ? "Скрыть архив" : "Показать архив"}
-        </Link>
       </div>
 
       <SelectionProvider ids={experiments.map((e) => e.id)}>
@@ -193,19 +172,7 @@ export default async function ExperimentsPage({
                   { value: "completed", label: "Завершённые" },
                 ],
               }}
-              fields={[
-                {
-                  name: "stage",
-                  label: "Status",
-                  options: STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
-                },
-                ...(segmentOptions.length > 0
-                  ? [{ name: "segment", label: "Segment", options: segmentOptions }]
-                  : []),
-                ...(authorOptions.length > 0
-                  ? [{ name: "author", label: "Автор", options: authorOptions }]
-                  : []),
-              ]}
+              fields={[]}
             />
           </Suspense>
           <SelectModeToggle />
@@ -225,9 +192,7 @@ export default async function ExperimentsPage({
               ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
               : isFiltered
               ? "Нет экспериментов под текущий фильтр."
-              : showArchived
-                ? "В архиве пока пусто."
-                : "Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в Backlog."}
+              : "Пока нет ни одного эксперимента. Эксперимент создаётся из карточки гипотезы в Backlog."}
           </p>
           <Link
             href="/backlog"
@@ -271,6 +236,7 @@ export default async function ExperimentsPage({
                     defaultDir="asc"
                     href={(d) => sortHref("stage", d)}
                   />
+                  <HeaderMultiFilter name="stage" label="Фильтр" options={STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] }))} />
                 </th>
                 <th className={`${META_COL} px-4 py-3`}>
                   <SortableHeader
@@ -280,6 +246,7 @@ export default async function ExperimentsPage({
                     defaultDir="asc"
                     href={(d) => sortHref("author", d)}
                   />
+                  {authorOptions.length > 0 && <HeaderMultiFilter name="author" label="Фильтр" options={authorOptions} />}
                 </th>
                 <th className={`${LONG_TEXT_COL} px-4 py-3`}>
                   <SortableHeader
@@ -289,6 +256,7 @@ export default async function ExperimentsPage({
                     defaultDir="asc"
                     href={(d) => sortHref("segment", d)}
                   />
+                  {segmentOptions.length > 0 && <HeaderMultiFilter name="segment" label="Фильтр" options={segmentOptions} />}
                 </th>
                 <th className={`${DATE_COL} px-4 py-3`}>
                   <SortableHeader

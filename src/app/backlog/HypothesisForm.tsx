@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useState } from "react";
 import {
   computeScore,
-  CONVERSION_LABELS,
   SCALE_VALUES,
   STATUS_BADGE_CLASSES,
   STATUS_ICONS,
@@ -66,6 +65,7 @@ export function HypothesisForm({
   submitLabel: string;
 }) {
   const values = { ...emptyInitial, ...initial };
+  const isNew = initial === undefined;
   const [state, formAction, pending] = useActionState(action, {});
   const { showToast } = useToast();
 
@@ -87,7 +87,7 @@ export function HypothesisForm({
   });
 
   return (
-    <form action={formAction} className="flex flex-col gap-8 pb-20">
+    <form action={formAction} className="flex flex-col gap-8 rounded-xl border border-zinc-200 bg-white p-5 pb-24 sm:p-7 sm:pb-24">
       {state.error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-600/20">
           {state.error}
@@ -120,8 +120,7 @@ export function HypothesisForm({
           <Field label="Funnel Level">
             <FunnelLevelField funnelLevels={funnelLevels} defaultValue={values.funnelLevelName} />
           </Field>
-
-          <Field label="Status" htmlFor="status">
+          {!isNew && <Field label="Status" htmlFor="status">
             <IconSelect
               id="status"
               name="status"
@@ -133,50 +132,44 @@ export function HypothesisForm({
               variant="field"
               onChange={setStatus}
             />
-          </Field>
+          </Field>}
         </div>
       </FormSection>
 
       <FormSection title="Оценка">
-        <Field label="Conversion">
-          <SegmentedControl name="conversion" defaultValue={values.conversion} />
-        </Field>
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Impact">
-            <ScaleButtons name="impact" value={impact} onChange={setImpact} />
-          </Field>
-          <Field label="Effort">
-            <ScaleButtons name="effort" value={effort} onChange={setEffort} />
-          </Field>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="% Traffic (Reach)" htmlFor="reach">
-            <PercentInput id="reach" name="reach" value={reachPct} onChange={setReachPct} />
-          </Field>
-          <Field label="Confidence" htmlFor="confidence">
-            <PercentInput
-              id="confidence"
-              name="confidence"
-              value={confidencePct}
-              onChange={setConfidencePct}
-            />
-          </Field>
-        </div>
-
-        <div className="flex items-start justify-between gap-6 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
-          <div>
-            <p className="text-sm font-medium text-zinc-500">Score</p>
-            <p className="text-4xl font-semibold tabular-nums text-zinc-900">{score.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-zinc-500">
-              Impact × Confidence × Reach ÷ Effort — считается автоматически
-            </p>
+        {isNew && <input type="hidden" name="status" value="NEW" />}
+        <input type="hidden" name="conversion" value={values.conversion} />
+        <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-stretch">
+          <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+            <Field label="Impact">
+              <ScaleButtons name="impact" value={impact} onChange={setImpact} />
+            </Field>
+            <Field label="Effort">
+              <ScaleButtons name="effort" value={effort} onChange={setEffort} />
+            </Field>
+            <Field label="Трафик (Reach)" htmlFor="reach">
+              <PercentInput id="reach" name="reach" value={reachPct} onChange={setReachPct} />
+            </Field>
+            <Field label="Confidence" htmlFor="confidence">
+              <PercentInput
+                id="confidence"
+                name="confidence"
+                value={confidencePct}
+                onChange={setConfidencePct}
+              />
+            </Field>
           </div>
+          <aside className="flex min-h-28 flex-col justify-between rounded-lg bg-zinc-900 p-4 text-white lg:sticky lg:top-5">
+            <div>
+              <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Score</p>
+              <output className="mt-1 block text-4xl font-semibold tracking-tight tabular-nums">{score.toFixed(2)}</output>
+            </div>
+            <p className="text-xs leading-5 text-zinc-400">Impact × Confidence × Reach ÷ Effort</p>
+          </aside>
         </div>
       </FormSection>
 
-      <FormSection title="Дополнительно">
+      {!isNew && <FormSection title="Дополнительно">
         {status === "DONE" && (
           <Field label="Result" htmlFor="result">
             <Textarea
@@ -211,7 +204,7 @@ export function HypothesisForm({
             placeholder="https://linear.app/..."
           />
         </Field>
-      </FormSection>
+      </FormSection>}
 
       <StickyFormSubmit pending={pending} label={submitLabel} />
     </form>
@@ -303,37 +296,6 @@ function ScaleButtons({
           />
           <div className="flex h-10 cursor-pointer items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-zinc-600 transition-colors peer-checked:border-zinc-900 peer-checked:bg-zinc-900 peer-checked:text-white hover:border-zinc-400">
             {n}
-          </div>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-const CONVERSION_OPTIONS: ConversionMetric[] = ["CR", "LTV", "CR_LTV"];
-
-function SegmentedControl({
-  name,
-  defaultValue,
-}: {
-  name: string;
-  defaultValue: ConversionMetric;
-}) {
-  const [value, setValue] = useState(defaultValue);
-  return (
-    <div className="inline-flex w-fit rounded-lg border border-zinc-300 p-1">
-      {CONVERSION_OPTIONS.map((opt) => (
-        <label key={opt}>
-          <input
-            type="radio"
-            name={name}
-            value={opt}
-            checked={value === opt}
-            onChange={() => setValue(opt)}
-            className="peer sr-only"
-          />
-          <div className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors peer-checked:bg-zinc-900 peer-checked:text-white">
-            {CONVERSION_LABELS[opt]}
           </div>
         </label>
       ))}

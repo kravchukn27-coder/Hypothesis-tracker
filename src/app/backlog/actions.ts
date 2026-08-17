@@ -153,6 +153,21 @@ export async function updateHypothesisStatus(id: string, status: string) {
   revalidatePath(`/backlog/${id}`);
 }
 
+/** Starts the experiment workflow from an Accepted backlog row. */
+export async function takeHypothesisIntoWork(id: string): Promise<string> {
+  const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
+  if (!hypothesis || hypothesis.status !== "ACCEPTED") return "/backlog";
+  const existing = await prisma.experiment.findFirst({
+    where: { hypothesisId: id, archived: false, stage: { not: "DONE" } },
+    select: { id: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const experiment = existing ?? await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id } });
+  await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
+  revalidatePath("/backlog"); revalidatePath("/experiments"); revalidatePath("/calendar");
+  return `/calendar?experimentId=${experiment.id}`;
+}
+
 export async function deleteHypothesis(id: string): Promise<{ error?: string }> {
   const hypothesis = await prisma.hypothesis.findUnique({
     where: { id },

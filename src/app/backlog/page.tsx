@@ -11,6 +11,8 @@ import { Badge } from "@/components/Badge";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
+import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
+import { TakeInWorkButton } from "./TakeInWorkButton";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
   ACTION_COL,
@@ -32,25 +34,25 @@ export default async function BacklogPage({
   searchParams: Promise<{
     sort?: string;
     dir?: string;
-    funnelLevel?: string;
-    status?: string;
+    funnelLevel?: string | string[];
+    status?: string | string[];
     q?: string;
     view?: string;
     archived?: string;
   }>;
 }) {
-  const { sort = "score", dir, funnelLevel, status, q, view, archived } = await searchParams;
-  const showArchived = archived === "1";
+  const { sort = "score", dir, funnelLevel, status, q } = await searchParams;
+  const funnelLevelsFilter = Array.isArray(funnelLevel) ? funnelLevel : funnelLevel ? [funnelLevel] : [];
+  const statuses = Array.isArray(status) ? status : status ? [status] : [];
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" || sort === "createdAt" ? "desc" : "asc";
 
   const [hypotheses, funnelLevels] = await Promise.all([
     prisma.hypothesis.findMany({
       where: {
-        archived: showArchived,
-        ...(funnelLevel ? { funnelLevelId: funnelLevel } : {}),
-        ...(status ? { status: status as HypothesisStatus } : {}),
-        ...(view === "without-experiment" ? { experiments: { none: {} } } : {}),
+        archived: false,
+        ...(funnelLevelsFilter.length ? { funnelLevelId: { in: funnelLevelsFilter } } : {}),
+        ...(statuses.length ? { status: { in: statuses as HypothesisStatus[] } } : {}),
         ...(q
           ? {
               OR: [
@@ -88,30 +90,15 @@ export default async function BacklogPage({
 
   function sortHref(field: string, nextDir: SortDir) {
     const params = new URLSearchParams();
-    if (funnelLevel) params.set("funnelLevel", funnelLevel);
-    if (status) params.set("status", status);
+    funnelLevelsFilter.forEach((value) => params.append("funnelLevel", value));
+    statuses.forEach((value) => params.append("status", value));
     if (q) params.set("q", q);
-    if (view) params.set("view", view);
-    if (showArchived) params.set("archived", "1");
     params.set("sort", field);
     params.set("dir", nextDir);
     return `/backlog?${params.toString()}`;
   }
 
-  function archiveHref() {
-    const params = new URLSearchParams();
-    if (funnelLevel) params.set("funnelLevel", funnelLevel);
-    if (status) params.set("status", status);
-    if (q) params.set("q", q);
-    if (view) params.set("view", view);
-    if (sort) params.set("sort", sort);
-    if (dir) params.set("dir", dir);
-    if (!showArchived) params.set("archived", "1");
-    const query = params.toString();
-    return query ? `/backlog?${query}` : "/backlog";
-  }
-
-  const isFiltered = Boolean(funnelLevel || status || q || view);
+  const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q);
   const now = new Date();
 
   function currentStageOf(experiment: (typeof hypotheses)[number]["experiments"][number]): ExperimentStage {
@@ -128,17 +115,10 @@ export default async function BacklogPage({
           <h1 className="text-2xl font-semibold text-zinc-900">Backlog</h1>
           <p className="mt-1 text-sm text-zinc-500">
             {rows.length} {rows.length === 1 ? "гипотеза" : "гипотез"}
-            {showArchived ? " в архиве" : ""}
             {isFiltered ? " (с фильтром)" : ""}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href={archiveHref()}
-            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            {showArchived ? "Скрыть архив" : "Показать архив"}
-          </Link>
           <Link
             href="/backlog/new"
             className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
@@ -153,22 +133,7 @@ export default async function BacklogPage({
           <Suspense fallback={null}>
             <FilterBar
               search={{ name: "q", placeholder: "Поиск по названию и комментарию", ariaLabel: "Поиск гипотез" }}
-              quickFilters={{
-                name: "view",
-                options: [{ value: "without-experiment", label: "Без эксперимента" }],
-              }}
-              fields={[
-                {
-                  name: "funnelLevel",
-                  label: "Funnel Level",
-                  options: funnelLevels.map((f) => ({ value: f.id, label: f.name })),
-                },
-                {
-                  name: "status",
-                  label: "Status",
-                  options: STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
-                },
-              ]}
+              fields={[]}
             />
           </Suspense>
           <SelectModeToggle />
@@ -188,11 +153,9 @@ export default async function BacklogPage({
               ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
               : isFiltered
               ? "Нет гипотез под текущий фильтр."
-              : showArchived
-                ? "В архиве пока пусто."
-                : "Пока нет ни одной гипотезы."}
+              : "Пока нет ни одной гипотезы."}
           </p>
-          {!showArchived && (
+          {(
             <Link
               href="/backlog/new"
               className="text-sm font-medium text-zinc-900 underline underline-offset-4"
@@ -229,7 +192,7 @@ export default async function BacklogPage({
                   </div>
                 </th>
                 <th className={`${STATUS_COL} px-4 py-3 text-center`}>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center gap-1">
                     <SortableHeader
                       label="Status"
                       active={sort === "status"}
@@ -237,9 +200,10 @@ export default async function BacklogPage({
                       defaultDir="asc"
                       href={(d) => sortHref("status", d)}
                     />
+                    <HeaderMultiFilter name="status" label="Фильтр" options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] }))} />
                   </div>
                 </th>
-                <th className={`${FUNNEL_LEVEL_COL} px-4 py-3`}>Funnel Level</th>
+                <th className={`${FUNNEL_LEVEL_COL} px-4 py-3`}><HeaderMultiFilter name="funnelLevel" label="Funnel Level" options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))} /></th>
                 <th className={`${META_COL} px-4 py-3 text-left`}>
                   <SortableHeader
                     label="Score"
@@ -326,7 +290,7 @@ export default async function BacklogPage({
                     )}
                   </td>
                   <td className={`${ACTION_COL} px-4 py-3 text-right`}>
-                    {h.experiments.length > 0 ? (
+                    {h.status === "ACCEPTED" ? <TakeInWorkButton hypothesisId={h.id} /> : h.experiments.length > 0 ? (
                       <Link
                         href={`/experiments?hypothesisId=${h.id}`}
                         aria-label="Перейти к эксперименту"

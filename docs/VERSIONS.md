@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- [UI-028] Closed with no code change — its acceptance criteria
+  (Calendar row shows name/Автор/Раскатка as compact columns, Автор
+  has a fixed-width `HeaderMultiFilter`-backed column with a
+  Саша/Дима/Артем `<select>`, Funnel Level/Product/Segment absent)
+  were already fully met by the existing `calendar/page.tsx`,
+  `AuthorCell.tsx`, and `RolloutCell.tsx` — this card had gone stale
+  after that work shipped under PROD-030/032. Verified live at
+  `/calendar`: name/Автор/Раскатка columns present exactly as
+  specified, no other metadata columns.
+
 - [UI-032] "Раскатка" (`Experiment.rollout`) now supports multi-line
   text in both places it's edited. `ExperimentForm.tsx` swapped its
   single-line `<Input>` for the existing `<Textarea>` (already used

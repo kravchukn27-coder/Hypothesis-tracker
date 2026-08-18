@@ -261,6 +261,7 @@ export default async function CalendarPage({
                       key={e.id}
                       experimentId={e.id}
                       name={e.name}
+                      highlighted={e.id === experimentId}
                     />
                   ))}
                 </ul>

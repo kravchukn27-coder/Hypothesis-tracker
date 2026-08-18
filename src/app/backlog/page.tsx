@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
 import { currentStageOf, stageLabel } from "@/lib/experiment";
+import { toDateParam } from "@/lib/calendar";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
 import { archiveHypotheses, deleteHypotheses } from "./actions";
@@ -69,6 +70,7 @@ export default async function BacklogPage({
             name: true,
             stage: true,
             archived: true,
+            startDate: true,
             weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
           },
         },
@@ -219,11 +221,27 @@ export default async function BacklogPage({
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {rows.map((h) => {
-                const activeExperiments = h.experiments.filter((experiment) => !experiment.archived);
-                const stageSummary = activeExperiments
-                  .map((experiment) => stageLabel(currentStageOf(experiment, now)))
-                  .filter((stage, index, stages) => stages.indexOf(stage) === index)
-                  .join(", ");
+                // PROD-034: a hypothesis has at most one experiment, so
+                // this is 0 or 1 — no dedup/counter needed any more.
+                const activeExperiment = h.experiments.find((experiment) => !experiment.archived);
+                // BUG-012: always Calendar — a dated experiment (has
+                // weeks, or legacy start/end dates) highlights on the
+                // timeline (UI-030), an undated one highlights in the
+                // "Без дат" panel instead (both are the same
+                // `experimentId` highlight, Calendar itself decides
+                // which side to light up). `start` jumps the timeline's
+                // 8-week window to the experiment's own weeks so the
+                // highlight is actually visible instead of landing on
+                // whatever week happens to be "today".
+                const calendarStart = activeExperiment?.weekStages[0]?.weekStart ?? activeExperiment?.startDate;
+                const experimentHref = activeExperiment
+                  ? `/calendar?experimentId=${activeExperiment.id}${calendarStart ? `&start=${toDateParam(calendarStart)}` : ""}`
+                  : null;
+                const experimentLabel = activeExperiment
+                  ? stageLabel(currentStageOf(activeExperiment, now))
+                  : h.experiments.length > 0
+                    ? "Связанные эксперименты в архиве"
+                    : null;
 
                 return (
                   <tr
@@ -241,16 +259,23 @@ export default async function BacklogPage({
                     >
                       {h.name}
                     </Link>
-                    {h.experiments.length > 0 && (
-                      <Link
-                        href={`/experiments?hypothesisId=${h.id}`}
-                        title={stageSummary || "Все связанные эксперименты в архиве"}
-                        className="mt-1 block truncate text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
-                      >
-                        {activeExperiments.length > 0
-                          ? `${activeExperiments.length} ${activeExperiments.length === 1 ? "эксперимент" : "экспериментов"} · ${stageSummary}`
-                          : "Связанные эксперименты в архиве"}
-                      </Link>
+                    {experimentLabel && (
+                      experimentHref ? (
+                        <Link
+                          href={experimentHref}
+                          title={experimentLabel}
+                          className="mt-1 block truncate text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
+                        >
+                          {experimentLabel}
+                        </Link>
+                      ) : (
+                        <span
+                          title={experimentLabel}
+                          className="mt-1 block truncate text-xs text-zinc-500"
+                        >
+                          {experimentLabel}
+                        </span>
+                      )
                     )}
                   </td>
                   <td className={`${STATUS_COL} px-4 py-3 text-center`}>

@@ -14,9 +14,18 @@ import { GripVertical } from "lucide-react";
 export function UndatedRow({
   experimentId,
   name,
+  highlighted = false,
 }: {
   experimentId: string;
   name: string;
+  /** BUG-012: same "just arrived here from a link" signal as the
+   * timelined rows' amber ring (see `ExperimentWeekRow`/UI-030). That
+   * ring reads fine there because the bar underneath is a *different*
+   * color (violet/gray/blue/...); here the row is amber by default,
+   * so a same-hue ring barely shows up against its own border — this
+   * swaps in a distinctly darker/more saturated amber fill plus a
+   * wider offset ring instead of just overlaying one. */
+  highlighted?: boolean;
 }) {
   const router = useRouter();
   const [dragging, setDragging] = useState(false);
@@ -35,7 +44,9 @@ export function UndatedRow({
       className={`group flex w-full cursor-grab items-center gap-1.5 rounded-md border py-1.5 pl-1.5 pr-3 text-[13px] font-medium leading-none transition-all duration-150 active:cursor-grabbing ${
         dragging
           ? "border-amber-300 bg-amber-100/70 opacity-50"
-          : "border-amber-200/80 bg-amber-50 text-amber-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:border-amber-300 hover:bg-amber-100/70 hover:shadow-sm"
+          : highlighted
+            ? "border-amber-400 bg-amber-200 text-amber-950 shadow-sm ring-2 ring-amber-500 ring-offset-2"
+            : "border-amber-200/80 bg-amber-50 text-amber-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:border-amber-300 hover:bg-amber-100/70 hover:shadow-sm"
       }`}
     >
       <GripVertical

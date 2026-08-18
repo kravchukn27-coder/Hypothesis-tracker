@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+- [BUG-012] Fixed the 404 on Backlog's per-hypothesis experiment link
+  (`src/app/backlog/page.tsx`) — it pointed at `/experiments?hypothesisId=...`,
+  a route PROD-031 removed. Now always links to `/calendar?experimentId=...`:
+  a dated experiment (has weeks, or legacy start/end dates) highlights
+  on the timeline via the existing UI-030 mechanism; an undated one
+  (TECH-005's "—", or any experiment with no weeks/dates regardless of
+  a manually-set stage) highlights in the "Без дат" panel instead —
+  `UndatedRow.tsx` gained a `highlighted` prop driven by the same
+  `experimentId` query param Calendar's timeline already reads —
+  a plain amber ring didn't read as a highlight here (unlike the
+  timelined rows, an undated row's *unhighlighted* state is already
+  amber, so a same-hue ring barely stood out against its own border);
+  swapped to a distinctly darker/more saturated amber fill
+  (`bg-amber-200`/`border-amber-400`) plus a wider offset ring instead
+  of just overlaying a ring on the pale default. The link also passes
+  `&start=<week>` (`e.weekStages[0]?.weekStart ?? e.startDate`) so a
+  dated experiment scheduled outside the default 8-week window still
+  actually lands on a visible, highlighted week instead of silently
+  landing on "today" with nothing to show — the same pattern already
+  used by `AllExperimentsTable`'s and the experiment detail page's
+  Calendar links. Also dropped the now-meaningless "N эксперимент(ов) ·"
+  counter prefix (PROD-034: a hypothesis has at most one experiment) —
+  the label is just the stage (or "Связанные эксперименты в архиве"
+  as plain text, not a dead link, for an archived-only hypothesis).
+  `tsc --noEmit`/`eslint src/` clean. Verified live both paths: an
+  undated experiment's Backlog link → visible amber-ring highlight in
+  "Без дат"; a dated one scheduled months out → link correctly jumps
+  the timeline window and highlights the right week's cell.
+
 - [TECH-005] `Experiment.stage` is now nullable — an experiment with
   no `ExperimentWeekStage` rows and no manually-picked value has "no
   status" (`null`), not a fake `DISCOVERY` default. Follow-up to

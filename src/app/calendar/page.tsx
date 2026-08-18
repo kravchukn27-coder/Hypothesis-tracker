@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   addWeeks,
@@ -243,8 +243,32 @@ export default async function CalendarPage({
         <>
           <OverdueExperimentReminder reminders={overdueReminders} />
 
-          <div className={`${CALENDAR_SURFACE_WIDTH} rounded-xl border border-zinc-200`}>
-            <div className={TABLE_CONTENT_WIDTH}>
+          <div className={`${CALENDAR_SURFACE_WIDTH} flex items-start gap-4`}>
+            {undated.length > 0 && (
+              <div className="w-56 shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <CalendarOff className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} />
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Без дат
+                  </p>
+                  <span className="rounded-full bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-600">
+                    {undated.length}
+                  </span>
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {undated.map((e) => (
+                    <UndatedRow
+                      key={e.id}
+                      experimentId={e.id}
+                      name={e.name}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1 rounded-xl border border-zinc-200">
+              <div className={TABLE_CONTENT_WIDTH}>
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
                   <div className="px-3 py-3">Эксперимент</div>
@@ -334,24 +358,8 @@ export default async function CalendarPage({
                 </div>
               ))}
             </div>
-          </div>
-
-          {undated.length > 0 && (
-            <div className="rounded-xl border border-dashed border-zinc-300 p-4">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Без дат
-              </p>
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {undated.map((e) => (
-                  <UndatedRow
-                    key={e.id}
-                    experimentId={e.id}
-                    name={e.name}
-                  />
-                ))}
-              </ul>
             </div>
-          )}
+          </div>
         </>
       ))}
     </div>

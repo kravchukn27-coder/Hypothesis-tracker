@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+- [UI-035] Redesigned the "Без дат" undated-experiment tray and moved
+  it from a full-width block below the Calendar timeline to a fixed
+  `w-56` sidebar to its left (`calendar/page.tsx`), so a long list of
+  unscheduled experiments no longer pushes the week grid down the
+  page — you'd otherwise have to scroll past it to see dates. The
+  sidebar only renders when `undated.length > 0`; with none, the
+  timeline still fills the full `CALENDAR_SURFACE_WIDTH` exactly as
+  before. `UndatedRow.tsx` went through two passes: a first cut as
+  plain amber pill chips read as too loose, so it was revised toward
+  the density/precision of Linear/Height-style trackers — `rounded-md`
+  tokens with an explicit `GripVertical` drag-handle icon, a visible
+  `dragging` state (dims while `onDragStart` is active), `truncate` +
+  full name in `title`, stacked one-per-line in the sidebar. Also
+  added click-to-open: a plain click (no drag movement) now navigates
+  to `/experiments/${id}` via `onClick` + `useRouter().push` — no
+  extra click-vs-drag disambiguation needed, since the browser only
+  fires `click` when no `dragstart` preceded it. Kept the app's
+  existing Geist/zinc system and amber accent rather than introducing
+  a new palette, since this is one small piece of an app that's
+  otherwise deliberately unstyled pending a full design pass
+  (`PROJECT_CONTEXT.md` → "Current phase"). `draggable`/`onDragStart`/
+  `dataTransfer` payload and `WeekHeaderCell`'s drop target are
+  unchanged — only the token's markup/classes, the sidebar layout, and
+  the new click handler were added; no domain logic or Prisma changes.
+  Verified live: sidebar renders to the left of the timeline with
+  tokens stacked vertically, clicking a token navigates to its
+  experiment card, confirmed via `getBoundingClientRect` that the
+  sidebar and table sit side-by-side rather than stacked. Drag-and-drop
+  payload logic confirmed by code parity (`dataTransfer`/
+  `effectAllowed` calls unchanged from before the redesign).
+
 - [UI-025] Closed with no code change — Backlog's filters already
   live in their column headers (`HeaderMultiFilter` on Status and
   Funnel Level), already support multi-select (OR within a filter

@@ -7,7 +7,6 @@ import { startOfWeek, toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import {
   CHANNEL_BADGE_COLOR,
-  FUNNEL_LEVEL_BADGE_COLOR,
   MARKET_BADGE_COLOR,
   PLATFORM_BADGE_COLOR,
   PRODUCT_BADGE_COLOR,
@@ -15,6 +14,7 @@ import {
 } from "@/lib/tags";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
+import { FunnelLevelField } from "@/components/FunnelLevelField";
 import { IconSelect } from "@/components/IconSelect";
 import { Input, Select } from "@/components/Input";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
@@ -24,17 +24,17 @@ import { ExperimentWeekStagesEditor } from "./ExperimentWeekStagesEditor";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
-type Hypothesis = { id: string; name: string };
+type Hypothesis = { id: string; name: string; funnelLevel: { name: string } | null };
 type Tag = { id: string; name: string };
 type WeekEntry = { weekStartISO: string; stage: ExperimentStage };
 
 type Initial = {
   name: string;
   author: string;
+  rollout: string;
   stage: ExperimentStage;
   startDate: string; // yyyy-mm-dd
   endDate: string;
-  funnelLevels: Tag[];
   platforms: Tag[];
   channels: Tag[];
   markets: Tag[];
@@ -46,10 +46,10 @@ type Initial = {
 const emptyInitial: Initial = {
   name: "",
   author: "",
+  rollout: "",
   stage: "DISCOVERY",
   startDate: "",
   endDate: "",
-  funnelLevels: [],
   platforms: [],
   channels: [],
   markets: [],
@@ -145,12 +145,15 @@ export function ExperimentForm({
           </Link>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-3">
           <Field label="Status" htmlFor="stage">
             <StageField defaultValue={values.stage} locked={weekLocked} />
           </Field>
           <Field label="Автор">
             <AuthorField authors={authors} defaultValue={values.author} />
+          </Field>
+          <Field label="Раскатка" htmlFor="rollout">
+            <Input id="rollout" name="rollout" defaultValue={values.rollout} placeholder="Добавить…" />
           </Field>
         </div>
       </FormSection>
@@ -170,15 +173,14 @@ export function ExperimentForm({
       )}
 
       <FormSection title="Таргетинг">
+        {/* PROD-033: Funnel Level is one shared value between the
+            hypothesis and every one of its experiments — changing it
+            here also updates the hypothesis and any sibling experiments. */}
+        <Field label="Funnel Level">
+          <FunnelLevelField funnelLevels={funnelLevels} defaultValue={hypothesis.funnelLevel?.name ?? ""} />
+        </Field>
+
         <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Funnel Level">
-            <TagMultiSelect
-              name="funnelLevel"
-              options={funnelLevels}
-              initialSelected={values.funnelLevels}
-              color={FUNNEL_LEVEL_BADGE_COLOR}
-            />
-          </Field>
           <Field label="Platform">
             <TagMultiSelect
               name="platform"
@@ -187,9 +189,6 @@ export function ExperimentForm({
               color={PLATFORM_BADGE_COLOR}
             />
           </Field>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Channel">
             <TagMultiSelect
               name="channel"
@@ -198,6 +197,9 @@ export function ExperimentForm({
               color={CHANNEL_BADGE_COLOR}
             />
           </Field>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Market">
             <TagMultiSelect
               name="market"
@@ -206,9 +208,6 @@ export function ExperimentForm({
               color={MARKET_BADGE_COLOR}
             />
           </Field>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Product">
             <TagMultiSelect
               name="product"
@@ -217,15 +216,16 @@ export function ExperimentForm({
               color={PRODUCT_BADGE_COLOR}
             />
           </Field>
-          <Field label="Segment">
-            <TagMultiSelect
-              name="segment"
-              options={segments}
-              initialSelected={values.segments}
-              color={SEGMENT_BADGE_COLOR}
-            />
-          </Field>
         </div>
+
+        <Field label="Segment">
+          <TagMultiSelect
+            name="segment"
+            options={segments}
+            initialSelected={values.segments}
+            color={SEGMENT_BADGE_COLOR}
+          />
+        </Field>
       </FormSection>
 
       {experimentId ? (

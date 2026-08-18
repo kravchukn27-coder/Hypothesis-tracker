@@ -39,8 +39,7 @@ export default async function ExperimentDetailPage({
     prisma.experiment.findUnique({
       where: { id },
       include: {
-        hypothesis: true,
-        funnelLevels: true,
+        hypothesis: { include: { funnelLevel: { select: { name: true } } } },
         platforms: true,
         channels: true,
         markets: true,
@@ -139,7 +138,11 @@ export default async function ExperimentDetailPage({
       <ExperimentForm
         action={action}
         experimentId={experiment.id}
-        hypothesis={{ id: experiment.hypothesisId, name: experiment.hypothesis.name }}
+        hypothesis={{
+          id: experiment.hypothesisId,
+          name: experiment.hypothesis.name,
+          funnelLevel: experiment.hypothesis.funnelLevel,
+        }}
         authors={authors}
         funnelLevels={funnelLevels}
         platforms={platforms}
@@ -151,10 +154,10 @@ export default async function ExperimentDetailPage({
         initial={{
           name: experiment.name,
           author: experiment.author ?? "",
+          rollout: experiment.rollout ?? "",
           stage: experiment.stage,
           startDate: toDateInputValue(experiment.startDate),
           endDate: toDateInputValue(experiment.endDate),
-          funnelLevels: experiment.funnelLevels,
           platforms: experiment.platforms,
           channels: experiment.channels,
           markets: experiment.markets,

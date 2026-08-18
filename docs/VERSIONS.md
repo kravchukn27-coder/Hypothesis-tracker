@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- [PROD-032] Rollout (`Experiment.rollout`, PROD-030) is now shown and
+  editable on the experiment card (`ExperimentForm.tsx`, "Основное"
+  section, next to "Автор"), not just inline in Calendar
+  (`RolloutCell`). Both paths write through the same
+  `updateExperiment`/`createExperiment` actions, so a value set in one
+  place shows up in the other without redoing anything special.
+- [PROD-033] Funnel Level is now a single value shared between a
+  hypothesis and every one of its experiments, editable from either
+  side, confirmed with the user after the initial one-way
+  hypothesis-derives-experiment design got pushed back on ("логика в
+  том что бы изменить его можно и там и там"). Extracted the
+  select-existing-or-add-new control from `HypothesisForm.tsx` into a
+  shared `FunnelLevelField` (`src/components/FunnelLevelField.tsx`)
+  and `resolveFunnelLevelId` into `src/lib/funnelLevel.ts`, both now
+  used by `ExperimentForm.tsx` too. New `syncExperimentFunnelLevelsForHypothesis`
+  (`src/app/experiments/actions.ts`) fans a hypothesis's Funnel Level
+  out to every experiment under it — called from `updateHypothesis`
+  and `takeHypothesisIntoWork` (`src/app/backlog/actions.ts`), and
+  from a new `applyFunnelLevelFromExperimentForm` that first writes
+  the submitted value back onto the parent hypothesis (the canonical
+  source) when edited from `createExperiment`/`updateExperiment`
+  instead. One-time backfill run against the dev database to sync
+  existing experiments to their hypothesis's current value.
+  Follow-up flagged by the user but explicitly deferred to its own
+  task: restrict a hypothesis to at most one experiment, since this
+  shared-value design gets more surprising the more experiments one
+  hypothesis has.
+
 - [TECH-004 follow-up] Creating a new experiment now picks a starting
   week instead of raw start/end dates, confirmed with the user after
   noticing new experiments still went through the legacy

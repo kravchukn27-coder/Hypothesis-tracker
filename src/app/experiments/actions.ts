@@ -5,19 +5,22 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
+import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 
 const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
   author: z.string().trim().optional(),
+  rollout: z.string().trim().optional(),
   stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"]),
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
-  // TECH-003: 6 multi-select tag categories (5 original + Segment,
-  // folded in the same way), each submitted as a pair of comma-joined
-  // hidden fields (see TagMultiSelect) — existing tag ids to connect,
-  // and new tag names to create-then-connect.
-  funnelLevelIds: z.string().trim().optional(),
-  funnelLevelNew: z.string().trim().optional(),
+  // PROD-033: Funnel Level is a single value shared by a hypothesis and
+  // every one of its experiments — editing it here also updates the
+  // hypothesis and every sibling experiment (syncExperimentFunnelLevelsForHypothesis).
+  funnelLevel: z.string().trim().optional(),
+  // TECH-003: 5 multi-select tag categories, each submitted as a pair
+  // of comma-joined hidden fields (see TagMultiSelect) — existing tag
+  // ids to connect, and new tag names to create-then-connect.
   platformIds: z.string().trim().optional(),
   platformNew: z.string().trim().optional(),
   channelIds: z.string().trim().optional(),
@@ -148,8 +151,6 @@ async function resolveTagIds(
 }
 
 async function resolveExperimentTagIds(data: {
-  funnelLevelIds?: string;
-  funnelLevelNew?: string;
   platformIds?: string;
   platformNew?: string;
   channelIds?: string;
@@ -161,15 +162,52 @@ async function resolveExperimentTagIds(data: {
   segmentIds?: string;
   segmentNew?: string;
 }) {
-  const [funnelLevels, platforms, channels, markets, products, segments] = await Promise.all([
-    resolveTagIds(prisma.funnelLevel, data.funnelLevelIds, data.funnelLevelNew),
+  const [platforms, channels, markets, products, segments] = await Promise.all([
     resolveTagIds(prisma.platform, data.platformIds, data.platformNew),
     resolveTagIds(prisma.channel, data.channelIds, data.channelNew),
     resolveTagIds(prisma.market, data.marketIds, data.marketNew),
     resolveTagIds(prisma.product, data.productIds, data.productNew),
     resolveTagIds(prisma.segment, data.segmentIds, data.segmentNew),
   ]);
-  return { funnelLevels, platforms, channels, markets, products, segments };
+  return { platforms, channels, markets, products, segments };
+}
+
+/**
+ * PROD-033: Funnel Level is one shared value between a hypothesis and
+ * every one of its experiments, editable from either side — the
+ * hypothesis form and every sibling experiment's form. Call after a
+ * hypothesis's Funnel Level changes so every experiment under it
+ * stays in sync (single-value "set", not additive — an experiment
+ * never accumulates more than the one level its hypothesis currently
+ * has).
+ */
+export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: string) {
+  const [hypothesis, experiments] = await Promise.all([
+    prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { funnelLevelId: true } }),
+    prisma.experiment.findMany({ where: { hypothesisId }, select: { id: true } }),
+  ]);
+  const funnelLevelId = hypothesis?.funnelLevelId ?? null;
+  await Promise.all(
+    experiments.map((experiment) =>
+      prisma.experiment.update({
+        where: { id: experiment.id },
+        data: { funnelLevels: { set: funnelLevelId ? [{ id: funnelLevelId }] : [] } },
+      }),
+    ),
+  );
+  revalidatePath("/backlog");
+  experiments.forEach((experiment) => revalidatePath(`/experiments/${experiment.id}`));
+}
+
+/**
+ * PROD-033: applies a Funnel Level submitted from an experiment's own
+ * form back onto the parent hypothesis (the canonical source), then
+ * fans that change out to every sibling experiment.
+ */
+async function applyFunnelLevelFromExperimentForm(hypothesisId: string, funnelLevelName: string | undefined) {
+  const funnelLevelId = await resolveFunnelLevelId(funnelLevelName);
+  await prisma.hypothesis.update({ where: { id: hypothesisId }, data: { funnelLevelId } });
+  await syncExperimentFunnelLevelsForHypothesis(hypothesisId);
 }
 
 /**
@@ -205,8 +243,8 @@ export async function createExperiment(
       name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
+      rollout: data.rollout || null,
       stage: data.stage,
-      funnelLevels: { connect: tagIds.funnelLevels.map((id) => ({ id })) },
       platforms: { connect: tagIds.platforms.map((id) => ({ id })) },
       channels: { connect: tagIds.channels.map((id) => ({ id })) },
       markets: { connect: tagIds.markets.map((id) => ({ id })) },
@@ -214,6 +252,7 @@ export async function createExperiment(
       segments: { connect: tagIds.segments.map((id) => ({ id })) },
     },
   });
+  await applyFunnelLevelFromExperimentForm(data.hypothesisId, data.funnelLevel);
 
   // TECH-004 follow-up: creation picks a starting week instead of raw
   // start/end dates — one ExperimentWeekStage entry at the chosen
@@ -266,8 +305,8 @@ export async function updateExperiment(
       name: data.name,
       hypothesisId: data.hypothesisId,
       author: data.author || null,
+      rollout: data.rollout || null,
       ...(locked ? {} : { stage: data.stage, startDate: toDate(data.startDate), endDate: toDate(data.endDate) }),
-      funnelLevels: { set: tagIds.funnelLevels.map((id) => ({ id })) },
       platforms: { set: tagIds.platforms.map((id) => ({ id })) },
       channels: { set: tagIds.channels.map((id) => ({ id })) },
       markets: { set: tagIds.markets.map((id) => ({ id })) },
@@ -275,6 +314,7 @@ export async function updateExperiment(
       segments: { set: tagIds.segments.map((id) => ({ id })) },
     },
   });
+  await applyFunnelLevelFromExperimentForm(data.hypothesisId, data.funnelLevel);
   await syncHypothesisStatusForExperiment(id);
 
   revalidatePath("/experiments");

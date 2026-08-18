@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [UI-024] Hypothesis scoring ("Оценка") is now a single-row compact
+  table (Impact | Effort | Трафик (Reach) | Confidence | Score)
+  instead of a 2-column vertical grid plus a separate boxed Score
+  panel, in `HypothesisForm.tsx` (shared by both `/backlog/new` and
+  `/backlog/[id]` edit). Impact/Effort moved from a 5-button picker
+  to a compact `<select>` (`ScaleSelect`, still constrained to
+  `SCALE_VALUES` 1-5) — a deliberate choice, confirmed with the user,
+  needed so the whole row fits inside the form's `max-w-2xl` width.
+  Score stays a read-only `<output>`, computed live, not a form
+  field; visually distinguished afterward (per user feedback) as a
+  dark chip with its own "SCORE" label behind a column divider, so
+  it reads as the row's result rather than another input. Required
+  columns keep the `*` asterisk; Funnel Level (outside this table)
+  stays unmarked. No Prisma/schema or Score formula change. Verified
+  live at `/backlog/new`: table renders in one row, changing Impact
+  recalculates Score live (3→5 impact: 0.16→0.27); `/backlog/[id]`
+  edit confirmed by code parity (identical shared component).
+
 - [UI-035] Redesigned the "Без дат" undated-experiment tray and moved
   it from a full-width block below the Calendar timeline to a fixed
   `w-56` sidebar to its left (`calendar/page.tsx`), so a long list of

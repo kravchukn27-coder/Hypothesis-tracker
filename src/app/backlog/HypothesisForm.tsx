@@ -11,7 +11,7 @@ import {
 } from "@/lib/hypothesis";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
-import { FIELD_CLASSES, Input, Textarea } from "@/components/Input";
+import { FIELD_CLASSES, Input, Select, Textarea } from "@/components/Input";
 import { FunnelLevelField } from "@/components/FunnelLevelField";
 import { IconSelect } from "@/components/IconSelect";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
@@ -138,33 +138,62 @@ export function HypothesisForm({
 
       <FormSection title="Оценка">
         <input type="hidden" name="conversion" value={values.conversion} />
-        <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-stretch">
-          <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-            <Field label="Impact" required>
-              <ScaleButtons name="impact" value={impact} onChange={setImpact} />
-            </Field>
-            <Field label="Effort" required>
-              <ScaleButtons name="effort" value={effort} onChange={setEffort} />
-            </Field>
-            <Field label="Трафик (Reach)" htmlFor="reach" required>
-              <PercentInput id="reach" name="reach" value={reachPct} onChange={setReachPct} />
-            </Field>
-            <Field label="Confidence" htmlFor="confidence" required>
-              <PercentInput
-                id="confidence"
-                name="confidence"
-                value={confidencePct}
-                onChange={setConfidencePct}
-              />
-            </Field>
-          </div>
-          <aside className="flex min-h-28 flex-col justify-between rounded-lg bg-zinc-900 p-4 text-white lg:sticky lg:top-5">
-            <div>
-              <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Score</p>
-              <output className="mt-1 block text-4xl font-semibold tracking-tight tabular-nums">{score.toFixed(2)}</output>
-            </div>
-            <p className="text-xs leading-5 text-zinc-400">Impact × Confidence × Reach ÷ Effort</p>
-          </aside>
+        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-50">
+          <table className="w-full min-w-[480px] text-left text-sm">
+            <thead>
+              <tr className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <th className="px-3 py-2.5 font-medium">
+                  Impact<span className="ml-0.5 text-red-600" aria-hidden="true">*</span>
+                </th>
+                <th className="px-3 py-2.5 font-medium">
+                  Effort<span className="ml-0.5 text-red-600" aria-hidden="true">*</span>
+                </th>
+                <th className="px-3 py-2.5 font-medium">
+                  Трафик (Reach)<span className="ml-0.5 text-red-600" aria-hidden="true">*</span>
+                </th>
+                <th className="px-3 py-2.5 font-medium">
+                  Confidence<span className="ml-0.5 text-red-600" aria-hidden="true">*</span>
+                </th>
+                <th className="px-3 py-2.5 text-center font-medium">
+                  <span className="sr-only">Score</span>
+                  <span aria-hidden="true">=</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="px-3 py-2 align-middle">
+                  <ScaleSelect aria-label="Impact" name="impact" value={impact} onChange={setImpact} />
+                </td>
+                <td className="px-3 py-2 align-middle">
+                  <ScaleSelect aria-label="Effort" name="effort" value={effort} onChange={setEffort} />
+                </td>
+                <td className="px-3 py-2 align-middle">
+                  <PercentInput aria-label="Трафик (Reach)" name="reach" value={reachPct} onChange={setReachPct} />
+                </td>
+                <td className="px-3 py-2 align-middle">
+                  <PercentInput
+                    aria-label="Confidence"
+                    name="confidence"
+                    value={confidencePct}
+                    onChange={setConfidencePct}
+                  />
+                </td>
+                <td className="border-l border-zinc-200 bg-zinc-100/70 py-2 pl-4 pr-3 align-middle">
+                  <div className="inline-flex min-w-[4.5rem] flex-col items-center gap-0.5 rounded-lg bg-zinc-900 px-3 py-1.5 shadow-sm">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">Score</span>
+                    <output
+                      aria-label="Score"
+                      title="Impact × Confidence × Reach ÷ Effort"
+                      className="text-xl font-bold leading-none tabular-nums text-white"
+                    >
+                      {score.toFixed(2)}
+                    </output>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </FormSection>
 
@@ -210,60 +239,59 @@ export function HypothesisForm({
   );
 }
 
-function ScaleButtons({
+// UI-024: Impact/Effort moved from a 5-button picker to a compact
+// dropdown so the whole scoring row fits as one table row in the
+// form's max-w-2xl width — still constrained to SCALE_VALUES (1-5).
+function ScaleSelect({
   name,
   value,
   onChange,
+  "aria-label": ariaLabel,
 }: {
   name: string;
   value: number;
   onChange: (v: number) => void;
+  "aria-label": string;
 }) {
   return (
-    <div className="flex gap-2">
+    <Select
+      aria-label={ariaLabel}
+      name={name}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="w-16"
+    >
       {SCALE_VALUES.map((n) => (
-        <label key={n} className="flex-1">
-          <input
-            type="radio"
-            name={name}
-            value={n}
-            checked={value === n}
-            onChange={() => onChange(n)}
-            className="peer sr-only"
-          />
-          <div className="flex h-10 cursor-pointer items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-zinc-600 transition-colors peer-checked:border-zinc-900 peer-checked:bg-zinc-900 peer-checked:text-white hover:border-zinc-400">
-            {n}
-          </div>
-        </label>
+        <option key={n} value={n}>{n}</option>
       ))}
-    </div>
+    </Select>
   );
 }
 
 function PercentInput({
-  id,
   name,
   value,
   onChange,
+  "aria-label": ariaLabel,
 }: {
-  id: string;
   name: string;
   value: number;
   onChange: (v: number) => void;
+  "aria-label": string;
 }) {
   return (
-    <div className="relative">
+    <div className="relative w-20">
       <input
-        id={id}
+        aria-label={ariaLabel}
         name={name}
         type="number"
         min={0}
         max={100}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={`${FIELD_CLASSES} pr-8`}
+        className={`${FIELD_CLASSES} pr-6`}
       />
-      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-400">
+      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-sm text-zinc-400">
         %
       </span>
     </div>

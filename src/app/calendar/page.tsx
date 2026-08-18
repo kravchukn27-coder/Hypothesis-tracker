@@ -11,7 +11,7 @@ import {
   toDateParam,
   WINDOW_WEEKS,
 } from "@/lib/calendar";
-import { STAGE_LABELS, getCurrentWeekStage } from "@/lib/experiment";
+import { STAGE_LABELS, currentStageOf } from "@/lib/experiment";
 import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
@@ -91,7 +91,7 @@ export default async function CalendarPage({
   // same helper the Experiments list uses), so it's exactly whether
   // it looks Done *right now* that decides visibility.
   const experiments = allExperiments.filter((e) => {
-    const currentStage = e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
+    const currentStage = currentStageOf(e, now);
     if (currentStage === "DONE" && e.calendarHiddenOnDone === true) return false;
     if (authorsFilter.length && (!e.author || !authorsFilter.includes(e.author))) return false;
     return true;

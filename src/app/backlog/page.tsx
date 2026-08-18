@@ -3,7 +3,7 @@ import { Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
-import { getCurrentWeekStage, STAGE_LABELS } from "@/lib/experiment";
+import { currentStageOf, stageLabel } from "@/lib/experiment";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
 import { archiveHypotheses, deleteHypotheses } from "./actions";
@@ -25,7 +25,7 @@ import {
   TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
-import type { ExperimentStage, HypothesisStatus } from "@/generated/prisma/enums";
+import type { HypothesisStatus } from "@/generated/prisma/enums";
 
 export default async function BacklogPage({
   searchParams,
@@ -99,10 +99,6 @@ export default async function BacklogPage({
 
   const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q);
   const now = new Date();
-
-  function currentStageOf(experiment: (typeof hypotheses)[number]["experiments"][number]): ExperimentStage {
-    return experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages, now) : experiment.stage;
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -225,7 +221,7 @@ export default async function BacklogPage({
               {rows.map((h) => {
                 const activeExperiments = h.experiments.filter((experiment) => !experiment.archived);
                 const stageSummary = activeExperiments
-                  .map((experiment) => STAGE_LABELS[currentStageOf(experiment)])
+                  .map((experiment) => stageLabel(currentStageOf(experiment, now)))
                   .filter((stage, index, stages) => stages.indexOf(stage) === index)
                   .join(", ");
 

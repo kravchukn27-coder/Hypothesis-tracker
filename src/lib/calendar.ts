@@ -57,7 +57,9 @@ export type TimelineExperiment = {
   hypothesisName: string;
   startDate: Date | null;
   endDate: Date | null;
-  stage: string;
+  // TECH-005: null when the experiment has no weeks and no manually-set
+  // status — "no status yet", not a fake default.
+  stage: string | null;
   weekStages: WeekStageEntry[];
 };
 
@@ -173,7 +175,10 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
         const s = startOfWeek(e.startDate);
         const en = startOfWeek(e.endDate);
         const count = Math.max(weeksBetween(s, en) + 1, 1);
-        entries = Array.from({ length: count }, (_, i) => ({ weekStart: addWeeks(s, i), stage: e.stage, completed: false }));
+        // Legacy pre-week-tracking data only — a real experiment's dates
+        // always come with a stage; this defensive fallback just avoids
+        // rendering an unlabeled bar if that ever isn't true.
+        entries = Array.from({ length: count }, (_, i) => ({ weekStart: addWeeks(s, i), stage: e.stage ?? "DISCOVERY", completed: false }));
       }
       const byWeek = new Map(entries.map((en) => [en.weekStart.getTime(), en.stage]));
       const blocks = computeWeekBlocks(entries);

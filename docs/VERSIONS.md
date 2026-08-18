@@ -2,75 +2,56 @@
 
 ## Unreleased
 
-- [UI-024] Hypothesis scoring ("Оценка") is now a single-row compact
-  table (Impact | Effort | Трафик (Reach) | Confidence | Score)
-  instead of a 2-column vertical grid plus a separate boxed Score
-  panel, in `HypothesisForm.tsx` (shared by both `/backlog/new` and
-  `/backlog/[id]` edit). Impact/Effort moved from a 5-button picker
-  to a compact `<select>` (`ScaleSelect`, still constrained to
-  `SCALE_VALUES` 1-5) — a deliberate choice, confirmed with the user,
-  needed so the whole row fits inside the form's `max-w-2xl` width.
-  Score stays a read-only `<output>`, computed live, not a form
-  field; visually distinguished afterward (per user feedback) as a
-  dark chip with its own "SCORE" label behind a column divider, so
-  it reads as the row's result rather than another input. Required
-  columns keep the `*` asterisk; Funnel Level (outside this table)
-  stays unmarked. No Prisma/schema or Score formula change. Verified
-  live at `/backlog/new`: table renders in one row, changing Impact
-  recalculates Score live (3→5 impact: 0.16→0.27); `/backlog/[id]`
-  edit confirmed by code parity (identical shared component).
+- [TECH-005] `Experiment.stage` is now nullable — an experiment with
+  no `ExperimentWeekStage` rows and no manually-picked value has "no
+  status" (`null`), not a fake `DISCOVERY` default. Follow-up to
+  BUG-010: the user pointed out the real fix was the data model, not
+  the revalidation paths. `prisma/schema.prisma`'s `stage` column
+  dropped its default and became `ExperimentStage?`; existing rows
+  with `stage=DISCOVERY` and zero weeks were backfilled to `NULL`
+  (5 rows locally). `recomputeExperimentDerivedFields`
+  (`experiments/actions.ts`) now resets to `stage: null` instead of
+  `"DISCOVERY"` when the last week is removed. The Status dropdown
+  (`StageField` in `ExperimentForm.tsx`, `StageCell.tsx`) gained a
+  "—"/`NONE` option so a stage can still be hand-picked without
+  adding the experiment to Calendar — `updateExperimentStage` accepts
+  the sentinel only for the no-weeks case (a specific week entry
+  still always needs a concrete stage; picking "—" while weeks exist
+  is a no-op, since unsetting one week's stage isn't meaningful — use
+  its delete control instead). New helpers in `lib/experiment.ts`
+  (`currentStageOf`, `stageLabel`, `stageBorderClass`, `stageRank`)
+  replaced five duplicated `experiment.stage` fallback/lookup sites
+  across Backlog, Calendar, and the experiment detail page so the
+  null-handling lives in one place — `STAGE_LABELS[null]` used to
+  silently render literal `"undefined"` in Backlog's stage summary
+  and the hypothesis detail page's title line. `tsc --noEmit` and
+  `eslint src/` clean. Verified live end-to-end: Backlog/Calendar
+  show "—" for unset stage; the form's Status field defaults to "—"
+  and a manual pick persists; adding a week derives the real stage;
+  deleting the last week reverts it to "—" (confirmed both in the DB
+  and via client-side nav to Backlog, not just a full reload) — the
+  original BUG-010 scenario, now showing the *correct* value instead
+  of a stale one.
 
-- [UI-035] Redesigned the "Без дат" undated-experiment tray and moved
-  it from a full-width block below the Calendar timeline to a fixed
-  `w-56` sidebar to its left (`calendar/page.tsx`), so a long list of
-  unscheduled experiments no longer pushes the week grid down the
-  page — you'd otherwise have to scroll past it to see dates. The
-  sidebar only renders when `undated.length > 0`; with none, the
-  timeline still fills the full `CALENDAR_SURFACE_WIDTH` exactly as
-  before. `UndatedRow.tsx` went through two passes: a first cut as
-  plain amber pill chips read as too loose, so it was revised toward
-  the density/precision of Linear/Height-style trackers — `rounded-md`
-  tokens with an explicit `GripVertical` drag-handle icon, a visible
-  `dragging` state (dims while `onDragStart` is active), `truncate` +
-  full name in `title`, stacked one-per-line in the sidebar. Also
-  added click-to-open: a plain click (no drag movement) now navigates
-  to `/experiments/${id}` via `onClick` + `useRouter().push` — no
-  extra click-vs-drag disambiguation needed, since the browser only
-  fires `click` when no `dragstart` preceded it. Kept the app's
-  existing Geist/zinc system and amber accent rather than introducing
-  a new palette, since this is one small piece of an app that's
-  otherwise deliberately unstyled pending a full design pass
-  (`PROJECT_CONTEXT.md` → "Current phase"). `draggable`/`onDragStart`/
-  `dataTransfer` payload and `WeekHeaderCell`'s drop target are
-  unchanged — only the token's markup/classes, the sidebar layout, and
-  the new click handler were added; no domain logic or Prisma changes.
-  Verified live: sidebar renders to the left of the timeline with
-  tokens stacked vertically, clicking a token navigates to its
-  experiment card, confirmed via `getBoundingClientRect` that the
-  sidebar and table sit side-by-side rather than stacked. Drag-and-drop
-  payload logic confirmed by code parity (`dataTransfer`/
-  `effectAllowed` calls unchanged from before the redesign).
-
-- [UI-025] Closed with no code change — Backlog's filters already
-  live in their column headers (`HeaderMultiFilter` on Status and
-  Funnel Level), already support multi-select (OR within a filter
-  via Prisma's `{ in: [...] }`, AND across filters via separate
-  `where` keys), and already round-trip through the URL alongside
-  sort/search/reset. `FilterBar` on Backlog only renders the search
-  box now (`fields: []`) — no separate filter panel remains. This
-  card had gone stale after that work shipped. Verified live at
-  `/backlog`: search box only, "Фильтр" dropdown on Status header,
-  "Funnel Level" dropdown on its own header.
-
-- [UI-028] Closed with no code change — its acceptance criteria
-  (Calendar row shows name/Автор/Раскатка as compact columns, Автор
-  has a fixed-width `HeaderMultiFilter`-backed column with a
-  Саша/Дима/Артем `<select>`, Funnel Level/Product/Segment absent)
-  were already fully met by the existing `calendar/page.tsx`,
-  `AuthorCell.tsx`, and `RolloutCell.tsx` — this card had gone stale
-  after that work shipped under PROD-030/032. Verified live at
-  `/calendar`: name/Автор/Раскатка columns present exactly as
-  specified, no other metadata columns.
+- [BUG-010] Investigated "Backlog shows stale experiment stage after
+  removing all weeks from Calendar" — not reproducible on current
+  `main`. The card's diagnosis (no week action calls
+  `revalidatePath("/backlog")`) predates `syncHypothesisStatusForExperiment`
+  (`experiments/actions.ts`), which every stage-changing week action
+  (`setExperimentWeekStage`, `deleteExperimentWeek`,
+  `addNextExperimentWeek`, `shiftExperimentWeeks`,
+  `resizeExperimentWeeks`) already calls after recomputing derived
+  fields, and which itself revalidates `/backlog` and
+  `/backlog/${hypothesisId}`. `completeExperimentWeek` only flips a
+  `completed` flag, not `stage`, so it doesn't need the same
+  revalidation — Backlog's displayed stage
+  (`getCurrentWeekStage`/`experiment.stage`) never reads `completed`.
+  No code change made. Verified live: added a week (Development)
+  and confirmed Backlog updated via client-side nav; deleted the
+  week and confirmed Backlog reverted to Discovery via client-side
+  nav — both without a full reload. The other three week actions
+  confirmed by code parity (identical `syncHypothesisStatusForExperiment`
+  call).
 
 - [UI-032] "Раскатка" (`Experiment.rollout`) now supports multi-line
   text in both places it's edited. `ExperimentForm.tsx` swapped its
@@ -104,24 +85,6 @@
   `ExperimentForm.tsx` confirmed by code parity (mechanical `Input`
   → `Textarea` swap, same pattern as existing `Textarea` fields in
   `HypothesisForm.tsx`).
-
-- [UI-030] Navigating to Calendar with `?experimentId=...` (from a
-  hypothesis/experiment card's "Открыть в Calendar") no longer
-  filters the timeline down to a single row. It now shows the full
-  timeline and rings that experiment's stage bars amber
-  (`ExperimentWeekRow`'s new `highlighted` prop, same visual
-  convention as `isOverdueCell`'s red ring), plus an amber tint on
-  its sticky name/author/rollout column and row background
-  (`bg-amber-50`, matching `AllExperimentsTable`'s existing
-  `isHighlighted` pattern for `hypothesisId`). `experimentId` still
-  round-trips through pagination links (Сегодня/prev/next) so the
-  highlight survives window navigation. Removed the
-  `displayedExperiments = focusedExperiment ? [focusedExperiment] :
-  experiments` filter entirely — there's one Calendar view now, not
-  a separate single-row focus mode. Verified live: navigating to
-  `?experimentId=...&start=...` shows all experiments in the window,
-  the target row visibly highlighted, and the highlight persists on
-  the "Вперёд" pagination link.
 
 - [UI-034] Removed the `overflow-x-hidden` wrapper around the
   Calendar table (`calendar/page.tsx`) and `AllExperimentsTable`

@@ -19,7 +19,7 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { toDateParam } from "@/lib/calendar";
-import { getCurrentWeekStage } from "@/lib/experiment";
+import { currentStageOf } from "@/lib/experiment";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -51,7 +51,7 @@ export default async function ExperimentDetailPage({
   if (!experiment) notFound();
 
   const action = updateExperiment.bind(null, experiment.id);
-  const currentStage = experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages) : experiment.stage;
+  const currentStage = currentStageOf(experiment);
   const isHiddenFromCalendar = currentStage === "DONE" && experiment.calendarHiddenOnDone === true;
   const calendarStart = experiment.weekStages[0]?.weekStart ?? experiment.startDate;
   const calendarHref = calendarStart

@@ -3,6 +3,7 @@ import {
   CheckCheck,
   Code2,
   FlaskConical,
+  Minus,
   PenTool,
   Search,
   type LucideIcon,
@@ -71,16 +72,51 @@ export const STAGE_ICONS: Record<ExperimentStage, LucideIcon> = {
   DONE: CheckCheck,
 };
 
+// TECH-005: an experiment with zero week entries and no manually-set
+// value has no status at all — not a fake "Discovery" (the old
+// default). These cover the "—" display everywhere a real stage would
+// otherwise be shown.
+export const NONE_STAGE_ICON: LucideIcon = Minus;
+export const NONE_STAGE_COLOR_CLASSES = "text-zinc-400";
+export const NONE_STAGE_BORDER_CLASS = "border-zinc-200";
+
+export function stageLabel(stage: ExperimentStage | null): string {
+  return stage ? STAGE_LABELS[stage] : "—";
+}
+
+export function stageBorderClass(stage: ExperimentStage | null): string {
+  return stage ? STAGE_BORDER_CLASSES[stage] : NONE_STAGE_BORDER_CLASS;
+}
+
+/** Sort rank for a possibly-unset stage — unset sorts after every real stage. */
+export function stageRank(stage: ExperimentStage | null): number {
+  return stage ? STAGE_ORDER.indexOf(stage) : STAGE_ORDER.length;
+}
+
 /**
  * PROD-018: prompts to archive once an experiment reaches Done, unless
  * it's already archived. Used from both the Experiments list's inline
  * stage editor and the experiment detail form.
  */
-export function shouldPromptArchiveExperiment(stage: ExperimentStage, archived: boolean): boolean {
+export function shouldPromptArchiveExperiment(stage: ExperimentStage | null, archived: boolean): boolean {
   return !archived && stage === "DONE";
 }
 
 export type WeekStageEntry = { weekStart: Date; stage: ExperimentStage };
+
+/**
+ * TECH-005: an experiment's displayed/current stage is its current
+ * week's stage once it has week entries, otherwise the manually-set
+ * (or unset) `Experiment.stage` cache directly. Shared by every screen
+ * that shows a "current stage" (Backlog, Calendar's list view, the
+ * experiment detail page) so the null-handling lives in one place.
+ */
+export function currentStageOf(
+  experiment: { stage: ExperimentStage | null; weekStages: WeekStageEntry[] },
+  now: Date = new Date(),
+): ExperimentStage | null {
+  return experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages, now) : experiment.stage;
+}
 
 /**
  * BUG-005 follow-up #2: the Experiments list shows/edits *this week's*

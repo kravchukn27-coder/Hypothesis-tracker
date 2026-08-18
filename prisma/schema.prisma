@@ -98,7 +98,7 @@ model Experiment {
   // working unchanged.
   startDate    DateTime?
   endDate      DateTime?
-  stage        ExperimentStage        @default(DISCOVERY)
+  stage        ExperimentStage?
   weekStages   ExperimentWeekStage[]
   hypothesis   Hypothesis             @relation(fields: [hypothesisId], references: [id])
   hypothesisId String

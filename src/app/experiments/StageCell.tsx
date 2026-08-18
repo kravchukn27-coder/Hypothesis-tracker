@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { updateExperimentStage } from "./actions";
 import { ArchiveExperimentModal } from "./ArchiveExperimentModal";
 import {
+  NONE_STAGE_COLOR_CLASSES,
+  NONE_STAGE_ICON,
   STAGE_BADGE_CLASSES,
   STAGE_ICONS,
   STAGE_LABELS,
@@ -14,6 +16,17 @@ import {
 import { IconSelect } from "@/components/IconSelect";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
+// TECH-005: same "—" sentinel as ExperimentForm's StageField — an
+// experiment with no weeks can genuinely have no status yet.
+const STAGE_CELL_OPTIONS = ["NONE", ...STAGE_ORDER] as const;
+type StageCellOption = (typeof STAGE_CELL_OPTIONS)[number];
+const STAGE_CELL_LABELS: Record<StageCellOption, string> = { NONE: "—", ...STAGE_LABELS };
+const STAGE_CELL_ICONS: Record<StageCellOption, typeof STAGE_ICONS[ExperimentStage]> = {
+  NONE: NONE_STAGE_ICON,
+  ...STAGE_ICONS,
+};
+const STAGE_CELL_COLORS: Record<StageCellOption, string> = { NONE: NONE_STAGE_COLOR_CLASSES, ...STAGE_BADGE_CLASSES };
+
 export function StageCell({
   experimentId,
   experimentName,
@@ -22,21 +35,21 @@ export function StageCell({
 }: {
   experimentId: string;
   experimentName: string;
-  stage: ExperimentStage;
+  stage: ExperimentStage | null;
   archived: boolean;
 }) {
   const router = useRouter();
-  const [current, setCurrent] = useState(stage);
+  const [current, setCurrent] = useState<StageCellOption>(stage ?? "NONE");
   const [pending, startTransition] = useTransition();
   const [showArchivePrompt, setShowArchivePrompt] = useState(false);
 
-  function handleChange(next: ExperimentStage) {
+  function handleChange(next: StageCellOption) {
     const previous = current;
     setCurrent(next);
     startTransition(async () => {
       await updateExperimentStage(experimentId, next);
       router.refresh();
-      if (next !== previous && shouldPromptArchiveExperiment(next, archived)) {
+      if (next !== previous && next !== "NONE" && shouldPromptArchiveExperiment(next, archived)) {
         setShowArchivePrompt(true);
       }
     });
@@ -46,10 +59,10 @@ export function StageCell({
     <span>
       <IconSelect
         value={current}
-        options={STAGE_ORDER}
-        labels={STAGE_LABELS}
-        icon={STAGE_ICONS[current]}
-        colorClasses={STAGE_BADGE_CLASSES[current]}
+        options={STAGE_CELL_OPTIONS}
+        labels={STAGE_CELL_LABELS}
+        icon={STAGE_CELL_ICONS[current]}
+        colorClasses={STAGE_CELL_COLORS[current]}
         disabled={pending}
         onChange={handleChange}
       />

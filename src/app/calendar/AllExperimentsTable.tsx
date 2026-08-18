@@ -3,11 +3,11 @@ import { Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import {
-  STAGE_BORDER_CLASSES,
-  STAGE_ORDER,
+  currentStageOf,
   formatDateRange,
   formatWeekRange,
-  getCurrentWeekStage,
+  stageBorderClass,
+  stageRank,
 } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { archiveExperiments, deleteExperiments } from "../experiments/actions";
@@ -26,7 +26,6 @@ import {
 } from "@/components/tableWidths";
 import { StageCell } from "../experiments/StageCell";
 import { toDateParam } from "@/lib/calendar";
-import type { ExperimentStage } from "@/generated/prisma/enums";
 
 // UI-033: Calendar's wider surface leaves the shared LONG_TEXT_COL width
 // (also used by Backlog/Experiments) too narrow to fill the extra room —
@@ -73,13 +72,11 @@ export async function AllExperimentsTable({
   });
 
   const now = new Date();
-  function currentStageOf(e: (typeof allExperiments)[number]): ExperimentStage {
-    return e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
-  }
 
   const experiments = allExperiments.filter((experiment) => {
-    const currentStage = currentStageOf(experiment);
-    if (stages.length && !stages.includes(currentStage)) return false;
+    const currentStage = currentStageOf(experiment, now);
+    // A null (unset) stage doesn't match any specific stage filter.
+    if (stages.length && (!currentStage || !stages.includes(currentStage))) return false;
     if (view === "active" && currentStage === "DONE") return false;
     if (view === "completed" && currentStage !== "DONE") return false;
     return true;
@@ -96,7 +93,7 @@ export async function AllExperimentsTable({
     let cmp = 0;
     if (sortBy === "name") cmp = a.name.localeCompare(b.name, "ru");
     else if (sortBy === "stage")
-      cmp = STAGE_ORDER.indexOf(currentStageOf(a)) - STAGE_ORDER.indexOf(currentStageOf(b));
+      cmp = stageRank(currentStageOf(a, now)) - stageRank(currentStageOf(b, now));
     else if (sortBy === "author") cmp = (a.author ?? "").localeCompare(b.author ?? "", "ru");
     else if (sortBy === "segment") cmp = segmentLabel(a).localeCompare(segmentLabel(b), "ru");
     else if (sortBy === "createdAt") cmp = a.createdAt.getTime() - b.createdAt.getTime();
@@ -239,7 +236,7 @@ export async function AllExperimentsTable({
               <tbody className="divide-y divide-zinc-100">
                 {experiments.map((e) => {
                   const isHighlighted = e.hypothesisId === hypothesisId;
-                  const currentStage = currentStageOf(e);
+                  const currentStage = currentStageOf(e, now);
                   const calendarStart = e.weekStages[0]?.weekStart ?? e.startDate;
                   const calendarHref = calendarStart
                     ? `/calendar?experimentId=${e.id}&start=${toDateParam(calendarStart)}`
@@ -248,7 +245,7 @@ export async function AllExperimentsTable({
                     <tr
                       key={e.id}
                       data-highlighted={isHighlighted || undefined}
-                      className={`border-l-4 transition-colors hover:bg-zinc-50 ${STAGE_BORDER_CLASSES[currentStage]} ${isHighlighted ? "bg-amber-50" : ""}`}
+                      className={`border-l-4 transition-colors hover:bg-zinc-50 ${stageBorderClass(currentStage)} ${isHighlighted ? "bg-amber-50" : ""}`}
                     >
                       <td className={`${CHECKBOX_COL} px-4 py-3`}>
                         <RowCheckbox id={e.id} />

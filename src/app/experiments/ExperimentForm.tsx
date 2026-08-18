@@ -4,7 +4,14 @@ import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { startOfWeek, toDateParam } from "@/lib/calendar";
-import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
+import {
+  NONE_STAGE_COLOR_CLASSES,
+  NONE_STAGE_ICON,
+  STAGE_BADGE_CLASSES,
+  STAGE_ICONS,
+  STAGE_LABELS,
+  STAGE_ORDER,
+} from "@/lib/experiment";
 import { PRODUCT_BADGE_COLOR, SEGMENT_BADGE_COLOR } from "@/lib/tags";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
@@ -26,7 +33,7 @@ type Initial = {
   name: string;
   author: string;
   rollout: string;
-  stage: ExperimentStage;
+  stage: ExperimentStage | null;
   startDate: string; // yyyy-mm-dd
   endDate: string;
   products: Tag[];
@@ -38,7 +45,7 @@ const emptyInitial: Initial = {
   name: "",
   author: "",
   rollout: "",
-  stage: "DISCOVERY",
+  stage: null,
   startDate: "",
   endDate: "",
   products: [],
@@ -284,22 +291,36 @@ function AuthorField({ authors, defaultValue }: { authors: string[]; defaultValu
   );
 }
 
-function StageField({ defaultValue, locked }: { defaultValue: ExperimentStage; locked?: boolean }) {
-  const [stage, setStage] = useState(defaultValue);
+// TECH-005: "—" (no status) is a real, selectable state — an
+// experiment that hasn't been scheduled on Calendar yet has no stage
+// at all, not a fake Discovery default. Widens the six real stages
+// with a "NONE" sentinel for this picker only; the sentinel never
+// reaches the DB (see `optionalStageSchema` in actions.ts).
+const STAGE_SELECT_OPTIONS = ["NONE", ...STAGE_ORDER] as const;
+type StageOption = (typeof STAGE_SELECT_OPTIONS)[number];
+const STAGE_SELECT_LABELS: Record<StageOption, string> = { NONE: "—", ...STAGE_LABELS };
+const STAGE_SELECT_ICONS: Record<StageOption, typeof STAGE_ICONS[ExperimentStage]> = {
+  NONE: NONE_STAGE_ICON,
+  ...STAGE_ICONS,
+};
+const STAGE_SELECT_COLORS: Record<StageOption, string> = { NONE: NONE_STAGE_COLOR_CLASSES, ...STAGE_BADGE_CLASSES };
+
+function StageField({ defaultValue, locked }: { defaultValue: ExperimentStage | null; locked?: boolean }) {
+  const [stage, setStage] = useState<StageOption>(defaultValue ?? "NONE");
   return (
     <>
       {/* Disabled <select>s aren't submitted with the form — a hidden
-          input keeps `stage` in the payload (required by the schema)
-          when locked, since the visible control below is disabled. */}
+          input keeps `stage` in the payload when locked, since the
+          visible control below is disabled. */}
       {locked && <input type="hidden" name="stage" value={stage} />}
       <IconSelect
         id="stage"
         name={locked ? undefined : "stage"}
         value={stage}
-        options={STAGE_ORDER}
-        labels={STAGE_LABELS}
-        icon={STAGE_ICONS[stage]}
-        colorClasses={STAGE_BADGE_CLASSES[stage]}
+        options={STAGE_SELECT_OPTIONS}
+        labels={STAGE_SELECT_LABELS}
+        icon={STAGE_SELECT_ICONS[stage]}
+        colorClasses={STAGE_SELECT_COLORS[stage]}
         disabled={locked}
         locked={locked}
         title={locked ? "Управляется по неделям — редактируй ниже" : undefined}

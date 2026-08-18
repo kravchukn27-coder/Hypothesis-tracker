@@ -7,11 +7,21 @@ import { z } from "zod";
 import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 
+// TECH-005: "no status" (the Status field's "—" option) submits the
+// "NONE" sentinel from StageField — normalized to `undefined` here so
+// an unset stage means the field is simply absent, not a seventh enum
+// value living in the database.
+const stageValues = ["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"] as const;
+const optionalStageSchema = z.preprocess(
+  (v) => (v === "NONE" ? undefined : v),
+  z.enum(stageValues).optional(),
+);
+
 const baseExperimentFields = {
   hypothesisId: z.string().trim().min(1, "Выбери гипотезу"),
   author: z.string().trim().optional(),
   rollout: z.string().trim().optional(),
-  stage: z.enum(["DISCOVERY", "DESIGN", "DEVELOPMENT", "EXPERIMENTATION", "ANALYSIS", "DONE"]),
+  stage: optionalStageSchema,
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
   // PROD-033: Funnel Level is a single value shared by a hypothesis and
@@ -74,7 +84,10 @@ function startOfWeek(date: Date): Date {
  * ExperimentWeekStage rows (latest week's stage; earliest/latest week
  * as the date span) — the denormalized cache that keeps every
  * existing query/filter/sort/badge across the app working unchanged.
- * With no week entries, restores the experiment's undated baseline.
+ * With no week entries, restores the experiment's undated baseline —
+ * TECH-005: that baseline is "no status" (`null`), not a fake
+ * `DISCOVERY` default; the user can still hand-pick a real stage via
+ * the Status field while it's unlocked.
  */
 async function recomputeExperimentDerivedFields(experimentId: string) {
   const weeks = await prisma.experimentWeekStage.findMany({
@@ -84,7 +97,7 @@ async function recomputeExperimentDerivedFields(experimentId: string) {
   if (weeks.length === 0) {
     await prisma.experiment.update({
       where: { id: experimentId },
-      data: { stage: "DISCOVERY", startDate: null, endDate: null, calendarHiddenOnDone: null },
+      data: { stage: null, startDate: null, endDate: null, calendarHiddenOnDone: null },
     });
     return;
   }
@@ -235,7 +248,7 @@ export async function createExperiment(
       hypothesisId: data.hypothesisId,
       author: data.author || null,
       rollout: data.rollout || null,
-      stage: data.stage,
+      stage: data.stage ?? null,
       products: { connect: tagIds.products.map((id) => ({ id })) },
       segments: { connect: tagIds.segments.map((id) => ({ id })) },
     },
@@ -248,11 +261,13 @@ export async function createExperiment(
   // for it), then the same recompute every other week-mutating action
   // runs so Experiment.stage/startDate/endDate reflect it immediately.
   // No week picked (still-undated experiment) is a no-op here, same
-  // as today.
+  // as today. TECH-005: a week entry always needs a concrete stage
+  // even if Status was left at "—" — defaults that one week to
+  // DISCOVERY rather than blocking creation.
   if (data.startWeek) {
     const weekStart = startOfWeek(new Date(`${data.startWeek}T00:00:00`));
     await prisma.experimentWeekStage.create({
-      data: { experimentId: experiment.id, weekStart, stage: data.stage },
+      data: { experimentId: experiment.id, weekStart, stage: data.stage ?? "DISCOVERY" },
     });
     await recomputeExperimentDerivedFields(experiment.id);
   }
@@ -276,6 +291,7 @@ export async function updateExperiment(
     return { error: parsed.error.issues[0]?.message ?? "Проверь поля формы" };
   }
   const data = parsed.data;
+  const normalizedStage = data.stage ?? null;
   const tagIds = await resolveExperimentTagIds(data);
   // PROD-019: once week entries exist, stage/dates are derived from
   // them — the form's now-disabled Status/date fields still submit
@@ -293,7 +309,7 @@ export async function updateExperiment(
       hypothesisId: data.hypothesisId,
       author: data.author || null,
       rollout: data.rollout || null,
-      ...(locked ? {} : { stage: data.stage, startDate: toDate(data.startDate), endDate: toDate(data.endDate) }),
+      ...(locked ? {} : { stage: normalizedStage, startDate: toDate(data.startDate), endDate: toDate(data.endDate) }),
       products: { set: tagIds.products.map((id) => ({ id })) },
       segments: { set: tagIds.segments.map((id) => ({ id })) },
     },
@@ -304,9 +320,9 @@ export async function updateExperiment(
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
 
-  const stageChanged = !locked && before !== null && before.stage !== data.stage;
+  const stageChanged = !locked && before !== null && before.stage !== normalizedStage;
   const shouldPromptArchive =
-    stageChanged && before !== null && shouldPromptArchiveExperiment(data.stage, before.archived);
+    stageChanged && before !== null && shouldPromptArchiveExperiment(normalizedStage, before.archived);
 
   if (shouldPromptArchive) redirect(`/experiments/${id}?promptArchive=1&saved=1`);
   redirect(`/experiments/${id}?saved=1`);
@@ -357,8 +373,14 @@ async function clearHiddenFlagIfNoLongerDone(experimentId: string) {
   });
 }
 
+// TECH-005: "—" (no status) is only a valid pick for an experiment
+// with no weeks yet — a specific week entry always needs a concrete
+// stage, so this sentinel is accepted here but not by `stageSchema`
+// (shared with the always-required per-week actions).
+const stageOrNoneSchema = z.union([stageSchema, z.literal("NONE")]);
+
 export async function updateExperimentStage(id: string, stage: string) {
-  const parsed = stageSchema.safeParse(stage);
+  const parsed = stageOrNoneSchema.safeParse(stage);
   if (!parsed.success) return;
 
   // BUG-005 follow-up #2: confirmed with the user — the list's Status
@@ -368,6 +390,17 @@ export async function updateExperimentStage(id: string, stage: string) {
   // `setExperimentWeekStage`, just anchored at "now" instead of a
   // week picked on the Calendar).
   const hasWeeks = await hasWeekStages(id);
+
+  if (parsed.data === "NONE") {
+    // Can't unset a specific week's stage from this cell — deleting
+    // the week is the way to do that (Calendar/detail card).
+    if (hasWeeks) return;
+    await prisma.experiment.update({ where: { id }, data: { stage: null } });
+    revalidatePath(`/experiments/${id}`);
+    revalidatePath("/calendar");
+    await syncHypothesisStatusForExperiment(id);
+    return;
+  }
 
   if (hasWeeks) {
     const currentWeekStart = startOfWeek(new Date());

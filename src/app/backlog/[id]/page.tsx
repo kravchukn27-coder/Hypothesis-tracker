@@ -17,7 +17,7 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { Badge } from "@/components/Badge";
 import { computeScore, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
-import { getCurrentWeekStage, STAGE_LABELS } from "@/lib/experiment";
+import { currentStageOf, stageLabel } from "@/lib/experiment";
 
 export default async function HypothesisDetailPage({
   params,
@@ -38,7 +38,7 @@ export default async function HypothesisDetailPage({
   const action = updateHypothesis.bind(null, hypothesis.id);
   const currentExperiments = hypothesis.experiments.map((experiment) => ({
     ...experiment,
-    currentStage: experiment.weekStages.length > 0 ? getCurrentWeekStage(experiment.weekStages) : experiment.stage,
+    currentStage: currentStageOf(experiment),
   }));
   const activeExperiment = currentExperiments.find((experiment) => experiment.currentStage !== "DONE");
   const score = computeScore(hypothesis);
@@ -127,7 +127,7 @@ export default async function HypothesisDetailPage({
             {currentExperiments.length === 0
               ? "Экспериментов пока нет."
               : currentExperiments.length === 1
-                ? `Эксперимент: ${currentExperiments[0].name} · ${STAGE_LABELS[currentExperiments[0].currentStage]}`
+                ? `Эксперимент: ${currentExperiments[0].name} · ${stageLabel(currentExperiments[0].currentStage)}`
                 : `${currentExperiments.length} связанных эксперимента${activeExperiment ? ` · есть активные` : " · все завершены"}`}
           </p>
           {currentExperiments.length === 0 ? (

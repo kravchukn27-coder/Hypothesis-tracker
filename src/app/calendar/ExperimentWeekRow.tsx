@@ -77,12 +77,18 @@ export function ExperimentWeekRow({
   cells,
   overdue,
   overdueWeekStartISO,
+  highlighted = false,
 }: {
   experimentId: string;
   experimentName: string;
   cells: Cell[];
   overdue: boolean;
   overdueWeekStartISO: string | null;
+  // UI-030: true when this row is the ?experimentId= target navigated
+  // to from a hypothesis/experiment card — rings its stage bars amber
+  // instead of hiding every other row, so the experiment reads in the
+  // context of the full timeline.
+  highlighted?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -245,7 +251,7 @@ export function ExperimentWeekRow({
                   }}
                   aria-label={`${STAGE_LABELS[cell.stage as ExperimentStage]}. Перетащите, чтобы перенести неделю.`}
                   title={`${STAGE_LABELS[cell.stage as ExperimentStage]}${isOverdueCell ? " · Просрочен" : ""}`}
-                  className={`relative my-2 flex h-11 w-full cursor-grab items-center justify-center rounded-md px-3 text-[11px] font-medium text-white shadow-sm transition-opacity active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
+                  className={`relative my-2 flex h-11 w-full cursor-grab items-center justify-center rounded-md px-3 text-[11px] font-medium text-white shadow-sm transition-opacity active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-wait disabled:opacity-60 ${STAGE_BAR_CLASSES[cell.stage as ExperimentStage]} ${isOverdueCell ? "ring-2 ring-red-500 ring-offset-1" : highlighted ? "ring-2 ring-amber-500 ring-offset-1" : ""} ${cell.dimmed ? "opacity-20 hover:opacity-40" : ""}`}
                 >
                   <span className="w-full text-center leading-[1.15] break-words">
                     {STAGE_LABELS[cell.stage as ExperimentStage]}

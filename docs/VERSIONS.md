@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [UI-030] Navigating to Calendar with `?experimentId=...` (from a
+  hypothesis/experiment card's "Открыть в Calendar") no longer
+  filters the timeline down to a single row. It now shows the full
+  timeline and rings that experiment's stage bars amber
+  (`ExperimentWeekRow`'s new `highlighted` prop, same visual
+  convention as `isOverdueCell`'s red ring), plus an amber tint on
+  its sticky name/author/rollout column and row background
+  (`bg-amber-50`, matching `AllExperimentsTable`'s existing
+  `isHighlighted` pattern for `hypothesisId`). `experimentId` still
+  round-trips through pagination links (Сегодня/prev/next) so the
+  highlight survives window navigation. Removed the
+  `displayedExperiments = focusedExperiment ? [focusedExperiment] :
+  experiments` filter entirely — there's one Calendar view now, not
+  a separate single-row focus mode. Verified live: navigating to
+  `?experimentId=...&start=...` shows all experiments in the window,
+  the target row visibly highlighted, and the highlight persists on
+  the "Вперёд" pagination link.
+
 - [UI-034] Removed the `overflow-x-hidden` wrapper around the
   Calendar table (`calendar/page.tsx`) and `AllExperimentsTable`
   (`calendar/AllExperimentsTable.tsx`). Per CSS spec, setting

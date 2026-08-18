@@ -99,8 +99,12 @@ export default async function CalendarPage({
   const authorNames = [...new Set(["Саша", "Дима", "Артем", ...allExperiments.map((item) => item.author).filter((author): author is string => Boolean(author))])];
   const authorOptions = authorNames.map((author) => ({ value: author, label: author }));
 
+  // UI-030: experimentId only highlights its row on the full timeline
+  // now (ring on its stage bars, see ExperimentWeekRow) — it used to
+  // filter the table down to that one row, which hid every other
+  // experiment and made the view harder to read in context.
   const focusedExperiment = experimentId ? experiments.find((experiment) => experiment.id === experimentId) : null;
-  const displayedExperiments = focusedExperiment ? [focusedExperiment] : experiments;
+  const displayedExperiments = experiments;
   const timelineExperiments = displayedExperiments.map((e) => ({
     id: e.id,
     name: e.name,
@@ -267,13 +271,15 @@ export default async function CalendarPage({
 
               {visibleRows.map(({ experiment: e, cells, overdue, overdueWeekStart }) => {
                 const details = calendarDetails.get(e.id);
+                const isFocused = e.id === focusedExperiment?.id;
                 return (
                 <div
                   key={e.id}
                   data-experiment-id={e.id}
-                  className="flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50"
+                  data-highlighted={isFocused || undefined}
+                  className={`flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 ${isFocused ? "bg-amber-50/60" : ""}`}
                 >
-                  <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-white">
+                  <div className={`sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] ${isFocused ? "bg-amber-50" : "bg-white"}`}>
                     {/* PROD-019: previously the colored bar itself linked to
                         /experiments/[id] — now that each week is its own
                         stage-editing button, the name here is the only
@@ -300,6 +306,7 @@ export default async function CalendarPage({
                     experimentName={e.name}
                     overdue={overdue}
                     overdueWeekStartISO={overdueWeekStart ? toDateParam(overdueWeekStart) : null}
+                    highlighted={isFocused}
                     cells={cells.map((c) => ({
                       weekIndex: c.weekIndex,
                       weekStartISO: toDateParam(c.weekStart),

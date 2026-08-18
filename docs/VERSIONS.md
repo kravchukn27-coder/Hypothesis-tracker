@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- [BUG-011] `HeaderMultiFilter` (`src/components/HeaderMultiFilter.tsx`
+  — Status filter in Backlog, Автор filter in Calendar) closed only on
+  a repeat click of its own trigger, because it was built on native
+  `<details>/<summary>`. Rebuilt on controlled `useState` open state
+  with a document click-outside/`Escape` listener, matching the
+  pattern already used by `StageOptionsMenu`. Verified live in
+  Backlog: opens, checkbox clicks keep it open, outside click closes
+  it, filter still applies via URL params; Calendar's Автор filter
+  confirmed by code parity (same shared component, no divergent
+  wiring).
+
 - [PROD-034] A hypothesis now has at most one experiment — flagged by
   the user as a follow-up to PROD-033, confirmed multiple experiments
   per hypothesis were transition-period cruft nobody needs. Removed

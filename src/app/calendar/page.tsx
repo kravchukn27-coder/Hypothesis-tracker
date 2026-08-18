@@ -239,7 +239,7 @@ export default async function CalendarPage({
         <>
           <OverdueExperimentReminder reminders={overdueReminders} />
 
-          <div className={`${CALENDAR_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
+          <div className={`${CALENDAR_SURFACE_WIDTH} rounded-xl border border-zinc-200`}>
             <div className={TABLE_CONTENT_WIDTH}>
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">

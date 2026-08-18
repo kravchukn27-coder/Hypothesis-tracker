@@ -172,7 +172,7 @@ export async function AllExperimentsTable({
             </Link>
           </div>
         ) : (
-          <div className={`${CALENDAR_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
+          <div className={`${CALENDAR_SURFACE_WIDTH} rounded-xl border border-zinc-200`}>
             <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
               <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <tr>

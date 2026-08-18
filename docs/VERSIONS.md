@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- [UI-034] Removed the `overflow-x-hidden` wrapper around the
+  Calendar table (`calendar/page.tsx`) and `AllExperimentsTable`
+  (`calendar/AllExperimentsTable.tsx`). Per CSS spec, setting
+  `overflow-x` to anything but `visible` forces `overflow-y` to
+  compute to `auto` too, so the wrapper was also clipping vertical
+  overflow — including the stage-picker popup on any row, most
+  visibly the last one. Both tables already fit within
+  `CALENDAR_SURFACE_WIDTH` without horizontal overflow (Calendar's
+  week columns use `minmax(0, 1fr)`, `AllExperimentsTable`'s columns
+  sum to less than the surface width and stretch via `w-full`), so
+  dropping the container doesn't introduce a horizontal scrollbar.
+  Left the sticky `left-0` name/author/rollout column as-is — it was
+  already inert (nothing scrolls horizontally for it to stick
+  against) and removing it wasn't asked for. Verified live: the
+  stage popup on the last row of the Calendar timeline now renders
+  fully below the row instead of being clipped;
+  `AllExperimentsTable` confirmed by code parity (same wrapper
+  pattern, same fix).
+
 - [UI-033] Calendar (timeline and "Показать все эксперименты") now
   uses a wider surface (`max-w-[1600px]`, up from 1014px) instead of
   sharing `TABLE_SURFACE_WIDTH` with Backlog/Experiments. Added a new

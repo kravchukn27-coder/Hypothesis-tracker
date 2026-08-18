@@ -10,7 +10,7 @@ import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { FunnelLevelField } from "@/components/FunnelLevelField";
 import { IconSelect } from "@/components/IconSelect";
-import { Input, Select } from "@/components/Input";
+import { Input, Select, Textarea } from "@/components/Input";
 import { StickyFormSubmit } from "@/components/StickyFormSubmit";
 import { TagMultiSelect } from "@/components/TagMultiSelect";
 import { useToast } from "@/components/toast/ToastProvider";
@@ -135,7 +135,7 @@ export function ExperimentForm({
             <AuthorField authors={authors} defaultValue={values.author} />
           </Field>
           <Field label="Раскатка" htmlFor="rollout">
-            <Input id="rollout" name="rollout" defaultValue={values.rollout} placeholder="Добавить…" />
+            <Textarea id="rollout" name="rollout" defaultValue={values.rollout} placeholder="Добавить…" rows={3} />
           </Field>
         </div>
       </FormSection>

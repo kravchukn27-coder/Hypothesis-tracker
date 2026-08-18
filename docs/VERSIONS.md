@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- [UI-032] "Раскатка" (`Experiment.rollout`) now supports multi-line
+  text in both places it's edited. `ExperimentForm.tsx` swapped its
+  single-line `<Input>` for the existing `<Textarea>` (already used
+  by `HypothesisForm.tsx`'s Comment/Modeling/Sample-size fields — no
+  new form primitive). Calendar's inline `RolloutCell.tsx` got a
+  view/edit split instead of an always-visible input: the read state
+  is a button showing a truncated single-line preview (fade-mask +
+  `title` with the full text, mirroring Comment's pattern in
+  `backlog/page.tsx`), and clicking it opens a floating `<textarea>`
+  editor that closes and saves on outside click, reverts on
+  `Escape`, and lets Enter insert a newline instead of committing
+  early (removed the old single-line Enter-blurs behavior, no longer
+  correct for multi-line text) — so the table row height never
+  changes regardless of content. The editor is rendered via
+  `createPortal` to `document.body` and positioned from the
+  trigger's `getBoundingClientRect()`, not absolutely inside the
+  row: the row's sticky `left-0 z-10` column establishes its own
+  stacking context, so a plain `absolute` overlay with a higher
+  z-index was still getting painted over by the *next* row's sticky
+  column (z-index only competes within the same stacking context —
+  a sibling context wins by DOM order regardless of the child's own
+  z-index). No other overlay in the codebase
+  (`StageOptionsMenu`/`HeaderMultiFilter`) sits inside a `sticky`
+  ancestor, so this is the first place that trap showed up. No
+  schema change (`rollout` was already `String?`). Verified live in
+  Calendar: multi-line entry, truncated preview with full text in
+  `title`, save persists across reload, row height unchanged, and
+  the portal fix confirmed by reproducing the original clipping (row
+  above another row, overlay no longer hidden underneath it);
+  `ExperimentForm.tsx` confirmed by code parity (mechanical `Input`
+  → `Textarea` swap, same pattern as existing `Textarea` fields in
+  `HypothesisForm.tsx`).
+
 - [UI-030] Navigating to Calendar with `?experimentId=...` (from a
   hypothesis/experiment card's "Открыть в Calendar") no longer
   filters the timeline down to a single row. It now shows the full

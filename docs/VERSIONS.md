@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- [UI-025] Closed with no code change — Backlog's filters already
+  live in their column headers (`HeaderMultiFilter` on Status and
+  Funnel Level), already support multi-select (OR within a filter
+  via Prisma's `{ in: [...] }`, AND across filters via separate
+  `where` keys), and already round-trip through the URL alongside
+  sort/search/reset. `FilterBar` on Backlog only renders the search
+  box now (`fields: []`) — no separate filter panel remains. This
+  card had gone stale after that work shipped. Verified live at
+  `/backlog`: search box only, "Фильтр" dropdown on Status header,
+  "Funnel Level" dropdown on its own header.
+
 - [UI-028] Closed with no code change — its acceptance criteria
   (Calendar row shows name/Автор/Раскатка as compact columns, Автор
   has a fixed-width `HeaderMultiFilter`-backed column with a

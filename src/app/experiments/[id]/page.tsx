@@ -7,10 +7,7 @@ import {
   archiveExperiment,
   deleteExperiment,
   getAuthors,
-  getChannels,
   getFunnelLevels,
-  getMarkets,
-  getPlatforms,
   getProducts,
   getSegments,
   unarchiveExperiment,
@@ -35,14 +32,11 @@ export default async function ExperimentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [experiment, authors, funnelLevels, platforms, channels, markets, products, segments] = await Promise.all([
+  const [experiment, authors, funnelLevels, products, segments] = await Promise.all([
     prisma.experiment.findUnique({
       where: { id },
       include: {
         hypothesis: { include: { funnelLevel: { select: { name: true } } } },
-        platforms: true,
-        channels: true,
-        markets: true,
         products: true,
         segments: true,
         weekStages: { orderBy: { weekStart: "asc" } },
@@ -50,9 +44,6 @@ export default async function ExperimentDetailPage({
     }),
     getAuthors(),
     getFunnelLevels(),
-    getPlatforms(),
-    getChannels(),
-    getMarkets(),
     getProducts(),
     getSegments(),
   ]);
@@ -74,7 +65,7 @@ export default async function ExperimentDetailPage({
       </Suspense>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Breadcrumb listLabel="Experiments" listHref="/experiments" current={experiment.name} />
+          <Breadcrumb listLabel="Calendar" listHref="/calendar" current={experiment.name} />
           <h1 className="mt-2 text-2xl font-semibold text-zinc-900">{experiment.name}</h1>
           <p className="mt-1 flex items-center gap-2 text-xs text-zinc-400">
             Создан{" "}
@@ -145,9 +136,6 @@ export default async function ExperimentDetailPage({
         }}
         authors={authors}
         funnelLevels={funnelLevels}
-        platforms={platforms}
-        channels={channels}
-        markets={markets}
         products={products}
         segments={segments}
         submitLabel="Сохранить"
@@ -158,9 +146,6 @@ export default async function ExperimentDetailPage({
           stage: experiment.stage,
           startDate: toDateInputValue(experiment.startDate),
           endDate: toDateInputValue(experiment.endDate),
-          platforms: experiment.platforms,
-          channels: experiment.channels,
-          markets: experiment.markets,
           products: experiment.products,
           segments: experiment.segments,
           weekStages: experiment.weekStages.map((w) => ({

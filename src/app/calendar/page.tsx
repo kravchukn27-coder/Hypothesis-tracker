@@ -20,6 +20,7 @@ import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_WIDTH } from "@/components/tableWidt
 import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { RolloutCell } from "./RolloutCell";
 import { AuthorCell } from "./AuthorCell";
+import { AllExperimentsTable } from "./AllExperimentsTable";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -35,9 +36,25 @@ const MIN_ROWS = 2;
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string; weekStage?: string | string[]; experimentId?: string; calendarAuthor?: string | string[] }>;
+  searchParams: Promise<{
+    start?: string;
+    weekStage?: string | string[];
+    experimentId?: string;
+    calendarAuthor?: string | string[];
+    calendarView?: string;
+    stage?: string | string[];
+    segment?: string | string[];
+    author?: string | string[];
+    hypothesisId?: string;
+    q?: string;
+    view?: string;
+    sortBy?: string;
+    dir?: string;
+  }>;
 }) {
-  const { start, weekStage, experimentId, calendarAuthor } = await searchParams;
+  const params = await searchParams;
+  const { start, weekStage, experimentId, calendarAuthor, calendarView } = params;
+  const showAll = calendarView === "all";
   const asList = (value: string | string[] | undefined) => Array.isArray(value) ? value : value ? [value] : [];
   const authorsFilter = asList(calendarAuthor);
   const weekStageEntries = Array.isArray(weekStage) ? weekStage : weekStage ? [weekStage] : [];
@@ -161,40 +178,54 @@ export default async function CalendarPage({
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Calendar</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {displayedExperiments.length === 0
-              ? "Пока нет экспериментов"
-              : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}`}
-          </p>
+          {!showAll && (
+            <p className="mt-1 text-sm text-zinc-500">
+              {displayedExperiments.length === 0
+                ? "Пока нет экспериментов"
+                : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}`}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={todayHref}
-            aria-disabled={isToday}
-            className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
-              isToday ? "pointer-events-none text-zinc-300" : "text-zinc-700 hover:bg-zinc-50"
-            }`}
+            href={showAll ? calendarHref() : "/calendar?calendarView=all"}
+            className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
-            Сегодня
+            {showAll ? "Таймлайн" : "Показать все эксперименты"}
           </Link>
-          <Link
-            href={prevHref}
-            aria-label={`Назад на ${PAGE_STEP_WEEKS} нед.`}
-            className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <Link
-            href={nextHref}
-            aria-label={`Вперёд на ${PAGE_STEP_WEEKS} нед.`}
-            className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Link>
+          {!showAll && (
+            <>
+              <Link
+                href={todayHref}
+                aria-disabled={isToday}
+                className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
+                  isToday ? "pointer-events-none text-zinc-300" : "text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Сегодня
+              </Link>
+              <Link
+                href={prevHref}
+                aria-label={`Назад на ${PAGE_STEP_WEEKS} нед.`}
+                className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Link>
+              <Link
+                href={nextHref}
+                aria-label={`Вперёд на ${PAGE_STEP_WEEKS} нед.`}
+                className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
-      {displayedExperiments.length === 0 ? (
+      {showAll && <AllExperimentsTable searchParams={params} />}
+
+      {!showAll && (displayedExperiments.length === 0 ? (
         <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
           <Link
@@ -315,7 +346,7 @@ export default async function CalendarPage({
             </div>
           )}
         </>
-      )}
+      ))}
     </div>
   );
 }

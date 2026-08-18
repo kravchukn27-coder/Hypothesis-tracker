@@ -67,21 +67,16 @@ export default async function HypothesisDetailPage({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {/* PROD-034: a hypothesis has at most one experiment, so this
+              is either a link into it or one to create the only one
+              it'll ever get — never both. */}
           {hypothesis.experiments.length > 0 ? (
-            <>
-              <Link
-                href={`/experiments?hypothesisId=${hypothesis.id}`}
-                className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-              >
-                Показать эксперимент
-              </Link>
-              <Link
-                href={`/experiments/new?hypothesisId=${hypothesis.id}`}
-                className="rounded-md border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900"
-              >
-                Добавить эксперимент
-              </Link>
-            </>
+            <Link
+              href={`/experiments/${hypothesis.experiments[0].id}`}
+              className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              Показать эксперимент
+            </Link>
           ) : (
             <Link
               href={`/experiments/new?hypothesisId=${hypothesis.id}`}

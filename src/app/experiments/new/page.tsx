@@ -4,10 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   createExperiment,
   getAuthors,
-  getChannels,
   getFunnelLevels,
-  getMarkets,
-  getPlatforms,
   getProducts,
   getSegments,
 } from "../actions";
@@ -21,26 +18,28 @@ export default async function NewExperimentPage({
   const { hypothesisId } = await searchParams;
   if (!hypothesisId) redirect("/backlog");
 
-  const [hypothesis, authors, funnelLevels, platforms, channels, markets, products, segments] = await Promise.all([
+  const [hypothesis, existingExperiment, authors, funnelLevels, products, segments] = await Promise.all([
     prisma.hypothesis.findUnique({
       where: { id: hypothesisId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, funnelLevel: { select: { name: true } } },
     }),
+    // PROD-034: a hypothesis has at most one experiment — send anyone
+    // who reaches this page for a hypothesis that already has one
+    // straight to its card instead of letting a second get created.
+    prisma.experiment.findFirst({ where: { hypothesisId }, select: { id: true } }),
     getAuthors(),
     getFunnelLevels(),
-    getPlatforms(),
-    getChannels(),
-    getMarkets(),
     getProducts(),
     getSegments(),
   ]);
   if (!hypothesis) redirect("/backlog");
+  if (existingExperiment) redirect(`/experiments/${existingExperiment.id}`);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
       <div>
-        <Link href="/experiments" className="text-sm text-zinc-500 hover:text-zinc-900">
-          ← Experiments
+        <Link href={`/backlog/${hypothesisId}`} className="text-sm text-zinc-500 hover:text-zinc-900">
+          ← {hypothesis.name}
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-zinc-900">Новый эксперимент</h1>
       </div>
@@ -50,9 +49,6 @@ export default async function NewExperimentPage({
         hypothesis={hypothesis}
         authors={authors}
         funnelLevels={funnelLevels}
-        platforms={platforms}
-        channels={channels}
-        markets={markets}
         products={products}
         segments={segments}
         submitLabel="Создать"

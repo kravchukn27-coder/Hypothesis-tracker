@@ -5,13 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { startOfWeek, toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, STAGE_ICONS, STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
-import {
-  CHANNEL_BADGE_COLOR,
-  MARKET_BADGE_COLOR,
-  PLATFORM_BADGE_COLOR,
-  PRODUCT_BADGE_COLOR,
-  SEGMENT_BADGE_COLOR,
-} from "@/lib/tags";
+import { PRODUCT_BADGE_COLOR, SEGMENT_BADGE_COLOR } from "@/lib/tags";
 import { Field } from "@/components/Field";
 import { FormSection } from "@/components/FormSection";
 import { FunnelLevelField } from "@/components/FunnelLevelField";
@@ -35,9 +29,6 @@ type Initial = {
   stage: ExperimentStage;
   startDate: string; // yyyy-mm-dd
   endDate: string;
-  platforms: Tag[];
-  channels: Tag[];
-  markets: Tag[];
   products: Tag[];
   segments: Tag[];
   weekStages: WeekEntry[];
@@ -50,9 +41,6 @@ const emptyInitial: Initial = {
   stage: "DISCOVERY",
   startDate: "",
   endDate: "",
-  platforms: [],
-  channels: [],
-  markets: [],
   products: [],
   segments: [],
   weekStages: [],
@@ -64,9 +52,6 @@ export function ExperimentForm({
   hypothesis,
   authors,
   funnelLevels,
-  platforms,
-  channels,
-  markets,
   products,
   segments,
   initial,
@@ -78,9 +63,6 @@ export function ExperimentForm({
   hypothesis: Hypothesis;
   authors: string[];
   funnelLevels: Tag[];
-  platforms: Tag[];
-  channels: Tag[];
-  markets: Tag[];
   products: Tag[];
   segments: Tag[];
   initial?: Partial<Initial>;
@@ -181,33 +163,6 @@ export function ExperimentForm({
         </Field>
 
         <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Platform">
-            <TagMultiSelect
-              name="platform"
-              options={platforms}
-              initialSelected={values.platforms}
-              color={PLATFORM_BADGE_COLOR}
-            />
-          </Field>
-          <Field label="Channel">
-            <TagMultiSelect
-              name="channel"
-              options={channels}
-              initialSelected={values.channels}
-              color={CHANNEL_BADGE_COLOR}
-            />
-          </Field>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Market">
-            <TagMultiSelect
-              name="market"
-              options={markets}
-              initialSelected={values.markets}
-              color={MARKET_BADGE_COLOR}
-            />
-          </Field>
           <Field label="Product">
             <TagMultiSelect
               name="product"
@@ -216,16 +171,15 @@ export function ExperimentForm({
               color={PRODUCT_BADGE_COLOR}
             />
           </Field>
+          <Field label="Segment">
+            <TagMultiSelect
+              name="segment"
+              options={segments}
+              initialSelected={values.segments}
+              color={SEGMENT_BADGE_COLOR}
+            />
+          </Field>
         </div>
-
-        <Field label="Segment">
-          <TagMultiSelect
-            name="segment"
-            options={segments}
-            initialSelected={values.segments}
-            color={SEGMENT_BADGE_COLOR}
-          />
-        </Field>
       </FormSection>
 
       {experimentId ? (

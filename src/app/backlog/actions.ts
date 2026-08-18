@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { shouldPromptArchiveHypothesis } from "@/lib/hypothesis";
+import { resolveFunnelLevelId } from "@/lib/funnelLevel";
+import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions";
 
 const hypothesisFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно"),
@@ -27,17 +29,6 @@ export type HypothesisFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
-
-async function resolveFunnelLevelId(name: string | undefined) {
-  const trimmed = name?.trim();
-  if (!trimmed) return null;
-  const level = await prisma.funnelLevel.upsert({
-    where: { name: trimmed },
-    update: {},
-    create: { name: trimmed, isCustom: true },
-  });
-  return level.id;
-}
 
 function parseForm(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
@@ -116,6 +107,10 @@ export async function updateHypothesis(
       taskUrl: data.taskUrl || null,
     },
   });
+  // PROD-033: Funnel Level isn't independently editable on an
+  // experiment — keep every experiment under this hypothesis in sync
+  // whenever the hypothesis's own Funnel Level changes.
+  await syncExperimentFunnelLevelsForHypothesis(id);
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
@@ -152,16 +147,21 @@ export async function updateHypothesisStatus(id: string, status: string) {
 export async function takeHypothesisIntoWork(id: string): Promise<string> {
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
   if (!hypothesis || hypothesis.status !== "ACCEPTED") return "/backlog";
+  // PROD-034: a hypothesis has at most one experiment ever, not just
+  // one active at a time — so this checks for any experiment, archived
+  // or Done included, not only "still active" ones like before.
   const existing = await prisma.experiment.findFirst({
-    where: { hypothesisId: id, archived: false, stage: { not: "DONE" } },
+    where: { hypothesisId: id },
     select: { id: true },
     orderBy: { createdAt: "desc" },
   });
   if (!existing) {
     await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id } });
+    // PROD-033: seed the new experiment's Funnel Level from the hypothesis.
+    await syncExperimentFunnelLevelsForHypothesis(id);
   }
   await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
-  revalidatePath("/backlog"); revalidatePath("/experiments"); revalidatePath("/calendar");
+  revalidatePath("/backlog"); revalidatePath("/calendar");
   return "/calendar";
 }
 

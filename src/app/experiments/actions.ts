@@ -18,15 +18,10 @@ const baseExperimentFields = {
   // every one of its experiments — editing it here also updates the
   // hypothesis and every sibling experiment (syncExperimentFunnelLevelsForHypothesis).
   funnelLevel: z.string().trim().optional(),
-  // TECH-003: 5 multi-select tag categories, each submitted as a pair
-  // of comma-joined hidden fields (see TagMultiSelect) — existing tag
-  // ids to connect, and new tag names to create-then-connect.
-  platformIds: z.string().trim().optional(),
-  platformNew: z.string().trim().optional(),
-  channelIds: z.string().trim().optional(),
-  channelNew: z.string().trim().optional(),
-  marketIds: z.string().trim().optional(),
-  marketNew: z.string().trim().optional(),
+  // TECH-003: multi-select tag categories, each submitted as a pair of
+  // comma-joined hidden fields (see TagMultiSelect) — existing tag ids
+  // to connect, and new tag names to create-then-connect. Platform/
+  // Channel/Market were removed (PROD-035) — unused in practice.
   productIds: z.string().trim().optional(),
   productNew: z.string().trim().optional(),
   segmentIds: z.string().trim().optional(),
@@ -151,25 +146,16 @@ async function resolveTagIds(
 }
 
 async function resolveExperimentTagIds(data: {
-  platformIds?: string;
-  platformNew?: string;
-  channelIds?: string;
-  channelNew?: string;
-  marketIds?: string;
-  marketNew?: string;
   productIds?: string;
   productNew?: string;
   segmentIds?: string;
   segmentNew?: string;
 }) {
-  const [platforms, channels, markets, products, segments] = await Promise.all([
-    resolveTagIds(prisma.platform, data.platformIds, data.platformNew),
-    resolveTagIds(prisma.channel, data.channelIds, data.channelNew),
-    resolveTagIds(prisma.market, data.marketIds, data.marketNew),
+  const [products, segments] = await Promise.all([
     resolveTagIds(prisma.product, data.productIds, data.productNew),
     resolveTagIds(prisma.segment, data.segmentIds, data.segmentNew),
   ]);
-  return { platforms, channels, markets, products, segments };
+  return { products, segments };
 }
 
 /**
@@ -212,17 +198,13 @@ async function applyFunnelLevelFromExperimentForm(hypothesisId: string, funnelLe
 
 /**
  * PROD-006: an experiment created from a hypothesis is named exactly
- * after it. If the hypothesis already has experiments, the name gets
- * a " N" suffix (N = existing count + 1) so multiple experiments off
- * the same hypothesis stay distinguishable.
+ * after it. No numbering suffix needed (PROD-034 dropped that) — the
+ * caller already guarantees a hypothesis has no other experiment yet.
  */
 async function computeExperimentName(hypothesisId: string): Promise<string> {
-  const [hypothesis, existingCount] = await Promise.all([
-    prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { name: true } }),
-    prisma.experiment.count({ where: { hypothesisId } }),
-  ]);
+  const hypothesis = await prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { name: true } });
   if (!hypothesis) throw new Error("Hypothesis not found");
-  return existingCount === 0 ? hypothesis.name : `${hypothesis.name} ${existingCount + 1}`;
+  return hypothesis.name;
 }
 
 export async function createExperiment(
@@ -235,6 +217,15 @@ export async function createExperiment(
     return { error: parsed.error.issues[0]?.message ?? "Проверь поля формы" };
   }
   const data = parsed.data;
+  // PROD-034: a hypothesis has at most one experiment — a submit that
+  // races another creation (or resubmits a stale form) lands on the
+  // existing one instead of creating a second.
+  const existingExperiment = await prisma.experiment.findFirst({
+    where: { hypothesisId: data.hypothesisId },
+    select: { id: true },
+  });
+  if (existingExperiment) redirect(`/experiments/${existingExperiment.id}`);
+
   const name = await computeExperimentName(data.hypothesisId);
   const tagIds = await resolveExperimentTagIds(data);
 
@@ -245,9 +236,6 @@ export async function createExperiment(
       author: data.author || null,
       rollout: data.rollout || null,
       stage: data.stage,
-      platforms: { connect: tagIds.platforms.map((id) => ({ id })) },
-      channels: { connect: tagIds.channels.map((id) => ({ id })) },
-      markets: { connect: tagIds.markets.map((id) => ({ id })) },
       products: { connect: tagIds.products.map((id) => ({ id })) },
       segments: { connect: tagIds.segments.map((id) => ({ id })) },
     },
@@ -271,11 +259,10 @@ export async function createExperiment(
 
   await syncHypothesisStatusForExperiment(experiment.id);
 
-  revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${data.hypothesisId}`);
   revalidatePath("/calendar");
-  redirect("/experiments?saved=1");
+  redirect(`/experiments/${experiment.id}?saved=1`);
 }
 
 export async function updateExperiment(
@@ -307,9 +294,6 @@ export async function updateExperiment(
       author: data.author || null,
       rollout: data.rollout || null,
       ...(locked ? {} : { stage: data.stage, startDate: toDate(data.startDate), endDate: toDate(data.endDate) }),
-      platforms: { set: tagIds.platforms.map((id) => ({ id })) },
-      channels: { set: tagIds.channels.map((id) => ({ id })) },
-      markets: { set: tagIds.markets.map((id) => ({ id })) },
       products: { set: tagIds.products.map((id) => ({ id })) },
       segments: { set: tagIds.segments.map((id) => ({ id })) },
     },
@@ -317,15 +301,15 @@ export async function updateExperiment(
   await applyFunnelLevelFromExperimentForm(data.hypothesisId, data.funnelLevel);
   await syncHypothesisStatusForExperiment(id);
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
+  revalidatePath("/calendar");
 
   const stageChanged = !locked && before !== null && before.stage !== data.stage;
   const shouldPromptArchive =
     stageChanged && before !== null && shouldPromptArchiveExperiment(data.stage, before.archived);
 
   if (shouldPromptArchive) redirect(`/experiments/${id}?promptArchive=1&saved=1`);
-  redirect("/experiments?saved=1");
+  redirect(`/experiments/${id}?saved=1`);
 }
 
 const stageSchema = z.enum([
@@ -401,7 +385,6 @@ export async function updateExperimentStage(id: string, stage: string) {
     });
   }
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
   await syncHypothesisStatusForExperiment(id);
@@ -419,7 +402,6 @@ export async function updateExperimentDates(
     data: { startDate: toDate(startDate ?? undefined), endDate: toDate(endDate ?? undefined) },
   });
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
 }
 
@@ -464,7 +446,6 @@ export async function setExperimentWeekStage(
   const after = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { stage: true } });
   const becameDone = before?.stage !== "DONE" && after?.stage === "DONE";
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
 
@@ -479,7 +460,6 @@ export async function completeExperimentWeek(experimentId: string, weekStartISO:
     data: { completed: true },
   });
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
 }
@@ -503,7 +483,6 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
   await clearHiddenFlagIfNoLongerDone(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
 }
@@ -546,7 +525,6 @@ export async function addNextExperimentWeek(experimentId: string) {
   await recomputeExperimentDerivedFields(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
 }
@@ -637,7 +615,6 @@ export async function shiftExperimentWeeks(
   await recomputeExperimentDerivedFields(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
   return { changed: true };
@@ -686,7 +663,6 @@ export async function resizeExperimentWeeks(
   await recomputeExperimentDerivedFields(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
 
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
   return { changed: true };
@@ -694,18 +670,6 @@ export async function resizeExperimentWeeks(
 
 export async function getFunnelLevels() {
   return prisma.funnelLevel.findMany({ orderBy: { name: "asc" } });
-}
-
-export async function getPlatforms() {
-  return prisma.platform.findMany({ orderBy: { name: "asc" } });
-}
-
-export async function getChannels() {
-  return prisma.channel.findMany({ orderBy: { name: "asc" } });
-}
-
-export async function getMarkets() {
-  return prisma.market.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getProducts() {
@@ -758,11 +722,10 @@ export async function deleteExperiment(id: string): Promise<{ error?: string }> 
   await prisma.experiment.delete({ where: { id } });
   await resetEmptyHypotheses([experiment.hypothesisId]);
 
-  revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${experiment.hypothesisId}`);
   revalidatePath("/calendar");
-  redirect("/experiments");
+  redirect("/calendar");
 }
 
 export async function archiveExperiment(id: string) {
@@ -770,7 +733,6 @@ export async function archiveExperiment(id: string) {
     where: { id },
     data: { archived: true, archivedAt: new Date() },
   });
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
 }
@@ -780,7 +742,6 @@ export async function unarchiveExperiment(id: string) {
     where: { id },
     data: { archived: false, archivedAt: null },
   });
-  revalidatePath("/experiments");
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
 }
@@ -791,7 +752,6 @@ export async function archiveExperiments(ids: string[]): Promise<{ error?: strin
     where: { id: { in: ids } },
     data: { archived: true, archivedAt: new Date() },
   });
-  revalidatePath("/experiments");
   revalidatePath("/calendar");
 }
 
@@ -804,7 +764,6 @@ export async function deleteExperiments(ids: string[]): Promise<{ error?: string
   await prisma.experiment.deleteMany({ where: { id: { in: ids } } });
   const hypothesisIds = experiments.map((experiment) => experiment.hypothesisId);
   await resetEmptyHypotheses(hypothesisIds);
-  revalidatePath("/experiments");
   revalidatePath("/backlog");
   revalidatePath("/calendar");
   for (const hypothesisId of new Set(hypothesisIds)) {

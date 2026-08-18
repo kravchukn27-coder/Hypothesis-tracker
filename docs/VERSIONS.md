@@ -2,6 +2,59 @@
 
 ## Unreleased
 
+- [PROD-034] A hypothesis now has at most one experiment — flagged by
+  the user as a follow-up to PROD-033, confirmed multiple experiments
+  per hypothesis were transition-period cruft nobody needs. Removed
+  "Добавить эксперимент" from `/backlog/[id]` (only "Показать
+  эксперимент"/"Создать эксперимент" remain, never both). Guarded both
+  entry points against creating a second: `/experiments/new` redirects
+  straight to the existing experiment's card instead of rendering the
+  create form when the hypothesis already has one, and `createExperiment`
+  (`experiments/actions.ts`) does the same server-side for a raced or
+  stale form submit. `takeHypothesisIntoWork`'s (`backlog/actions.ts`,
+  PROD-029) duplicate check widened from "no *active* experiment" to
+  "no experiment at all" — re-running "Взять в работу" after the sole
+  experiment reached Done or got archived no longer spawns a second.
+  `computeExperimentName`'s now-unreachable " N" suffix branch (for a
+  hypothesis's Nth experiment) dropped along with it. No existing
+  hypothesis had more than one experiment at the time (checked before
+  shipping), so no data migration was needed.
+- [PROD-031] Removed the `/experiments` list route and its "Experiments"
+  nav entry (`NavLinks.tsx`) — Backlog and Calendar are now the only
+  top-level screens. The list's table/filter/sort/bulk-actions moved
+  into Calendar as an embedded "Показать все эксперименты" mode
+  (new `src/app/calendar/AllExperimentsTable.tsx`, toggled via a
+  `?calendarView=all` param that coexists with Calendar's own
+  timeline params since the two never shared a query-param name). The
+  default timeline view and "Без дат" block are unchanged.
+  `/experiments/[id]` and `/experiments/new` still work, just without
+  a menu entry — reachable only via a Calendar row's name link or a
+  hypothesis's card in Backlog. Fixed the now-dead `/experiments`
+  targets this removal left behind: `createExperiment`/`updateExperiment`
+  now redirect to the experiment's own card instead of the removed
+  list, `deleteExperiment` redirects to `/calendar`, and every
+  `revalidatePath("/experiments")` call (`experiments/actions.ts`,
+  `backlog/actions.ts`) was dropped or pointed at `/calendar` instead.
+  Also missed on the first pass: the hypothesis card's "Показать
+  эксперимент" button (`src/app/backlog/[id]/page.tsx`) still pointed
+  at `/experiments?hypothesisId=...` — repointed straight to the
+  experiment's own card, `/experiments/${hypothesis.experiments[0].id}`.
+- [PROD-035] Removed Platform, Channel, and Market entirely — confirmed
+  unused by the user ("эти теги вообще не нужны, мы их удаляем из
+  кода"). Dropped the `Platform`/`Channel`/`Market` Prisma models and
+  their many-to-many relations off `Experiment`
+  (`prisma/schema.prisma`), applied with `prisma db push
+  --accept-data-loss` after explicit user confirmation (dropped 3
+  non-empty tables on the local dev database). Removed every
+  reference: the three `TagMultiSelect` fields and their grid layout
+  in `ExperimentForm.tsx`'s "Таргетинг" section (now just Funnel
+  Level/Product/Segment), `platformIds`/`platformNew`/etc. from
+  `baseExperimentFields` and `resolveExperimentTagIds`
+  (`experiments/actions.ts`), the `getPlatforms`/`getChannels`/
+  `getMarkets` actions, and the matching props/fetches in
+  `experiments/new/page.tsx` and `experiments/[id]/page.tsx`.
+  `PLATFORM_BADGE_COLOR`/`CHANNEL_BADGE_COLOR`/`MARKET_BADGE_COLOR`
+  dropped from `src/lib/tags.ts`.
 - [PROD-032] Rollout (`Experiment.rollout`, PROD-030) is now shown and
   editable on the experiment card (`ExperimentForm.tsx`, "Основное"
   section, next to "Автор"), not just inline in Calendar

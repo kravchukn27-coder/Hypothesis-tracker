@@ -65,7 +65,6 @@ export function HypothesisForm({
   submitLabel: string;
 }) {
   const values = { ...emptyInitial, ...initial };
-  const isNew = initial === undefined;
   const [state, formAction, pending] = useActionState(action, {});
   const { showToast } = useToast();
 
@@ -95,7 +94,7 @@ export function HypothesisForm({
       )}
 
       <FormSection title="Основное">
-        <Field label="Название" htmlFor="name">
+        <Field label="Название" htmlFor="name" required>
           <Input
             id="name"
             name="name"
@@ -105,7 +104,7 @@ export function HypothesisForm({
           />
         </Field>
 
-        <Field label="Гипотеза" htmlFor="text">
+        <Field label="Описание" htmlFor="text" required>
           <Textarea
             id="text"
             name="text"
@@ -120,7 +119,7 @@ export function HypothesisForm({
           <Field label="Funnel Level">
             <FunnelLevelField funnelLevels={funnelLevels} defaultValue={values.funnelLevelName} />
           </Field>
-          {!isNew && <Field label="Status" htmlFor="status">
+          <Field label="Status" htmlFor="status">
             <IconSelect
               id="status"
               name="status"
@@ -132,25 +131,24 @@ export function HypothesisForm({
               variant="field"
               onChange={setStatus}
             />
-          </Field>}
+          </Field>
         </div>
       </FormSection>
 
       <FormSection title="Оценка">
-        {isNew && <input type="hidden" name="status" value="NEW" />}
         <input type="hidden" name="conversion" value={values.conversion} />
         <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-stretch">
           <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-            <Field label="Impact">
+            <Field label="Impact" required>
               <ScaleButtons name="impact" value={impact} onChange={setImpact} />
             </Field>
-            <Field label="Effort">
+            <Field label="Effort" required>
               <ScaleButtons name="effort" value={effort} onChange={setEffort} />
             </Field>
-            <Field label="Трафик (Reach)" htmlFor="reach">
+            <Field label="Трафик (Reach)" htmlFor="reach" required>
               <PercentInput id="reach" name="reach" value={reachPct} onChange={setReachPct} />
             </Field>
-            <Field label="Confidence" htmlFor="confidence">
+            <Field label="Confidence" htmlFor="confidence" required>
               <PercentInput
                 id="confidence"
                 name="confidence"
@@ -169,7 +167,7 @@ export function HypothesisForm({
         </div>
       </FormSection>
 
-      {!isNew && <FormSection title="Дополнительно">
+      <FormSection title="Дополнительно">
         {status === "DONE" && (
           <Field label="Result" htmlFor="result">
             <Textarea
@@ -204,7 +202,7 @@ export function HypothesisForm({
             placeholder="https://linear.app/..."
           />
         </Field>
-      </FormSection>}
+      </FormSection>
 
       <StickyFormSubmit pending={pending} label={submitLabel} />
     </form>

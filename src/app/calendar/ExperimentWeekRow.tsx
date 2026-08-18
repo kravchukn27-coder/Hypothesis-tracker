@@ -20,6 +20,7 @@ import type { ExperimentStage } from "@/generated/prisma/enums";
 type Cell = {
   weekIndex: number;
   weekStartISO: string;
+  isToday: boolean;
   stage: string | null;
   // BUG-006: the contiguous block this cell belongs to (its true
   // start/end, which may fall outside the visible window) — lets drag
@@ -32,6 +33,7 @@ type Cell = {
   // stays intact and the cell stays fully interactive (filtering is
   // a view, not a read-only mode).
   dimmed?: boolean;
+  hidden?: boolean;
 };
 
 type DragMode = "move" | "resize-right";
@@ -219,10 +221,13 @@ export function ExperimentWeekRow({
       {cells.map((cell, i) => {
         const isOpen = openWeekIndex === i;
         const isOverdueCell = overdue && cell.weekStartISO === overdueWeekStartISO;
+        if (cell.hidden) {
+          return <div key={i} className={`border-l border-zinc-100 ${cell.isToday ? "bg-blue-50/60" : ""}`} />;
+        }
         return (
           <div
             key={i}
-            className="group relative border-l border-zinc-100"
+            className={`group relative border-l border-zinc-100 ${cell.isToday ? "bg-blue-50/60" : ""}`}
             style={{ gridColumn: i + 1, gridRow: 1 }}
           >
             {cell.stage ? (

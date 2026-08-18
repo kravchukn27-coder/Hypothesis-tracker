@@ -113,6 +113,7 @@ model Experiment {
   id           String                 @id @default(cuid())
   name         String
   author       String?
+  rollout      String?
   // startDate/endDate/stage are derived caches (PROD-019, 2026-08-07):
   // once weekStages exist, they're recomputed automatically from the
   // week entries (min/max weekStart, latest week's stage) — not

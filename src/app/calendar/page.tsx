@@ -6,19 +6,20 @@ import {
   buildTimeline,
   formatWeekLabel,
   getOverdueWeek,
-  getISOWeekNumber,
   PAGE_STEP_WEEKS,
   startOfWeek,
   toDateParam,
   WINDOW_WEEKS,
 } from "@/lib/calendar";
 import { STAGE_LABELS, getCurrentWeekStage } from "@/lib/experiment";
-import { CalendarStageFilter } from "./CalendarStageFilter";
 import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
 import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
+import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
+import { RolloutCell } from "./RolloutCell";
+import { AuthorCell } from "./AuthorCell";
 
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
@@ -31,24 +32,31 @@ function parseWindowStart(start: string | undefined): Date {
 /** Keeps the grid a stable height regardless of how many rows are in the current window. */
 const MIN_ROWS = 2;
 
-/** PROD-022: "Просрочен" isn't a real `ExperimentStage` — it's a
- * derived per-experiment flag (see `overdue` on `TimelineRow`) — so
- * the legend's filter uses this sentinel value for it instead of
- * overloading a stage name. */
-const OVERDUE_FILTER = "OVERDUE";
-
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string; stage?: string; experimentId?: string }>;
+  searchParams: Promise<{ start?: string; weekStage?: string | string[]; experimentId?: string; calendarAuthor?: string | string[] }>;
 }) {
-  const { start, stage: stageFilter, experimentId } = await searchParams;
+  const { start, weekStage, experimentId, calendarAuthor } = await searchParams;
+  const asList = (value: string | string[] | undefined) => Array.isArray(value) ? value : value ? [value] : [];
+  const authorsFilter = asList(calendarAuthor);
+  const weekStageEntries = Array.isArray(weekStage) ? weekStage : weekStage ? [weekStage] : [];
+  const weekStageFilters = new Map<string, string>();
+  weekStageEntries.forEach((entry) => {
+    const divider = entry.indexOf(":");
+    if (divider > 0 && divider < entry.length - 1) {
+      weekStageFilters.set(entry.slice(0, divider), entry.slice(divider + 1));
+    }
+  });
   const windowStart = parseWindowStart(start);
 
   const now = new Date();
   const allExperiments = await prisma.experiment.findMany({
     where: { archived: false },
-    include: { hypothesis: true, weekStages: { orderBy: { weekStart: "asc" } } },
+    include: {
+      hypothesis: true,
+      weekStages: { orderBy: { weekStart: "asc" } },
+    },
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
   });
 
@@ -67,8 +75,12 @@ export default async function CalendarPage({
   // it looks Done *right now* that decides visibility.
   const experiments = allExperiments.filter((e) => {
     const currentStage = e.weekStages.length > 0 ? getCurrentWeekStage(e.weekStages, now) : e.stage;
-    return !(currentStage === "DONE" && e.calendarHiddenOnDone === true);
+    if (currentStage === "DONE" && e.calendarHiddenOnDone === true) return false;
+    if (authorsFilter.length && (!e.author || !authorsFilter.includes(e.author))) return false;
+    return true;
   });
+  const authorNames = [...new Set(["Саша", "Дима", "Артем", ...allExperiments.map((item) => item.author).filter((author): author is string => Boolean(author))])];
+  const authorOptions = authorNames.map((author) => ({ value: author, label: author }));
 
   const focusedExperiment = experimentId ? experiments.find((experiment) => experiment.id === experimentId) : null;
   const displayedExperiments = focusedExperiment ? [focusedExperiment] : experiments;
@@ -83,13 +95,15 @@ export default async function CalendarPage({
     weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage, completed: w.completed })),
   }));
   const { weeks, rows, undated, todayColumn } = buildTimeline(timelineExperiments, windowStart);
-  const activeExperimentCounts = weeks.map((_, weekIndex) =>
-    rows.reduce((count, row) => count + (row.cells[weekIndex]?.stage ? 1 : 0), 0),
+  const calendarDetails = new Map(
+    displayedExperiments.map((experiment) => [
+      experiment.id,
+      {
+        author: experiment.author,
+        rollout: experiment.rollout,
+      },
+    ]),
   );
-  const weekOptions = weeks.map((week) => ({
-    value: toDateParam(week),
-    label: `${formatWeekLabel(week)} (${getISOWeekNumber(week)})`,
-  }));
   const overdueReminders = timelineExperiments.flatMap((experiment) => {
     const overdueWeek = getOverdueWeek(experiment, now);
     return overdueWeek
@@ -106,17 +120,15 @@ export default async function CalendarPage({
 
   function calendarHref({
     start: nextStart,
-    stage: requestedStage,
     focused = Boolean(focusedExperiment),
   }: {
     start?: Date;
-    stage?: string | null;
     focused?: boolean;
   } = {}): string {
-    const nextStage = requestedStage === undefined ? stageFilter : requestedStage;
     const params = new URLSearchParams();
     if (nextStart) params.set("start", toDateParam(nextStart));
-    if (nextStage) params.set("stage", nextStage);
+    weekStageEntries.forEach((entry) => params.append("weekStage", entry));
+    authorsFilter.forEach((value) => params.append("calendarAuthor", value));
     if (focused && focusedExperiment) params.set("experimentId", focusedExperiment.id);
     const query = params.toString();
     return query ? `/calendar?${query}` : "/calendar";
@@ -129,11 +141,20 @@ export default async function CalendarPage({
   const todayHref = calendarHref();
   const isToday = windowStart.getTime() === startOfWeek(new Date()).getTime();
 
-  function cellMatchesFilter(cellStage: string | null, overdue: boolean): boolean {
-    if (!stageFilter) return true;
-    if (stageFilter === OVERDUE_FILTER) return overdue;
-    return cellStage === stageFilter;
+  function cellMatchesFilter(cellStage: string | null, weekStartISO: string): boolean {
+    const selectedStage = weekStageFilters.get(weekStartISO);
+    return !selectedStage || cellStage === selectedStage;
   }
+
+  const hasWeekStageFilters = weekStageFilters.size > 0;
+  const visibleRows = hasWeekStageFilters
+    ? rows.filter((row) =>
+        row.cells.some((cell) => {
+          const selectedStage = weekStageFilters.get(toDateParam(cell.weekStart));
+          return Boolean(selectedStage && cell.stage === selectedStage);
+        }),
+      )
+    : rows;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -185,28 +206,15 @@ export default async function CalendarPage({
         </div>
       ) : (
         <>
-          {focusedExperiment && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
-              <p className="min-w-0 truncate text-zinc-600">
-                Просмотр: <span className="font-medium text-zinc-900">{focusedExperiment.name}</span>
-              </p>
-              <Link href={calendarHref({ start: windowStart, focused: false })} className="shrink-0 font-medium text-zinc-700 underline underline-offset-4 hover:text-zinc-900">
-                Показать все эксперименты
-              </Link>
-            </div>
-          )}
           <OverdueExperimentReminder reminders={overdueReminders} />
-
-          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500">
-            <span>Фильтры:</span>
-            <CalendarStageFilter value={stageFilter} options={[...Object.entries(STAGE_LABELS).map(([value, label]) => ({ value, label })), { value: OVERDUE_FILTER, label: "Просрочен" }]} />
-          </div>
 
           <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
             <div className={TABLE_CONTENT_WIDTH}>
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                <div className="sticky left-0 z-10 w-56 shrink-0 bg-zinc-50 px-4 py-3">
-                  Эксперимент
+                <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
+                  <div className="px-3 py-3">Эксперимент</div>
+                  <div className="px-2 py-3"><HeaderMultiFilter name="calendarAuthor" label="Автор" options={authorOptions} /></div>
+                  <div className="px-2 py-3">Раскатка</div>
                 </div>
                 <div
                   className="grid min-w-0 flex-1"
@@ -217,39 +225,43 @@ export default async function CalendarPage({
                       key={i}
                       weekStartISO={toDateParam(w)}
                       isToday={i === todayColumn}
-                      activeExperimentCount={activeExperimentCounts[i]}
+                      stageFilter={weekStageFilters.get(toDateParam(w))}
+                      stageOptions={Object.entries(STAGE_LABELS).map(([value, label]) => ({ value, label }))}
                     >
-                      {formatWeekLabel(w)} ({getISOWeekNumber(w)})
+                      {formatWeekLabel(w)}
                     </WeekHeaderCell>
                   ))}
                 </div>
               </div>
 
-              {rows.map(({ experiment: e, cells, overdue, overdueWeekStart }) => (
+              {visibleRows.map(({ experiment: e, cells, overdue, overdueWeekStart }) => {
+                const details = calendarDetails.get(e.id);
+                return (
                 <div
                   key={e.id}
                   data-experiment-id={e.id}
                   className="flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50"
                 >
-                  <div className="sticky left-0 z-10 w-56 shrink-0 bg-white px-4 py-3">
+                  <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-white">
                     {/* PROD-019: previously the colored bar itself linked to
                         /experiments/[id] — now that each week is its own
                         stage-editing button, the name here is the only
                         click-through to the experiment's own card. */}
-                    <Link
+                    <div className="min-w-0 px-3 py-3"><Link
                       href={`/experiments/${e.id}`}
                       title={e.name}
                       className="block truncate text-sm font-medium text-zinc-900 hover:underline"
                     >
                       {e.name}
-                    </Link>
-                    <Link
+                    </Link><Link
                       href={`/backlog/${e.hypothesisId}`}
                       title={`Гипотеза: ${e.hypothesisName}`}
                       className="mt-0.5 block truncate text-xs text-zinc-400 hover:underline"
                     >
                       {e.hypothesisName}
-                    </Link>
+                    </Link></div>
+                    <div className="min-w-0 px-1 py-2"><AuthorCell experimentId={e.id} value={details?.author ?? null} options={authorNames} /></div>
+                    <div className="min-w-0 px-1 py-2"><RolloutCell experimentId={e.id} value={details?.rollout ?? null} /></div>
                   </div>
                   <ExperimentWeekRow
                     key={`${e.id}-${toDateParam(windowStart)}`}
@@ -260,22 +272,24 @@ export default async function CalendarPage({
                     cells={cells.map((c) => ({
                       weekIndex: c.weekIndex,
                       weekStartISO: toDateParam(c.weekStart),
+                      isToday: c.weekIndex === todayColumn,
                       stage: c.stage,
                       blockStartISO: c.blockStart ? toDateParam(c.blockStart) : null,
                       blockEndISO: c.blockEnd ? toDateParam(c.blockEnd) : null,
-                      dimmed: !cellMatchesFilter(c.stage, overdue),
+                      hidden: !cellMatchesFilter(c.stage, toDateParam(c.weekStart)),
                     }))}
                   />
                 </div>
-              ))}
+                );
+              })}
 
-              {rows.length === 0 && (
+              {visibleRows.length === 0 && (
                 <div className="flex items-center border-b border-zinc-100 px-4 py-3 text-sm text-zinc-400">
                   Нет экспериментов в этом окне
                 </div>
               )}
 
-              {Array.from({ length: Math.max(MIN_ROWS - Math.max(rows.length, 1), 0) }).map((_, i) => (
+              {Array.from({ length: Math.max(MIN_ROWS - Math.max(visibleRows.length, 1), 0) }).map((_, i) => (
                 <div key={`filler-${i}`} className="flex border-b border-zinc-100 last:border-b-0" aria-hidden="true">
                   <div className="w-56 shrink-0 px-4 py-3" />
                   <div className="flex-1" />
@@ -289,14 +303,12 @@ export default async function CalendarPage({
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Без дат
               </p>
-              <ul className="flex flex-col gap-2">
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {undated.map((e) => (
                   <UndatedRow
                     key={e.id}
                     experimentId={e.id}
                     name={e.name}
-                    hypothesisName={e.hypothesisName}
-                    weekOptions={weekOptions}
                   />
                 ))}
               </ul>

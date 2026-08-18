@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock, Plus } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
@@ -9,13 +9,12 @@ import { StatusCell } from "./StatusCell";
 import { archiveHypotheses, deleteHypotheses } from "./actions";
 import { Badge } from "@/components/Badge";
 import { BulkActionBar } from "@/components/BulkActionBar";
-import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
+import { RowCheckbox, SelectAllCheckbox, SelectionProvider } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
 import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { TakeInWorkButton } from "./TakeInWorkButton";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
-  ACTION_COL,
   CHECKBOX_COL,
   COMMENT_COL,
   FUNNEL_LEVEL_COL,
@@ -129,14 +128,13 @@ export default async function BacklogPage({
       </div>
 
       <SelectionProvider ids={rows.map((h) => h.id)}>
-        <div className="flex items-center justify-between gap-3">
+        <div>
           <Suspense fallback={null}>
             <FilterBar
               search={{ name: "q", placeholder: "Поиск по названию и комментарию", ariaLabel: "Поиск гипотез" }}
               fields={[]}
             />
           </Suspense>
-          <SelectModeToggle />
         </div>
 
         <BulkActionBar
@@ -155,7 +153,14 @@ export default async function BacklogPage({
               ? "Нет гипотез под текущий фильтр."
               : "Пока нет ни одной гипотезы."}
           </p>
-          {(
+          {q || isFiltered ? (
+            <Link
+              href="/backlog"
+              className="text-sm font-medium text-zinc-900 underline underline-offset-4"
+            >
+              Сбросить фильтр
+            </Link>
+          ) : (
             <Link
               href="/backlog/new"
               className="text-sm font-medium text-zinc-900 underline underline-offset-4"
@@ -214,7 +219,6 @@ export default async function BacklogPage({
                   />
                 </th>
                 <th className={`${COMMENT_COL} px-4 py-3`}>Comment</th>
-                <th className={`${ACTION_COL} px-4 py-3`} />
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -258,9 +262,9 @@ export default async function BacklogPage({
                       hypothesisId={h.id}
                       hypothesisName={h.name}
                       status={h.status}
-                      hasExperiments={h.experiments.length > 0}
                       archived={h.archived}
                     />
+                    {h.status === "ACCEPTED" && <div className="mt-2"><TakeInWorkButton hypothesisId={h.id} /></div>}
                   </td>
                   <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-3`}>
                     {h.funnelLevel ? (
@@ -287,27 +291,6 @@ export default async function BacklogPage({
                       </Link>
                     ) : (
                       <span className="text-zinc-500">—</span>
-                    )}
-                  </td>
-                  <td className={`${ACTION_COL} px-4 py-3 text-right`}>
-                    {h.status === "ACCEPTED" ? <TakeInWorkButton hypothesisId={h.id} /> : h.experiments.length > 0 ? (
-                      <Link
-                        href={`/experiments?hypothesisId=${h.id}`}
-                        aria-label="Перейти к эксперименту"
-                        title="Перейти к эксперименту"
-                        className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-600 shadow-sm transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
-                      >
-                        <ArrowRight className="size-[18px]" />
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/experiments/new?hypothesisId=${h.id}`}
-                        aria-label="Создать эксперимент"
-                        title="Создать эксперимент"
-                        className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-600 shadow-sm transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
-                      >
-                        <Plus className="size-[18px]" />
-                      </Link>
                     )}
                   </td>
                   </tr>

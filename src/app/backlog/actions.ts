@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { shouldPromptArchiveHypothesis, shouldPromptExperimentConversion } from "@/lib/hypothesis";
+import { shouldPromptArchiveHypothesis } from "@/lib/hypothesis";
 
 const hypothesisFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно"),
@@ -94,7 +94,7 @@ export async function updateHypothesis(
 
   const before = await prisma.hypothesis.findUnique({
     where: { id },
-    select: { status: true, archived: true, _count: { select: { experiments: true } } },
+    select: { status: true, archived: true },
   });
 
   await prisma.hypothesis.update({
@@ -121,14 +121,9 @@ export async function updateHypothesis(
   revalidatePath(`/backlog/${id}`);
 
   const statusChanged = before !== null && before.status !== data.status;
-  const shouldPromptConvert =
-    statusChanged &&
-    before !== null &&
-    shouldPromptExperimentConversion(data.status, before._count.experiments > 0);
   const shouldPromptArchive =
     statusChanged && before !== null && shouldPromptArchiveHypothesis(data.status, before.archived);
 
-  if (shouldPromptConvert) redirect(`/backlog/${id}?promptExperiment=1&saved=1`);
   if (shouldPromptArchive) redirect(`/backlog/${id}?promptArchive=1&saved=1`);
   redirect("/backlog?saved=1");
 }
@@ -162,10 +157,12 @@ export async function takeHypothesisIntoWork(id: string): Promise<string> {
     select: { id: true },
     orderBy: { createdAt: "desc" },
   });
-  const experiment = existing ?? await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id } });
+  if (!existing) {
+    await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id } });
+  }
   await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
   revalidatePath("/backlog"); revalidatePath("/experiments"); revalidatePath("/calendar");
-  return `/calendar?experimentId=${experiment.id}`;
+  return "/calendar";
 }
 
 export async function deleteHypothesis(id: string): Promise<{ error?: string }> {

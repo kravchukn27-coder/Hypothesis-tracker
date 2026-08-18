@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   STAGE_BORDER_CLASSES,
-  STAGE_LABELS,
   STAGE_ORDER,
   formatDateRange,
   formatWeekRange,
@@ -15,7 +14,6 @@ import { archiveExperiments, deleteExperiments } from "./actions";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
-import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
@@ -54,8 +52,8 @@ export default async function ExperimentsPage({
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
 
-  const [allExperiments, segments, authorRows] = await Promise.all([
-    prisma.experiment.findMany({
+  const allExperiments = await prisma.experiment.findMany(
+    {
       where: {
         archived: false,
         ...(segmentsFilter.length ? { segments: { some: { id: { in: segmentsFilter } } } } : {}),
@@ -67,15 +65,8 @@ export default async function ExperimentsPage({
         segments: true,
         weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
       },
-    }),
-    prisma.segment.findMany({ orderBy: { name: "asc" } }),
-    prisma.experiment.findMany({
-      where: { author: { not: null } },
-      select: { author: true },
-      distinct: ["author"],
-      orderBy: { author: "asc" },
-    }),
-  ]);
+    },
+  );
 
   const now = new Date();
   function currentStageOf(e: (typeof allExperiments)[number]): ExperimentStage {
@@ -91,13 +82,6 @@ export default async function ExperimentsPage({
     if (view === "completed" && currentStage !== "DONE") return false;
     return true;
   });
-
-  const segmentOptions = segments.map((s) => ({ value: s.id, label: s.name }));
-
-  const authorOptions = authorRows
-    .map((r) => r.author)
-    .filter((a): a is string => Boolean(a))
-    .map((a) => ({ value: a, label: a }));
 
   // BUG-005 follow-up #2: the list shows/edits *this week's* status
   // for week-tracked experiments, not `stage` (which caches the
@@ -236,7 +220,6 @@ export default async function ExperimentsPage({
                     defaultDir="asc"
                     href={(d) => sortHref("stage", d)}
                   />
-                  <HeaderMultiFilter name="stage" label="Фильтр" options={STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] }))} />
                 </th>
                 <th className={`${META_COL} px-4 py-3`}>
                   <SortableHeader
@@ -246,7 +229,6 @@ export default async function ExperimentsPage({
                     defaultDir="asc"
                     href={(d) => sortHref("author", d)}
                   />
-                  {authorOptions.length > 0 && <HeaderMultiFilter name="author" label="Фильтр" options={authorOptions} />}
                 </th>
                 <th className={`${LONG_TEXT_COL} px-4 py-3`}>
                   <SortableHeader
@@ -256,7 +238,6 @@ export default async function ExperimentsPage({
                     defaultDir="asc"
                     href={(d) => sortHref("segment", d)}
                   />
-                  {segmentOptions.length > 0 && <HeaderMultiFilter name="segment" label="Фильтр" options={segmentOptions} />}
                 </th>
                 <th className={`${DATE_COL} px-4 py-3`}>
                   <SortableHeader

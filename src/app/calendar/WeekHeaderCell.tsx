@@ -4,15 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setExperimentWeekStage } from "@/app/experiments/actions";
 import { useToast } from "@/components/toast/ToastProvider";
-
-function activeExperimentLabel(count: number): string {
-  const remainder = count % 100;
-  const lastDigit = count % 10;
-  if (remainder >= 11 && remainder <= 14) return `${count} активных экспериментов`;
-  if (lastDigit === 1) return `${count} активный эксперимент`;
-  if (lastDigit >= 2 && lastDigit <= 4) return `${count} активных эксперимента`;
-  return `${count} активных экспериментов`;
-}
+import { WeekStageFilter } from "./WeekStageFilter";
 
 /**
  * Header cell for one week column (PROD-019). Also a drop target for
@@ -23,12 +15,14 @@ function activeExperimentLabel(count: number): string {
 export function WeekHeaderCell({
   weekStartISO,
   isToday,
-  activeExperimentCount,
+  stageFilter,
+  stageOptions,
   children,
 }: {
   weekStartISO: string;
   isToday: boolean;
-  activeExperimentCount: number;
+  stageFilter?: string;
+  stageOptions: { value: string; label: string }[];
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -64,12 +58,7 @@ export function WeekHeaderCell({
       } ${isPending ? "opacity-60" : ""}`}
     >
       <div>{children}</div>
-      <span
-        className="mt-0.5 hidden text-[10px] font-normal normal-case tracking-normal text-zinc-400 min-[641px]:block"
-        title={activeExperimentLabel(activeExperimentCount)}
-      >
-        {activeExperimentCount} актив.
-      </span>
+      <WeekStageFilter weekStartISO={weekStartISO} value={stageFilter} options={stageOptions} />
     </div>
   );
 }

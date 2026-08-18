@@ -383,6 +383,18 @@ export async function updateExperimentDates(
   revalidatePath(`/experiments/${id}`);
 }
 
+export async function updateExperimentRollout(id: string, rollout: string) {
+  await prisma.experiment.update({ where: { id }, data: { rollout: rollout.trim() || null } });
+  revalidatePath("/calendar");
+  revalidatePath(`/experiments/${id}`);
+}
+
+export async function updateExperimentAuthor(id: string, author: string) {
+  await prisma.experiment.update({ where: { id }, data: { author: author.trim() || null } });
+  revalidatePath("/calendar");
+  revalidatePath(`/experiments/${id}`);
+}
+
 /**
  * PROD-019: sets (creates or updates) one week's stage for an
  * experiment, then recomputes the denormalized stage/startDate/endDate

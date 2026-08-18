@@ -51,3 +51,8 @@ export const CHECKBOX_COL = "w-8";
 export const TABLE_SURFACE_WIDTH = "mx-auto w-full min-w-0 max-w-[1014px]";
 export const TABLE_CONTENT_WIDTH = "w-full min-w-0";
 export const TABLE_SURFACE_HEIGHT = "h-[164px]";
+
+// UI-033: Calendar gets its own, wider surface cap — deliberately not
+// shared with TABLE_SURFACE_WIDTH so Backlog/Experiments stay at their
+// existing width while Calendar's week columns get the extra room.
+export const CALENDAR_SURFACE_WIDTH = "mx-auto w-full min-w-0 max-w-[1600px]";

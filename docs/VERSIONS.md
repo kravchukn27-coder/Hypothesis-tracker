@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- [UI-033] Calendar (timeline and "Показать все эксперименты") now
+  uses a wider surface (`max-w-[1600px]`, up from 1014px) instead of
+  sharing `TABLE_SURFACE_WIDTH` with Backlog/Experiments. Added a new
+  `CALENDAR_SURFACE_WIDTH` constant in `tableWidths.ts` so Backlog's
+  width stays untouched. Week columns already used
+  `grid-template-columns: repeat(N, minmax(0, 1fr))` inside a
+  `flex-1` container, so they grow automatically with the wider
+  surface. `AllExperimentsTable.tsx`'s Segment column got a local
+  `w-96` override (not the shared `LONG_TEXT_COL`) so the extra width
+  fills real content instead of leaving blank trailing space in its
+  `table-fixed` layout. Verified live at 1920px viewport: Calendar
+  table surface renders at 1552px (1600 minus page padding), the
+  all-experiments table fills that width with no dead space, and
+  Backlog's table stayed at its original ~1012px.
+
 - [BUG-011] `HeaderMultiFilter` (`src/components/HeaderMultiFilter.tsx`
   — Status filter in Backlog, Автор filter in Calendar) closed only on
   a repeat click of its own trigger, because it was built on native

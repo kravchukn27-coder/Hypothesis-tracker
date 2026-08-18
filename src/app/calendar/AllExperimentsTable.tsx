@@ -16,18 +16,23 @@ import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } f
 import { FilterBar } from "@/components/FilterBar";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
+  CALENDAR_SURFACE_WIDTH,
   CHECKBOX_COL,
   DATE_COL,
-  LONG_TEXT_COL,
   META_COL,
   NAME_COL,
   STATUS_COL,
   TABLE_CONTENT_WIDTH,
-  TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { StageCell } from "../experiments/StageCell";
 import { toDateParam } from "@/lib/calendar";
 import type { ExperimentStage } from "@/generated/prisma/enums";
+
+// UI-033: Calendar's wider surface leaves the shared LONG_TEXT_COL width
+// (also used by Backlog/Experiments) too narrow to fill the extra room —
+// a local, calendar-only override so the space goes to real content
+// instead of blank trailing space.
+const SEGMENT_COL = "w-96";
 
 // PROD-031: this is the former /experiments list, moved in as Calendar's
 // "show all experiments" mode — same table, filters, sort, and bulk
@@ -154,7 +159,7 @@ export async function AllExperimentsTable({
         />
 
         {experiments.length === 0 ? (
-          <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+          <div className={`flex ${CALENDAR_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
             <p className="text-sm text-zinc-500">
               {q
                 ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
@@ -167,7 +172,7 @@ export async function AllExperimentsTable({
             </Link>
           </div>
         ) : (
-          <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
+          <div className={`${CALENDAR_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
             <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
               <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <tr>
@@ -211,7 +216,7 @@ export async function AllExperimentsTable({
                       href={(d) => sortHref("author", d)}
                     />
                   </th>
-                  <th className={`${LONG_TEXT_COL} px-4 py-3`}>
+                  <th className={`${SEGMENT_COL} px-4 py-3`}>
                     <SortableHeader
                       label="Segment"
                       active={sortBy === "segment"}
@@ -282,7 +287,7 @@ export async function AllExperimentsTable({
                           "—"
                         )}
                       </td>
-                      <td className={`${LONG_TEXT_COL} px-4 py-3 text-zinc-500`}>
+                      <td className={`${SEGMENT_COL} px-4 py-3 text-zinc-500`}>
                         <span className="block truncate" title={segmentLabel(e) || undefined}>
                           {segmentLabel(e) || "—"}
                         </span>

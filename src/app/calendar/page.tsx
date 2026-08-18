@@ -16,7 +16,7 @@ import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
-import { TABLE_CONTENT_WIDTH, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
+import { CALENDAR_SURFACE_WIDTH, TABLE_CONTENT_WIDTH } from "@/components/tableWidths";
 import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { RolloutCell } from "./RolloutCell";
 import { AuthorCell } from "./AuthorCell";
@@ -174,7 +174,7 @@ export default async function CalendarPage({
     : rows;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-6 py-10">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Calendar</h1>
@@ -226,7 +226,7 @@ export default async function CalendarPage({
       {showAll && <AllExperimentsTable searchParams={params} />}
 
       {!showAll && (displayedExperiments.length === 0 ? (
-        <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+        <div className={`flex ${CALENDAR_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
           <Link
             href="/experiments/new"
@@ -239,7 +239,7 @@ export default async function CalendarPage({
         <>
           <OverdueExperimentReminder reminders={overdueReminders} />
 
-          <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
+          <div className={`${CALENDAR_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
             <div className={TABLE_CONTENT_WIDTH}>
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">

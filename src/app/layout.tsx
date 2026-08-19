@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { HeaderUserMenu } from "./HeaderUserMenu";
 import { NavLinks } from "./NavLinks";
 import { ToastProvider } from "@/components/toast/ToastProvider";
-import { logout } from "@/lib/auth/actions";
 import { getCurrentUser } from "@/lib/auth/session";
 import "./globals.css";
 
@@ -36,17 +36,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 with page content on every screen instead of floating
                 centered in its own narrower column. */}
             <div className="mx-auto flex max-w-[1600px] items-center gap-8 px-6 py-3">
-              <span className="text-lg font-semibold tracking-tight text-zinc-900">
+              <span className="text-xl font-semibold tracking-tight text-zinc-900">
                 Hypothesis Tracker
               </span>
               <NavLinks />
               {user ? (
-                <form action={logout} className="ml-auto flex items-center gap-3 text-sm">
-                  <span className="text-zinc-600">{user.name}</span>
-                  <button className="rounded-md px-3 py-1.5 text-zinc-600 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50" type="submit">
-                    Выйти
-                  </button>
-                </form>
+                <HeaderUserMenu userName={user.name} />
               ) : null}
             </div>
           </header>

@@ -1,5 +1,20 @@
 # Tech Backlog
 
+## TECH-025 — Stand up a test runner and cover critical business logic with minimal unit tests
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Testing
+- **Type:** Chore
+- **Summary:** The project has no test framework at all — no Jest/Vitest/etc in `package.json`, no test config, no test files under `src/`, and no `npm test` script. The only test-like artifact is `scripts/verify-auth-core.ts`, a manual assertion script that isn't wired into any enforced check (no `npm test` alias, no CI).
+- **Description:**
+  Found during a test-coverage audit (2026-08-20). Highest-risk untested areas: `computeScore` in `src/lib/hypothesis.ts` (the canonical Score-derivation formula — see `docs/CANONICAL_RULES.md` on Score never being stored, always derived); the week-bucketing/rollout logic in `src/lib/calendar.ts`; the login-lockout and session-token boundary conditions in `src/lib/auth/login-rate-limit.ts` and `src/lib/auth/token.ts`; and the 849-line server-action layer in `src/app/experiments/actions.ts`, which has no integration coverage. Scope for this card is deliberately minimal — pick a runner and prove the pattern on the highest-risk logic, not full coverage across the app.
+- **Acceptance Criteria:**
+  - A test runner is added and wired to `npm test` (Vitest is the natural fit given Next.js/TS, but the choice is open).
+  - `computeScore` has unit tests covering normal input, `effort = 0`, and at least one boundary/edge case (e.g. negative or fractional inputs).
+  - The auth boundary cases currently only covered by `scripts/verify-auth-core.ts` (wrong password, tampered token, expired token, session-version mismatch) are ported into the new test suite.
+  - `npm test` runs green locally; no claim about CI wiring is made unless CI config is added in the same change.
+
 ## TECH-024 — deleteHypotheses: wrap findMany+deleteMany in try/catch
 
 - **Status:** TODO

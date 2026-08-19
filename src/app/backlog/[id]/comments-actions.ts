@@ -1,0 +1,44 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+export type CommentActionState = { error?: string; success?: boolean };
+
+export async function createHypothesisComment(
+  hypothesisId: string,
+  _previousState: CommentActionState,
+  formData: FormData,
+): Promise<CommentActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Сессия истекла. Войдите снова." };
+
+  const message = String(formData.get("message") ?? "").trim();
+  if (!message) return { error: "Комментарий не может быть пустым." };
+  if (message.length > 4000) return { error: "Комментарий не должен превышать 4000 символов." };
+
+  const hypothesis = await prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { id: true } });
+  if (!hypothesis) return { error: "Гипотеза не найдена." };
+
+  await prisma.hypothesisComment.create({ data: { hypothesisId, authorUserId: user.id, message } });
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${hypothesisId}`);
+  return { success: true };
+}
+
+export async function deleteHypothesisComment(commentId: string): Promise<CommentActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Сессия истекла. Войдите снова." };
+
+  const comment = await prisma.hypothesisComment.findUnique({
+    where: { id: commentId },
+    select: { hypothesisId: true, authorUserId: true },
+  });
+  if (!comment || comment.authorUserId !== user.id) return { error: "Удалить можно только свой комментарий." };
+
+  await prisma.hypothesisComment.delete({ where: { id: commentId } });
+  revalidatePath("/backlog");
+  revalidatePath(`/backlog/${comment.hypothesisId}`);
+  return { success: true };
+}

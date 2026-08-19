@@ -22,7 +22,7 @@
 
 ## TECH-011 — Comment feed: write path and detail-page UI
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Backlog
 - **Type:** Feature

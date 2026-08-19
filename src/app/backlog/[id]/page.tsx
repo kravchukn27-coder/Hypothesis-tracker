@@ -18,6 +18,8 @@ import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { Badge } from "@/components/Badge";
 import { computeScore, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
 import { currentStageOf, stageLabel } from "@/lib/experiment";
+import { requireUserPage } from "@/lib/auth/page-guards";
+import { CommentFeed } from "./CommentFeed";
 
 export default async function HypothesisDetailPage({
   params,
@@ -25,12 +27,17 @@ export default async function HypothesisDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [hypothesis, funnelLevels] = await Promise.all([
+  const [hypothesis, funnelLevels, currentUser] = await Promise.all([
     prisma.hypothesis.findUnique({
       where: { id },
-      include: { funnelLevel: true, experiments: { include: { weekStages: { orderBy: { weekStart: "asc" } } } } },
+      include: {
+        funnelLevel: true,
+        experiments: { include: { weekStages: { orderBy: { weekStart: "asc" } } } },
+        comments: { include: { authorUser: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 40 },
+      },
     }),
     getFunnelLevels(),
+    requireUserPage(),
   ]);
 
   if (!hypothesis) notFound();
@@ -171,6 +178,17 @@ export default async function HypothesisDetailPage({
           sampleSize: hypothesis.sampleSize ?? "",
           taskUrl: hypothesis.taskUrl ?? "",
         }}
+      />
+      <CommentFeed
+        hypothesisId={hypothesis.id}
+        currentUserId={currentUser.id}
+        comments={hypothesis.comments.map((comment) => ({
+          id: comment.id,
+          authorUserId: comment.authorUserId,
+          authorName: comment.authorUser.name,
+          message: comment.message,
+          createdAt: comment.createdAt.toISOString(),
+        }))}
       />
     </div>
   );

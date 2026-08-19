@@ -188,7 +188,7 @@ model Experiment {
   products     Product[]
   segments     Segment[]
   archived     Boolean                @default(false)
-  archivedAt   DateTime?
+  archivedAt           DateTime?
   // PROD-023: when a week's stage transitions to Done, the user is
   // asked whether to hide the experiment from the Calendar. Tri-state,
   // not a plain boolean: null = not asked yet (stays visible, so the
@@ -201,6 +201,9 @@ model Experiment {
   // them specifically — everything else (not yet Done, or newly
   // created) starts at null.
   calendarHiddenOnDone Boolean?
+  // PROD-036: Calendar-only row priority. Null means the experiment has
+  // never been manually ordered and therefore follows the date fallback.
+  manualOrder  Int?
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
 }

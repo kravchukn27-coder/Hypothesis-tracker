@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { updateExperimentRollout } from "@/app/experiments/actions";
 
-export function RolloutCell({ experimentId, value }: { experimentId: string; value: string | null }) {
+export function RolloutCell({ experimentId, value, multiline = false }: { experimentId: string; value: string | null; multiline?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
@@ -67,7 +67,7 @@ export function RolloutCell({ experimentId, value }: { experimentId: string; val
         aria-label="Раскатка"
         title={savedValue || undefined}
         onClick={openEditor}
-        className={`block w-full min-w-0 overflow-hidden whitespace-nowrap rounded border border-transparent px-2 py-1 text-left text-xs text-zinc-700 outline-none hover:border-zinc-200 disabled:opacity-50 [mask-image:linear-gradient(to_right,black_85%,transparent_100%)] ${editing ? "invisible" : ""}`}
+        className={`${multiline ? "line-clamp-2 leading-tight" : "overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_85%,transparent_100%)]"} block w-full min-w-0 rounded border border-transparent px-2 py-1 text-left text-xs text-zinc-700 outline-none hover:border-zinc-200 disabled:opacity-50 ${editing ? "invisible" : ""}`}
       >
         {savedValue || <span className="text-zinc-400">Добавить…</span>}
       </button>

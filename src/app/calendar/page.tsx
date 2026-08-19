@@ -22,6 +22,7 @@ import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { RolloutCell } from "./RolloutCell";
 import { AuthorCell } from "./AuthorCell";
 import { AllExperimentsTable } from "./AllExperimentsTable";
+import { CalendarRowReorderHandle } from "./CalendarRowReorderHandle";
 
 // UI-051: the default (no `?start=`) window anchors 2 weeks before the
 // current one, not on it — so "Сегодня" shows 2 past weeks, the current
@@ -111,7 +112,13 @@ export default async function CalendarPage({
   // filter the table down to that one row, which hid every other
   // experiment and made the view harder to read in context.
   const focusedExperiment = experimentId ? experiments.find((experiment) => experiment.id === experimentId) : null;
-  const displayedExperiments = experiments;
+  const displayedExperiments = [...experiments].sort((a, b) => {
+    if (a.manualOrder === null && b.manualOrder !== null) return -1;
+    if (a.manualOrder !== null && b.manualOrder === null) return 1;
+    if (a.manualOrder !== null && b.manualOrder !== null) return a.manualOrder - b.manualOrder;
+    const startDiff = (a.startDate?.getTime() ?? Number.POSITIVE_INFINITY) - (b.startDate?.getTime() ?? Number.POSITIVE_INFINITY);
+    return startDiff || b.createdAt.getTime() - a.createdAt.getTime();
+  });
   const timelineExperiments = displayedExperiments.map((e) => ({
     id: e.id,
     name: e.name,
@@ -313,7 +320,8 @@ export default async function CalendarPage({
             <div className="min-w-0 flex-1 rounded-xl border border-zinc-200">
               <div className={TABLE_CONTENT_WIDTH}>
                 <div className="sticky top-0 z-20 flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium text-zinc-500">
-                <div className="sticky left-0 z-30 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
+                <div className="sticky left-0 z-30 grid w-[24rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
+                  <div aria-hidden />
                   <div className="flex items-center justify-center px-3 py-2 text-center font-bold">Эксперимент</div>
                   <div className="flex items-center justify-center px-2 py-2 text-center font-bold"><HeaderMultiFilter name="calendarAuthor" label="Автор" options={authorOptions} iconPosition="end" /></div>
                   <div className="flex items-center justify-center px-2 py-2 text-center font-bold">Раскатка</div>
@@ -342,16 +350,14 @@ export default async function CalendarPage({
                 return (
                 <div
                   key={e.id}
+                  data-calendar-reorder-row
                   data-experiment-id={e.id}
                   data-highlighted={isFocused || undefined}
-                  className={`flex border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 ${isFocused ? "bg-amber-50/60" : ""}`}
+                  className={`flex border-b border-zinc-100 transition-[transform,box-shadow,background-color] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] last:border-b-0 hover:bg-zinc-50 ${isFocused ? "bg-amber-50/60" : ""}`}
                 >
-                  <div className={`sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] ${isFocused ? "bg-amber-50" : "bg-white"}`}>
-                    {/* PROD-019: previously the colored bar itself linked to
-                        /experiments/[id] — now that each week is its own
-                        stage-editing button, the name here is the only
-                        click-through to the experiment's own card. */}
-                    <div className="min-w-0 px-3 py-2 text-sm"><Link
+                  <div className={`sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] ${isFocused ? "bg-amber-50" : "bg-white"}`}>
+                    <div className="flex items-start justify-center pt-2"><CalendarRowReorderHandle experimentName={e.name} /></div>
+                    <div className="min-w-0 py-2 pr-3 text-sm"><Link
                       href={`/experiments/${e.id}`}
                       title={e.name}
                       className="line-clamp-2 font-medium text-zinc-900 hover:underline"
@@ -359,7 +365,7 @@ export default async function CalendarPage({
                       {e.name}
                     </Link></div>
                     <div className="min-w-0 px-1 py-2"><AuthorCell experimentId={e.id} value={details?.author ?? null} options={authorNames} /></div>
-                    <div className="min-w-0 px-1 py-2"><RolloutCell experimentId={e.id} value={details?.rollout ?? null} /></div>
+                    <div className="min-w-0 px-1 py-2"><RolloutCell experimentId={e.id} value={details?.rollout ?? null} multiline /></div>
                   </div>
                   <ExperimentWeekRow
                     key={`${e.id}-${toDateParam(windowStart)}`}

@@ -461,6 +461,36 @@ export async function updateExperimentAuthor(id: string, author: string) {
   revalidatePath(`/experiments/${id}`);
 }
 
+/** PROD-036: persists the Calendar timeline's explicit row order. */
+export async function reorderCalendarExperiments(orderedExperimentIds: string[]): Promise<{ error?: string }> {
+  const parsed = z.array(z.string().trim().min(1)).min(1).max(500).safeParse(orderedExperimentIds);
+  if (!parsed.success || new Set(parsed.data).size !== parsed.data.length) {
+    return { error: "Некорректный порядок экспериментов." };
+  }
+
+  const user = await getCurrentUser();
+  if (!user) return { error: "Сессия истекла. Обновите страницу и войдите снова." };
+
+  const activeExperiments = await prisma.experiment.findMany({
+    where: { id: { in: parsed.data }, archived: false },
+    select: { id: true },
+  });
+  if (activeExperiments.length !== parsed.data.length) {
+    return { error: "Часть экспериментов больше недоступна. Обновите страницу." };
+  }
+
+  await prisma.$transaction(
+    parsed.data.map((id, manualOrder) => prisma.experiment.update({ where: { id }, data: { manualOrder } })),
+  );
+  await safeWriteAuditLog({
+    event: "CALENDAR_EXPERIMENTS_REORDERED",
+    userId: user.id,
+    metadata: { experimentIds: parsed.data },
+    route: "src/app/experiments/actions.ts",
+  });
+  return {};
+}
+
 /**
  * PROD-019: sets (creates or updates) one week's stage for an
  * experiment, then recomputes the denormalized stage/startDate/endDate

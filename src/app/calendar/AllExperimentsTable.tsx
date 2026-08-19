@@ -7,6 +7,7 @@ import {
   formatWeekRange,
   stageBorderClass,
   stageRank,
+  STAGE_LABELS,
 } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
@@ -14,6 +15,7 @@ import { archiveExperiments, deleteExperiments } from "../experiments/actions";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
+import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
   ACTION_COL,
@@ -73,6 +75,7 @@ export async function AllExperimentsTable({
     stage?: string | string[];
     segment?: string | string[];
     author?: string | string[];
+    funnelLevel?: string | string[];
     hypothesisId?: string;
     q?: string;
     view?: string;
@@ -80,26 +83,49 @@ export async function AllExperimentsTable({
     dir?: string;
   };
 }) {
-  const { stage, segment, author, hypothesisId, q, view, sortBy = "startDate", dir } = searchParams;
+  const { stage, segment, author, funnelLevel, hypothesisId, q, view, sortBy = "startDate", dir } = searchParams;
   const stages = Array.isArray(stage) ? stage : stage ? [stage] : [];
   const segmentsFilter = Array.isArray(segment) ? segment : segment ? [segment] : [];
   const authors = Array.isArray(author) ? author : author ? [author] : [];
+  const funnelLevelsFilter = Array.isArray(funnelLevel) ? funnelLevel : funnelLevel ? [funnelLevel] : [];
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
 
-  const allExperiments = await prisma.experiment.findMany({
-    where: {
-      archived: false,
-      ...(segmentsFilter.length ? { segments: { some: { id: { in: segmentsFilter } } } } : {}),
-      ...(authors.length ? { author: { in: authors } } : {}),
-      ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-    },
-    include: {
-      hypothesis: { include: { funnelLevel: true } },
-      segments: true,
-      weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
-    },
-  });
+  const [allExperiments, usedFunnelLevels, usedSegments, usedAuthors] = await Promise.all([
+    prisma.experiment.findMany({
+      where: {
+        archived: false,
+        ...(segmentsFilter.length ? { segments: { some: { id: { in: segmentsFilter } } } } : {}),
+        ...(authors.length ? { author: { in: authors } } : {}),
+        ...(funnelLevelsFilter.length ? { hypothesis: { funnelLevelId: { in: funnelLevelsFilter } } } : {}),
+        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
+      },
+      include: {
+        hypothesis: { include: { funnelLevel: true } },
+        segments: true,
+        weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
+      },
+    }),
+    prisma.funnelLevel.findMany({
+      where: { hypotheses: { some: { archived: false, experiments: { some: { archived: false } } } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.segment.findMany({
+      where: { experiments: { some: { archived: false } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.experiment.findMany({
+      where: { archived: false, author: { not: null } },
+      select: { author: true },
+      distinct: ["author"],
+      orderBy: { author: "asc" },
+    }),
+  ]);
+
+  const stageOptions = Object.entries(STAGE_LABELS).map(([value, label]) => ({ value, label }));
+  const authorOptions = usedAuthors.flatMap((item) => item.author ? [{ value: item.author, label: item.author }] : []);
+  const funnelLevelOptions = usedFunnelLevels.map((item) => ({ value: item.id, label: item.name }));
+  const segmentOptions = usedSegments.map((item) => ({ value: item.id, label: item.name }));
 
   const now = new Date();
 
@@ -141,6 +167,7 @@ export async function AllExperimentsTable({
     stages.forEach((value) => params.append("stage", value));
     segmentsFilter.forEach((value) => params.append("segment", value));
     authors.forEach((value) => params.append("author", value));
+    funnelLevelsFilter.forEach((value) => params.append("funnelLevel", value));
     if (hypothesisId) params.set("hypothesisId", hypothesisId);
     if (q) params.set("q", q);
     if (view) params.set("view", view);
@@ -149,7 +176,7 @@ export async function AllExperimentsTable({
     return `/calendar?${params.toString()}`;
   }
 
-  const isFiltered = Boolean(stages.length || segmentsFilter.length || authors.length || q || view);
+  const isFiltered = Boolean(stages.length || segmentsFilter.length || authors.length || funnelLevelsFilter.length || q || view);
 
   return (
     // UI-041: this table now caps at TABLE_SURFACE_WIDTH (1014px, same
@@ -233,7 +260,7 @@ export async function AllExperimentsTable({
                     </div>
                   </th>
                   <th className={`${STATUS_COL} px-4 py-2 text-center`}>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-1">
                       <SortableHeader
                         label="Status"
                         active={sortBy === "stage"}
@@ -241,10 +268,11 @@ export async function AllExperimentsTable({
                         defaultDir="asc"
                         href={(d) => sortHref("stage", d)}
                       />
+                      <HeaderMultiFilter name="stage" label="" options={stageOptions} />
                     </div>
                   </th>
                   <th className={`${META_COL} px-4 py-2 text-center`}>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-1">
                       <SortableHeader
                         label="Автор"
                         active={sortBy === "author"}
@@ -252,11 +280,19 @@ export async function AllExperimentsTable({
                         defaultDir="asc"
                         href={(d) => sortHref("author", d)}
                       />
+                      <HeaderMultiFilter name="author" label="" options={authorOptions} />
                     </div>
                   </th>
-                  <th className={`${FUNNEL_LEVEL_COL} break-words px-4 py-2 text-center`}>Funnel Level</th>
+                  <th className={`${FUNNEL_LEVEL_COL} break-words px-4 py-2 text-center`}>
+                    <HeaderMultiFilter
+                      name="funnelLevel"
+                      label="Funnel Level"
+                      options={funnelLevelOptions}
+                      iconPosition="end"
+                    />
+                  </th>
                   <th className={`${SEGMENT_COL} px-4 py-2 text-center`}>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-1">
                       <SortableHeader
                         label="Segment"
                         active={sortBy === "segment"}
@@ -264,6 +300,7 @@ export async function AllExperimentsTable({
                         defaultDir="asc"
                         href={(d) => sortHref("segment", d)}
                       />
+                      <HeaderMultiFilter name="segment" label="" options={segmentOptions} />
                     </div>
                   </th>
                   <th className={`${ROLLOUT_COL} break-words px-4 py-2`}>Раскатка</th>

@@ -37,28 +37,6 @@
   - Сортировка (`sortBy`/`dir`) не сбрасывается этой кнопкой.
   - Существующий счётчик «N экспериментов (с фильтром)» и пустое состояние корректно отражают результат сброса.
 
-## UI-055 — Добавить фильтры к колонкам Status/Автор/Funnel Level/Segment в «Показать все эксперименты»
-
-- **Status:** TODO
-- **Priority:** Medium
-- **Area:** UI / Calendar (AllExperimentsTable)
-- **Type:** Enhancement
-- **Summary:** В таблице «Показать все эксперименты» (`src/app/calendar/AllExperimentsTable.tsx`) добавить в шапки колонок Status, Автор, Funnel Level, Segment такой же фильтр, как в Backlog (`HeaderMultiFilter` — иконка воронки в заголовке колонки, чекбокс-список значений, множественный выбор).
-- **Description:**
-  Часть работы уже сделана на бэкенде, часть — нет:
-  - **Status:** `stage`/`stages` уже читается и фильтрует (`page.tsx` использует `searchParams.stage`, `experiments.filter(... stages.includes(currentStage))`), но в шапке колонки сейчас только `SortableHeader` — фильтра нет вообще. Нужно добавить `HeaderMultiFilter` с опциями из `STAGE_LABELS` (как `WeekStageFilter` в Calendar использует те же лейблы).
-  - **Автор:** `author`/`authors` тоже уже читается и фильтрует (`where: authors.length ? {author: {in: authors}} : {}`), в шапке — только сортировка, фильтра нет. Список опций — как `authorNames`/`authorOptions`, уже вычисляемые в `src/app/calendar/page.tsx` для параметра `calendarAuthor` (тот же принцип, свой параметр `author` для этой таблицы).
-  - **Funnel Level:** фильтра нет ни в UI, ни в бэкенде — колонка сейчас вообще без `SortableHeader`/`HeaderMultiFilter`, просто статичный текст `<th>`. Нужно и добавить query-параметр (например `funnelLevel`, список id), и прокинуть его в `prisma.experiment.findMany`'s `where` (через `hypothesis: { funnelLevelId: { in: [...] } }`), и добавить `HeaderMultiFilter` в шапку с опциями — список различных `FunnelLevel`, реально используемых в текущих экспериментах (или все `FunnelLevel`, аналогично тому, как Backlog собирает свой список — уточнить при реализации).
-  - **Segment:** `segment`/`segmentsFilter` уже читается и фильтрует (`where: segmentsFilter.length ? {segments: {some: {id: {in: segmentsFilter}}}} : {}`), в шапке — только сортировка, фильтра нет. Опции — список существующих `Segment` записей (та же таблица, что использует `TagMultiSelect` в форме эксперимента).
-- **Acceptance Criteria:**
-  - Заголовки колонок Status, Автор, Funnel Level, Segment получают `HeaderMultiFilter` (тот же переиспользуемый компонент, что в Backlog), с множественным выбором значений через чекбоксы.
-  - Status и Автор: фильтрация продолжает работать так же, как сейчас (бэкенд уже поддерживает `stage`/`author`) — добавляется только недостающий UI-контрол.
-  - Segment: аналогично — бэкенд уже поддерживает `segment`, добавляется только UI-контрол.
-  - Funnel Level: добавляется новый query-параметр и соответствующая фильтрация в `prisma.experiment.findMany`'s `where` (по `hypothesis.funnelLevelId`), плюс UI-контрол — этой фильтрации сегодня нет вообще.
-  - Существующая сортировка по этим же колонкам (где она есть — Status, Автор, Segment) не ломается: `SortableHeader` и новый `HeaderMultiFilter` в одной шапке сосуществуют так же, как уже сделано для Backlog's колонки Status (`SortableHeader` + `HeaderMultiFilter` рядом, см. `src/app/backlog/page.tsx`).
-  - Учесть BUG-015 (позиционирование `HeaderMultiFilter` внутри `overflow-x-hidden`-таблицы) — если тот баг не исправлен раньше этой задачи, не тиражировать ту же проблему на новые 4 колонки без необходимости; если исправлен — новые фильтры automatически наследуют исправленное поведение, так как это тот же компонент.
-  - `isFiltered`/счётчик «N экспериментов (с фильтром)» учитывает и новый `funnelLevel`-параметр.
-
 ## UI-053 — Закрепить шапку таблиц (Calendar, Backlog, «Показать все эксперименты») при прокрутке
 
 - **Status:** TODO

@@ -85,7 +85,10 @@ export default async function BacklogPage({
         },
       },
     }),
-    prisma.funnelLevel.findMany({ orderBy: { name: "asc" } }),
+    prisma.funnelLevel.findMany({
+      where: { hypotheses: { some: { archived: false } } },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   const rows = hypotheses.map((h) => ({ ...h, latestComment: h.comments[0]?.message ?? null, score: computeScore(h) }));

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- [UI-026] Closed with no code change — its acceptance criteria were
+  already fully met: no "Изменить" link (name links straight to the
+  card), no quick-action arrows/plus column in Backlog, `ACCEPTED`
+  hypotheses still show "Взять в работу" next to their status, no
+  "Без эксперимента" filter, no "Показать архив" button in Backlog
+  or the Experiments table (now `AllExperimentsTable.tsx` per
+  PROD-031), archived rows hardcoded out of every query
+  (`archived: false`), and Calendar's filters (per-week stage
+  `WeekStageFilter`, Автор `HeaderMultiFilter`) are already
+  dropdown-style. This card had gone stale after that work shipped.
+  Verified live at `/backlog` and `/calendar` once the dev server
+  (temporarily broken by an unrelated concurrent schema sync) was
+  back up.
+
 - [BUG-012] Fixed the 404 on Backlog's per-hypothesis experiment link
   (`src/app/backlog/page.tsx`) — it pointed at `/experiments?hypothesisId=...`,
   a route PROD-031 removed. Now always links to `/calendar?experimentId=...`:

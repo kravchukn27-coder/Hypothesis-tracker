@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- [BUG-015] Header filters now render their checkbox panel through a
+  `createPortal` fixed to the viewport (`HeaderMultiFilter.tsx`) rather
+  than as an absolutely positioned child of the table header. The panel
+  stays anchored to its trigger while the page scrolls or resizes, is
+  constrained to the viewport edges, and still closes on Escape or an
+  outside click. This removes the Backlog table's overflow/scroll
+  conflict for Status and Funnel Level, and applies the same reliable
+  behavior to Calendar's Автор filter. URL filter parameters and
+  multi-select behavior are unchanged. Verified in the browser on all
+  three uses, including a Status selection (`?status=NEW`).
+
+- [UI-039] Filter icon in the Backlog table's Funnel Level header now
+  sits after the label, matching Status (`HeaderMultiFilter.tsx` grew
+  an `iconPosition` prop, `"end"` for Funnel Level). Calendar's Автор
+  filter (`calendar/page.tsx`) initially kept the old icon-before-text
+  default when this shipped — the same component, just not opted in —
+  caught and fixed in the same pass so both places match. Verified live
+  in the browser: both dropdowns still open/select/apply correctly.
+
 - [UI-042] Three UI fixes on the Backlog hypothesis card
   (`/backlog/[id]`), two of which also apply to the Experiment card
   (`/experiments/[id]`) since they share components:

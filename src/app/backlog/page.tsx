@@ -182,7 +182,7 @@ export default async function BacklogPage({
       ) : (
         <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
           <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
-            <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <thead className="bg-zinc-50 text-xs font-medium text-zinc-500">
               <tr>
                 <th className={`${CHECKBOX_COL} px-4 py-2`}>
                   <SelectAllCheckbox />
@@ -218,7 +218,14 @@ export default async function BacklogPage({
                     <HeaderMultiFilter name="status" label="" options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] }))} />
                   </div>
                 </th>
-                <th className={`${FUNNEL_LEVEL_COL} px-4 py-2 text-center`}><HeaderMultiFilter name="funnelLevel" label="Funnel Level" options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))} /></th>
+                <th className={`${FUNNEL_LEVEL_COL} px-4 py-2 text-center`}>
+                  <HeaderMultiFilter
+                    name="funnelLevel"
+                    label="Funnel Level"
+                    options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))}
+                    iconPosition="end"
+                  />
+                </th>
                 <th className={`${SCORE_COL} px-4 py-2 text-center`}>
                   <SortableHeader
                     label="Score"

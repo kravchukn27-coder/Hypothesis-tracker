@@ -303,7 +303,7 @@ export default async function CalendarPage({
               <div className="flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <div className="sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[minmax(10rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
                   <div className="px-3 py-2">Эксперимент</div>
-                  <div className="px-2 py-2"><HeaderMultiFilter name="calendarAuthor" label="Автор" options={authorOptions} /></div>
+                  <div className="px-2 py-2"><HeaderMultiFilter name="calendarAuthor" label="Автор" options={authorOptions} iconPosition="end" /></div>
                   <div className="px-2 py-2">Раскатка</div>
                 </div>
                 <div

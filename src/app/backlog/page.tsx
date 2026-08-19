@@ -49,16 +49,17 @@ export default async function BacklogPage({
     hypothesisId?: string;
   }>;
 }) {
-  const { sort = "score", dir, funnelLevel, status, q, hypothesisId } = await searchParams;
+  const { sort = "score", dir, funnelLevel, status, q, view, hypothesisId } = await searchParams;
   const funnelLevelsFilter = Array.isArray(funnelLevel) ? funnelLevel : funnelLevel ? [funnelLevel] : [];
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sort === "score" || sort === "createdAt" ? "desc" : "asc";
+  const isArchivedView = view === "archived";
 
   const [hypotheses, funnelLevels] = await Promise.all([
     prisma.hypothesis.findMany({
       where: {
-        archived: false,
+        archived: isArchivedView,
         ...(funnelLevelsFilter.length ? { funnelLevelId: { in: funnelLevelsFilter } } : {}),
         ...(statuses.length ? { status: { in: statuses as HypothesisStatus[] } } : {}),
         ...(q
@@ -86,7 +87,7 @@ export default async function BacklogPage({
       },
     }),
     prisma.funnelLevel.findMany({
-      where: { hypotheses: { some: { archived: false } } },
+      where: { hypotheses: { some: { archived: isArchivedView } } },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -106,6 +107,7 @@ export default async function BacklogPage({
     funnelLevelsFilter.forEach((value) => params.append("funnelLevel", value));
     statuses.forEach((value) => params.append("status", value));
     if (q) params.set("q", q);
+    if (view) params.set("view", view);
     params.set("sort", field);
     params.set("dir", nextDir);
     return `/backlog?${params.toString()}`;
@@ -114,12 +116,13 @@ export default async function BacklogPage({
   function resetColumnFiltersHref() {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
+    if (view) params.set("view", view);
     params.set("sort", sort);
     params.set("dir", currentDir);
     return `/backlog?${params.toString()}`;
   }
 
-  const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q);
+  const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q || view);
   const hasColumnFilters = Boolean(funnelLevelsFilter.length || statuses.length);
 
   // Page container matches the Backlog table so the header,
@@ -164,6 +167,7 @@ export default async function BacklogPage({
           <Suspense fallback={null}>
             <FilterBar
               search={{ name: "q", placeholder: "Поиск по названию и комментарию", ariaLabel: "Поиск гипотез" }}
+              quickFilters={{ name: "view", options: [{ value: "archived", label: "Архивные" }] }}
               fields={[]}
             />
           </Suspense>

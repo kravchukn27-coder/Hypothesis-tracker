@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- [UI-048] Long experiment names in the "Без даты"/"Вне диапазона"
+  side cards (`UndatedRow.tsx`, `OutOfRangeRow.tsx`) no longer get cut
+  off with `truncate` — they wrap across lines instead
+  (`break-words`/`leading-tight`), so the card grows taller to fit the
+  full name. The backlog card as written called for widening the
+  side column instead (`w-56` → ~double); first pass did that, but the
+  user clarified live that they wanted the *height* to grow to fit the
+  wrapped text within the existing width, not a wider column — reverted
+  the width change, kept the wrap. Drag-and-drop, click-through, and
+  `highlighted` styling are unchanged; only the name's wrap/height
+  behavior moved.
+
 - [UI-047] Removed the "N на таймлайне, N без дат, N вне диапазона"
   summary line from under the Calendar heading. The dedicated empty-state
   block further down ("Пока нет ни одного эксперимента. Добавить первый")

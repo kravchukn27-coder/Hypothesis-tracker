@@ -24,7 +24,7 @@ export function OutOfRangeRow({
       <Link
         href={`/calendar?experimentId=${experimentId}&start=${toDateParam(jumpStart)}`}
         title={`${name} — перейти к неделям эксперимента`}
-        className={`block w-full truncate rounded-md border py-1.5 pl-2.5 pr-3 text-[13px] font-medium leading-none transition-all duration-150 ${
+        className={`block w-full break-words rounded-md border py-1.5 pl-2.5 pr-3 text-[13px] font-medium leading-tight transition-all duration-150 ${
           highlighted
             ? "border-amber-400 bg-amber-200 text-amber-950 shadow-sm ring-2 ring-amber-500 ring-offset-2"
             : "border-amber-200/80 bg-amber-50 text-amber-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:border-amber-300 hover:bg-amber-100/70 hover:shadow-sm"

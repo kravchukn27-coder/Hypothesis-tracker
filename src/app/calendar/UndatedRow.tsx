@@ -41,7 +41,7 @@ export function UndatedRow({
       onDragEnd={() => setDragging(false)}
       onClick={() => router.push(`/experiments/${experimentId}`)}
       title={`${name} — перетащите на нужную неделю или нажмите, чтобы открыть`}
-      className={`group flex w-full cursor-grab items-center gap-1.5 rounded-md border py-1.5 pl-1.5 pr-3 text-[13px] font-medium leading-none transition-all duration-150 active:cursor-grabbing ${
+      className={`group flex w-full cursor-grab items-start gap-1.5 rounded-md border py-1.5 pl-1.5 pr-3 text-[13px] font-medium leading-tight transition-all duration-150 active:cursor-grabbing ${
         dragging
           ? "border-amber-300 bg-amber-100/70 opacity-50"
           : highlighted
@@ -51,9 +51,9 @@ export function UndatedRow({
     >
       <GripVertical
         strokeWidth={2.25}
-        className="h-3.5 w-3.5 shrink-0 text-amber-400 transition-colors group-hover:text-amber-500"
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400 transition-colors group-hover:text-amber-500"
       />
-      <span className="truncate">{name}</span>
+      <span className="min-w-0 break-words">{name}</span>
     </li>
   );
 }

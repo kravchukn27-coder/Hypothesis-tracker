@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- [UI-045] `/experiments/[id]`: "Показать на календаре" is now a
+  bordered button (`rounded-lg border border-zinc-300 px-4 py-2.5...`)
+  matching Backlog's "Открыть в Calendar", instead of a plain
+  underlined text link. The "Гипотеза" link moved out of
+  `ExperimentForm.tsx` (was a full-width block with the hypothesis
+  name and an arrow icon) into a compact button in the page header
+  (`experiments/[id]/page.tsx`), next to Архивировать/Удалить —
+  matching Backlog's "Карточка эксперимента" placement and style.
+  The hidden `hypothesisId` input stays in the form for submission;
+  only the visible link moved. No change to `FunnelLevelField` or
+  any other form editing. Verified live: both buttons render and
+  link correctly (`/backlog/[hypothesisId]` and
+  `/calendar?experimentId=...`), hidden `hypothesisId` still present
+  in the DOM and matches the visible button's target.
+
 - [UI-041] Redesigned "Показать все эксперименты"
   (`AllExperimentsTable.tsx`, Calendar's embedded show-all mode) to
   match Backlog's width/style system instead of its own wider

@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
-import { CalendarDays } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   archiveExperiment,
@@ -84,6 +83,13 @@ export default async function ExperimentDetailPage({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <Link
+            href={`/backlog/${experiment.hypothesisId}`}
+            title={experiment.hypothesis.name}
+            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            Гипотеза
+          </Link>
           {experiment.archived ? (
             <ConfirmDeleteButton
               onConfirm={unarchiveExperiment.bind(null, experiment.id)}
@@ -129,9 +135,8 @@ export default async function ExperimentDetailPage({
           {calendarHref && !isHiddenFromCalendar && (
             <Link
               href={calendarHref}
-              className="inline-flex items-center gap-2 font-medium text-zinc-900 underline underline-offset-4"
+              className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              <CalendarDays className="size-4" aria-hidden />
               Показать на календаре
             </Link>
           )}

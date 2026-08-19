@@ -1,8 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { startOfWeek, toDateParam } from "@/lib/calendar";
 import {
   NONE_STAGE_COLOR_CLASSES,
@@ -102,7 +100,7 @@ export function ExperimentForm({
   }, [state.error, showToast]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-8 rounded-xl border border-zinc-200 bg-white p-5 pb-24 sm:p-7 sm:pb-24">
+    <form action={formAction} className="flex flex-col gap-8 rounded-xl border border-zinc-200 bg-white p-5 sm:p-7">
       {state.error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-600/20">
           {state.error}
@@ -121,18 +119,10 @@ export function ExperimentForm({
           </p>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-zinc-700">Гипотеза</span>
-          <input type="hidden" name="hypothesisId" value={hypothesis.id} />
-          <Link
-            href={`/backlog/${hypothesis.id}`}
-            aria-label={`Открыть гипотезу: ${hypothesis.name}`}
-            className="group flex w-full items-center justify-between gap-3 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 transition-colors hover:border-zinc-400 hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
-          >
-            <span className="min-w-0 text-base font-semibold leading-snug break-words">{hypothesis.name}</span>
-            <ArrowRight className="size-5 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-900" />
-          </Link>
-        </div>
+        {/* UI-045: the visible "Гипотеза" link moved to a compact button
+            in the page header (experiments/[id]/page.tsx) — this hidden
+            input just keeps hypothesisId submitting with the form. */}
+        <input type="hidden" name="hypothesisId" value={hypothesis.id} />
 
         <div className="grid gap-6 sm:grid-cols-3">
           <Field label="Status" htmlFor="stage">

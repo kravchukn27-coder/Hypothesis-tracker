@@ -167,7 +167,6 @@ export default async function HypothesisDetailPage({
           confidence: hypothesis.confidence,
           status: hypothesis.status,
           result: hypothesis.result ?? "",
-          comment: hypothesis.comment ?? "",
           modeling: hypothesis.modeling ?? "",
           sampleSize: hypothesis.sampleSize ?? "",
           taskUrl: hypothesis.taskUrl ?? "",

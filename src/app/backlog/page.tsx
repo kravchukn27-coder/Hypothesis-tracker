@@ -64,13 +64,14 @@ export default async function BacklogPage({
           ? {
               OR: [
                 { name: { contains: q, mode: "insensitive" } },
-                { comment: { contains: q, mode: "insensitive" } },
+                { comments: { some: { message: { contains: q, mode: "insensitive" } } } },
               ],
             }
           : {}),
       },
       include: {
         funnelLevel: true,
+        comments: { select: { message: true }, orderBy: { createdAt: "desc" }, take: 1 },
         experiments: {
           select: {
             id: true,
@@ -86,7 +87,7 @@ export default async function BacklogPage({
     prisma.funnelLevel.findMany({ orderBy: { name: "asc" } }),
   ]);
 
-  const rows = hypotheses.map((h) => ({ ...h, score: computeScore(h) }));
+  const rows = hypotheses.map((h) => ({ ...h, latestComment: h.comments[0]?.message ?? null, score: computeScore(h) }));
   rows.sort((a, b) => {
     let cmp = 0;
     if (sort === "status") cmp = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
@@ -320,13 +321,13 @@ export default async function BacklogPage({
                     {h.score.toFixed(2)}
                   </td>
                   <td className={`${COMMENT_COL} px-4 py-2`}>
-                    {h.comment ? (
+                    {h.latestComment ? (
                       <Link
                         href={`/backlog/${h.id}`}
-                        title={h.comment}
+                        title={h.latestComment}
                         className="block overflow-hidden whitespace-nowrap text-zinc-500 hover:text-zinc-900 hover:underline [mask-image:linear-gradient(to_right,black_85%,transparent_100%)]"
                       >
-                        {h.comment}
+                        {h.latestComment}
                       </Link>
                     ) : (
                       <span className="text-zinc-500">—</span>

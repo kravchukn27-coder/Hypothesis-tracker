@@ -31,7 +31,6 @@ type Initial = {
   confidence: number; // 0-1
   status: HypothesisStatus;
   result: string;
-  comment: string;
   modeling: string;
   sampleSize: string;
   taskUrl: string;
@@ -48,7 +47,6 @@ const emptyInitial: Initial = {
   confidence: 0.8,
   status: "NEW",
   result: "",
-  comment: "",
   modeling: "",
   sampleSize: "",
   taskUrl: "",
@@ -209,10 +207,6 @@ export function HypothesisForm({
             />
           </Field>
         )}
-
-        <Field label="Comment" htmlFor="comment">
-          <Textarea id="comment" name="comment" defaultValue={values.comment} rows={3} />
-        </Field>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Моделирование" htmlFor="modeling">

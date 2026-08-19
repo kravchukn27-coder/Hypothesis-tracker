@@ -41,13 +41,13 @@
   - The old single-field "Comment" input is fully removed from `HypothesisForm`/`ExperimentForm`... [Hypothesis only — `Experiment` has no comment field, not in scope].
   - `docs/CANONICAL_RULES.md`'s hypothesis/experiment invariants are unaffected — this only touches the comment surface.
 
-## TECH-010 — Comment feed: `HypothesisComment` schema and data migration
+## TECH-010 — Comment feed: `HypothesisComment` schema and legacy-field removal
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Backlog
 - **Type:** Data model
-- **Summary:** Add a `HypothesisComment` table (feed of authored, timestamped comments per hypothesis) and drop the flat `Hypothesis.comment String?` field, migrating any existing comment text into the new table.
+- **Summary:** Add a `HypothesisComment` table (feed of authored, timestamped comments per hypothesis) and drop the flat `Hypothesis.comment String?` field.
 - **Description:**
   Source: user direction 2026-08-19, after reviewing `battery-pricing-app`'s `ProjectComment` model (`prisma/schema.prisma:275-289`) — same shape, ported directly:
   ```prisma
@@ -70,10 +70,10 @@
 
   Depends on TECH-006 (`User` table must exist for the `authorUserId` FK) — this card can't ship before auth's data model does.
 
-  **Migration of existing data**: `Hypothesis.comment` is a plain `String?` today with real (if sparse) values in the dev DB. Since that field never recorded *who* wrote it, there's no genuine author to attribute old comments to — the plan is to migrate each non-null `comment` value into one `HypothesisComment` row attributed to the TECH-006 bootstrap user, then drop the column. This is a documented default, not a silent guess: flag it to the user again at implementation time in case they'd rather just drop old comment text instead of migrating it (low-stakes either way, dev DB only, not yet deployed).
+  **Existing data**: the user explicitly chose to delete the sparse test values in `Hypothesis.comment` rather than migrate them, since they are not production data.
 - **Acceptance Criteria:**
   - `npx prisma db push` applies the new model and the dropped `Hypothesis.comment` column cleanly.
-  - A one-time migration script converts every hypothesis with a non-null `comment` into exactly one `HypothesisComment` row (attributed to the bootstrap user) before the column is dropped — verified by comparing pre-migration comment count to post-migration `HypothesisComment` row count.
+  - Existing legacy comment values are deleted rather than migrated, per the user's explicit decision; the new `HypothesisComment` table starts empty.
   - No other Hypothesis/Experiment fields or domain logic touched.
 
 ## TECH-009 — Auth: invite-based user creation and password set

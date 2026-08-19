@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- [PROD-028] No code change — `/backlog/new` already renders the full
+  `HypothesisForm` (name, description, Funnel Level, Status, Impact/
+  Effort/Reach/Confidence with live Score, Моделирование/Выборка/Task),
+  the same component `/backlog/[id]` uses to edit; `createHypothesis`
+  only requires name/text, everything else defaults. Verified live
+  (`get_page_text` on `/backlog/new`) that every field the card asked
+  for is present. Closed as already satisfied.
+
 - [PROD-026] The hypothesis card's summary block (status, Score,
   Funnel Level, linked experiment + current stage, Result, and a
   context-aware next action) and the status-sync-to-IN_PROGRESS/DONE

@@ -1,5 +1,55 @@
 # Tech Backlog
 
+## TECH-018 — Add indexes to AuditLog for /activity's filter/sort columns
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Performance
+- **Type:** Chore
+- **Summary:** `AuditLog` (`prisma/schema.prisma`) has no `@@index` at all, despite `src/app/activity/page.tsx` filtering by `userId`/`event` and sorting by `createdAt desc` (`take: 100`) on every load of `/activity`.
+- **Description:**
+  Found during a performance audit (2026-08-20). Every `/activity` request — filtered or not — forces a full sequential scan + sort of the whole `AuditLog` table to return its top 100 rows, and the table only grows (every audited mutation writes to it).
+
+  Add `@@index([createdAt])` at minimum — covers the unfiltered default sort plus the `take: 100`. Consider `@@index([userId])` too if user-filtering turns out to be common in practice. `event` uses `contains` (case-insensitive substring), which a plain btree index can't serve — leave it as-is unless full-text search becomes a real need.
+
+  This is a `prisma/schema.prisma` change, so it falls under this project's "don't change the schema outside a task that explicitly calls for it" rule — this card is that explicit call.
+- **Acceptance Criteria:**
+  - `AuditLog` has `@@index([createdAt])` (and `@@index([userId])` if implemented).
+  - `npx prisma db push` applies cleanly against the local dev DB.
+  - `/activity` still filters/sorts/paginates identically — no behavior change, only the query plan improves.
+  - No other model or column touched.
+
+## TECH-017 — Backlog/AllExperimentsTable: selection context re-renders every row checkbox on any toggle
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Performance
+- **Type:** Fix
+- **Summary:** `SelectionProvider` (`src/components/BulkSelection.tsx`) passes a freshly-constructed value object (and a new `Set`) to `SelectionContext` on every render; since every `RowCheckbox` in Backlog and AllExperimentsTable consumes the full context, toggling one checkbox re-renders every row's checkbox instead of just the one that changed.
+- **Description:**
+  Found during a performance audit (2026-08-20). Context updates bypass `memo` entirely — a new context value reference forces every consumer to re-render regardless of whether the specific data it reads changed. `selected` changes reference on every single toggle (`toggleRow`), so this is effectively O(rows) re-renders per click on tables that currently fetch their full unpaginated dataset.
+
+  Fix: keep the stable callbacks (`toggleActive`, `toggleRow`, `toggleAll`, `clear`) memoized with `useMemo`/`useCallback` so they don't force re-renders on their own, and move per-row `selected` membership out of the shared context value — e.g. a per-row selector hook (`useSyncExternalStore` reading a ref-backed `Set`, or splitting into a separate context keyed by row id) so only the toggled row's `RowCheckbox` actually re-renders.
+- **Acceptance Criteria:**
+  - Toggling one row's checkbox in Backlog or the "all experiments" table does not re-render other rows' `RowCheckbox`/`SelectAllCheckbox` components (verified via React DevTools profiler or an added render-count check).
+  - Select-all, clear-on-cancel, and bulk archive/delete still work identically from a user's perspective.
+  - No change to `SelectionProvider`'s public API (`useSelection`, `RowCheckbox`, `SelectAllCheckbox`, `SelectModeToggle`) beyond internals — existing call sites in Backlog and AllExperimentsTable need no changes.
+
+## TECH-016 — Memoize getCurrentUser() per request
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Performance
+- **Type:** Fix
+- **Summary:** `getCurrentUser()` (`src/lib/auth/session.ts`) runs a JWT verify plus `prisma.user.findFirst` on every call, and it's called more than once per request — once from the root layout, again from `requireUserPage()` on pages that use it (`/activity`, `/backlog/[id]`, `/users`), and again from server actions that call `auditBacklogEvent`. Wrap it in React's `cache()` so repeated calls within one request dedupe to a single query.
+- **Description:**
+  Found during a performance audit (2026-08-20). `src/app/layout.tsx` calls `getCurrentUser()` to render the header, and `requireUserPage()` (`src/lib/auth/page-guards.ts`) calls it again inside the page itself — React doesn't dedupe plain async function calls the way it dedupes `fetch`, so this is a full duplicate DB round-trip on every affected page load, and it's the single most frequently executed query path in the app (it runs on essentially every request).
+- **Acceptance Criteria:**
+  - `getCurrentUser` is wrapped in `cache()` from `"react"` in `src/lib/auth/session.ts`.
+  - Within a single request, calling `getCurrentUser()` from both the layout and a page (or a server action) results in exactly one `prisma.user.findFirst` call, not two.
+  - Session-revocation behavior (mismatched `sessionVersion`, expired/tampered token, inactive user) is unchanged — the cached result still reflects a real per-request lookup, just deduped within that request, not across requests.
+  - No change to `getCurrentUser`'s public signature or return type — all existing call sites keep working unmodified.
+
 ## TECH-015 — Extend AuditLog to general domain actions, plus a log viewer
 
 - **Status:** DONE

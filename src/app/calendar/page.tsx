@@ -23,12 +23,18 @@ import { RolloutCell } from "./RolloutCell";
 import { AuthorCell } from "./AuthorCell";
 import { AllExperimentsTable } from "./AllExperimentsTable";
 
+// UI-051: the default (no `?start=`) window anchors 2 weeks before the
+// current one, not on it — so "Сегодня" shows 2 past weeks, the current
+// week, and 5 future weeks (still WINDOW_WEEKS=8 total), instead of the
+// current week plus 7 future ones with no history visible.
+const DEFAULT_WINDOW_LOOKBACK_WEEKS = 2;
+
 function parseWindowStart(start: string | undefined): Date {
   if (start) {
     const parsed = new Date(`${start}T00:00:00`);
     if (!Number.isNaN(parsed.getTime())) return startOfWeek(parsed);
   }
-  return startOfWeek(new Date());
+  return addWeeks(startOfWeek(new Date()), -DEFAULT_WINDOW_LOOKBACK_WEEKS);
 }
 
 /** Keeps the grid a stable height regardless of how many rows are in the current window. */
@@ -161,7 +167,7 @@ export default async function CalendarPage({
   const prevHref = calendarHref({ start: addWeeks(windowStart, -PAGE_STEP_WEEKS) });
   const nextHref = calendarHref({ start: addWeeks(windowStart, PAGE_STEP_WEEKS) });
   const todayHref = calendarHref();
-  const isToday = windowStart.getTime() === startOfWeek(new Date()).getTime();
+  const isToday = windowStart.getTime() === parseWindowStart(undefined).getTime();
 
   function cellMatchesFilter(cellStage: string | null, weekStartISO: string): boolean {
     const selectedStage = weekStageFilters.get(weekStartISO);

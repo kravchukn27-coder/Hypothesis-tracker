@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- [UI-051] Calendar's default window (no `?start=`, including the
+  "Сегодня" button) now anchors 2 weeks before the current one instead
+  of on it — 2 past weeks, the current week, and 5 future weeks (still
+  `WINDOW_WEEKS=8` total), so the current week isn't the leftmost
+  column with no history visible. `parseWindowStart`
+  (`src/app/calendar/page.tsx`) shifts its no-`start` fallback by a new
+  `DEFAULT_WINDOW_LOOKBACK_WEEKS = 2`; `isToday` (used for the
+  "Сегодня" button's disabled state) now compares against that same
+  default instead of the raw current week, so it still correctly
+  detects "already on the default view." Explicit `?start=` (from
+  `experimentId` jumps, etc.) and the ‹/› paging step are unchanged.
+
 - [UI-046] Backlog no longer repeats the linked experiment's stage
   beneath a hypothesis name. A new rightmost action column holds an
   icon-only link to that experiment's focused Calendar view. The green

@@ -54,10 +54,10 @@ export function WeekHeaderCell({
       }}
       aria-busy={isPending}
       className={`min-w-0 overflow-hidden border-l border-zinc-100 px-1 py-2 text-center leading-tight transition-opacity ${
-        isDragOver ? "bg-zinc-900/10" : isToday ? "bg-blue-50/60 text-blue-700" : ""
+        isDragOver ? "bg-zinc-900/10" : isToday ? "bg-indigo-100 font-semibold text-indigo-700" : ""
       } ${isPending ? "opacity-60" : ""}`}
     >
-      <div>{children}</div>
+      <div className={isToday ? "text-sm" : ""}>{children}</div>
       <WeekStageFilter weekStartISO={weekStartISO} value={stageFilter} options={stageOptions} />
     </div>
   );

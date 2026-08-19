@@ -228,12 +228,12 @@ export function ExperimentWeekRow({
         const isOpen = openWeekIndex === i;
         const isOverdueCell = overdue && cell.weekStartISO === overdueWeekStartISO;
         if (cell.hidden) {
-          return <div key={i} className={`border-l border-zinc-100 ${cell.isToday ? "bg-blue-50/60" : ""}`} />;
+          return <div key={i} className={`border-l border-zinc-100 ${cell.isToday ? "bg-indigo-50" : ""}`} />;
         }
         return (
           <div
             key={i}
-            className={`group relative border-l border-zinc-100 ${cell.isToday ? "bg-blue-50/60" : ""}`}
+            className={`group relative border-l border-zinc-100 ${cell.isToday ? "bg-indigo-50" : ""}`}
             style={{ gridColumn: i + 1, gridRow: 1 }}
           >
             {cell.stage ? (

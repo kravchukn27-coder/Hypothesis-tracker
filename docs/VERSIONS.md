@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- [UI-050] The current week's column is noticeably brighter now, in
+  both Calendar's header (`WeekHeaderCell.tsx`) and body cells
+  (`ExperimentWeekRow.tsx`): `bg-blue-50/60` (barely visible, and the
+  same hue as the Experimentation stage color) is now `bg-indigo-100
+  font-semibold text-indigo-700` in the header and `bg-indigo-50` in
+  the body — indigo isn't used by any stage color
+  (Discovery/Design/Development/Experimentation/Analysis/Done), so the
+  highlight can't be mistaken for a stage. `isDragOver`/`isPending`
+  precedence on the header cell and the stage-pill rendering inside
+  body cells are unchanged; only the `isToday` branch's colors moved.
+  Follow-up same day: the current week's date label itself
+  (`formatWeekLabel`, e.g. "17 авг.") was inheriting the header row's
+  `text-xs` like every other week — bumped to `text-sm` in
+  `WeekHeaderCell.tsx`, gated on `isToday` so only the current week's
+  label grows; the rest keep their original size.
+
 - [UI-051] Calendar's default window (no `?start=`, including the
   "Сегодня" button) now anchors 2 weeks before the current one instead
   of on it — 2 past weeks, the current week, and 5 future weeks (still

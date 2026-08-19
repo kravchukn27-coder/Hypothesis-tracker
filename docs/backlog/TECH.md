@@ -2,7 +2,7 @@
 
 ## TECH-012 — Backlog table: latest-comment preview from the feed
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Backlog
 - **Type:** Feature

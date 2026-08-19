@@ -55,7 +55,7 @@ export const CHECKBOX_COL = "w-8";
 // UI-023: the Backlog table with two rows is the visual reference for
 // every tabular screen. The outer surface is vertically scrollable;
 // table data must never resize it or introduce horizontal scrolling.
-export const TABLE_SURFACE_WIDTH = "mx-auto w-full min-w-0 max-w-[1014px]";
+export const TABLE_SURFACE_WIDTH = "mx-auto w-full min-w-0 max-w-[1160px]";
 export const TABLE_CONTENT_WIDTH = "w-full min-w-0";
 export const TABLE_SURFACE_HEIGHT = "h-[164px]";
 

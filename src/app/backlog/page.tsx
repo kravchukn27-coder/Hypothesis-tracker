@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, ArrowUpRight, Clock } from "lucide-react";
+import { Archive, CalendarDays, Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
@@ -257,15 +257,8 @@ export default async function BacklogPage({
                     href={(d) => sortHref("score", d)}
                   />
                 </th>
-                {/* Left-aligned on purpose, unlike its siblings: Comment
-                    previews a long excerpt with a right-edge fade mask
-                    (see the body cell below) that assumes left-to-right
-                    reading — centering would fight that truncation
-                    pattern and read worse, not better. */}
-                <th className={`${COMMENT_COL} px-4 py-2`}>Comment</th>
-                <th className={`${EXPERIMENT_ACTION_COL} px-4 py-2`}>
-                  <span className="sr-only">Действия с экспериментом</span>
-                </th>
+                <th className={`${COMMENT_COL} px-4 py-2 text-center`}>Comment</th>
+                <th className={`${EXPERIMENT_ACTION_COL} px-4 py-2 text-center`}>Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -345,11 +338,11 @@ export default async function BacklogPage({
                       {experimentHref ? (
                         <Link
                           href={experimentHref}
-                          aria-label="Показать эксперимент на Calendar"
-                          title="Показать эксперимент на Calendar"
+                          aria-label="Показать на календаре"
+                          title="Показать на календаре"
                           className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
                         >
-                          <ArrowUpRight className="size-4" aria-hidden />
+                          <CalendarDays className="h-4 w-4" aria-hidden />
                         </Link>
                       ) : h.experiments.length > 0 ? (
                         <span

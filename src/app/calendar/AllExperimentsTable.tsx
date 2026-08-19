@@ -30,7 +30,7 @@ import { RolloutCell } from "./RolloutCell";
 import { toDateParam } from "@/lib/calendar";
 
 // UI-041: this table's 9 columns don't all fit at their shared-constant
-// widths within Backlog's narrower TABLE_SURFACE_WIDTH (1014px), so
+// widths within the surface that existed before Backlog was widened, so
 // several stay local overrides rather than the shared NAME_COL/
 // META_COL/LONG_TEXT_COL/DATE_COL — same "local override" pattern this
 // file already used for Segment before the redesign. NAME_COL and
@@ -191,8 +191,8 @@ export async function AllExperimentsTable({
   const hasColumnFilters = Boolean(stages.length || segmentsFilter.length || authors.length || funnelLevelsFilter.length);
 
   return (
-    // UI-041: this table now caps at TABLE_SURFACE_WIDTH (1014px, same
-    // as Backlog) instead of the outer Calendar page's own wider
+    // UI-041: this table now caps at TABLE_SURFACE_WIDTH (1160px, the
+    // same width as Backlog) instead of the outer Calendar page's own wider
     // max-w-[1600px] chrome — that outer cap is shared with the
     // Timeline view and stays wide on purpose, so the count/search/bulk
     // rows get their own matching cap here rather than inheriting the
@@ -256,7 +256,7 @@ export async function AllExperimentsTable({
         ) : (
           <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
             <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
-              <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
+              <thead className="bg-zinc-50 text-xs font-medium text-zinc-500">
                 <tr>
                   <th className={`${CHECKBOX_COL} px-4 py-2`}>
                     <SelectAllCheckbox />
@@ -334,7 +334,7 @@ export async function AllExperimentsTable({
                       href={(d) => sortHref("startDate", d)}
                     />
                   </th>
-                  <th className={`${ACTION_COL} px-4 py-2`} />
+                  <th className={`${ACTION_COL} px-4 py-2 text-center`}>Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">

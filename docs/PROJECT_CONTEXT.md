@@ -19,7 +19,8 @@ Source of truth for the original data model: a Google Sheet exported as
 Authentication uses local email/password accounts. Every app page is protected
 by the signed-session proxy; `/login` and one-time `/invite/[token]` password
 setup links are the public entry points. Any authenticated user can issue an
-invite manually; the app sends no email.
+invite manually; the app sends no email. See "Auth & Logging" below for
+details on both — they shipped together and share the same redaction layer.
 
 ## Screens (build order)
 
@@ -61,6 +62,12 @@ invite manually; the app sends no email.
    Backlog form's Funnel Level select+add, UI-001), and list
    filter/sort on Backlog and Experiments (PROD-004, PROD-007,
    PROD-008), see below.
+5. **Users** ✅ — `/users`, list of active accounts (name, email, who
+   invited them, "Активен"/"Ожидает пароль" from whether
+   `passwordHash` is set yet) plus an invite form. No self-service
+   signup — every account starts as an invite issued by an already
+   signed-in user (`src/lib/auth/invite-actions.ts`), consumed once at
+   `/invite/[token]` to set a password. See "Auth & Logging" below.
 
 All planned screens/mechanics are now built. Delete (PROD-005) also
 shipped. Remaining work is the visual design pass — see "Current
@@ -287,6 +294,71 @@ list you add to; they're something you spin off *from* a hypothesis:
   its hypothesis to `NEW`, while deleting one of several leaves its
   status unchanged — experiment presence and this lifecycle status
   cannot drift apart.
+
+## Auth & Logging
+
+Shipped together (in-progress work referenced by UI-042's VERSIONS.md
+entry, now landed) since alerts and audit trails need to know which
+user triggered them.
+
+### Authentication
+
+- Local email/password accounts (`User.passwordHash`, scrypt via
+  `src/lib/auth/password.ts`) — no OAuth/SSO provider.
+- No self-service signup. An already signed-in user issues an invite
+  from `/users` (`src/lib/auth/invite-actions.ts`); the app sends no
+  email, so the link is shared manually. The recipient sets their
+  password once at `/invite/[token]` (`src/lib/auth/invites.ts`) — the
+  token is single-use and the account has no `passwordHash` until then
+  (`/users` shows it as "Ожидает пароля").
+- Sessions are a signed cookie (`SESSION_COOKIE_NAME`,
+  `src/lib/auth/config.ts`), 7-day expiry, verified by
+  `src/proxy.ts` (Next.js middleware) on every request except
+  `/login`, `/invite/*`, `_next/`, and `api/`. `SESSION_SECRET` (env,
+  32+ chars) signs the token (`src/lib/auth/token.ts`); rotating it
+  invalidates every session at once.
+- `/login` is rate-limited per account/IP
+  (`src/lib/auth/login-rate-limit.ts`, backed by the
+  `LoginRateLimitBucket` table) to slow down credential-stuffing.
+- `session-version.ts` lets a session be invalidated server-side
+  (e.g. on password change) without needing `SESSION_SECRET` rotated
+  for everyone.
+
+### Logging & Monitoring
+
+- `src/lib/log.ts` exports `logInfo`/`logWarn`/`logError`, each
+  emitting one structured JSON line to stdout
+  (`{level, event, ts, metadata, ...}`). `createOperationCorrelationId`/
+  `withOperationCorrelation` thread a UUID through the log lines of one
+  operation so they can be grepped together.
+- All logged metadata passes through
+  `src/lib/audit-metadata-redaction.ts` first — any key matching
+  `password|token|secret|cookie|authorization|session` (case-insensitive)
+  is replaced with `"[REDACTED]"`, recursively, before it reaches
+  stdout or the database. This is the one redaction path shared by
+  logging and audit trails, so a sensitive key can't leak through
+  either.
+- `logError` additionally calls `recordErrorEvent`
+  (`src/lib/error-events.ts`), which hashes `(errorName, route,
+  normalized message)` into a signature and upserts it into the
+  `ErrorEvent` table — repeated occurrences of the same error increment
+  a counter instead of creating new rows, so the table stays a
+  deduplicated index of *distinct* failures, not a raw log stream.
+- Telegram alerting (`src/lib/telegram-alert.ts`) is opt-in via
+  `MONITOR_TELEGRAM_BOT_TOKEN`/`MONITOR_TELEGRAM_CHAT_ID` — a no-op if
+  unset. It fires on a brand-new error signature, or on a rate spike
+  (10+ occurrences within a 5-minute window, with a 30-minute cooldown
+  between spike alerts for the same signature) via
+  `RATE_ALERT_THRESHOLD`/`RATE_ALERT_WINDOW_MS`/`ALERT_COOLDOWN_MS` in
+  `error-events.ts`.
+- `src/lib/audit-log.ts` is a separate, deliberately simpler concern:
+  user-attributed action history (`AuditLog` table: `event`, `userId`,
+  redacted `metadata`), not error tracking. `safeWriteAuditLog` never
+  throws — a failed audit write is itself routed through
+  `captureServerError` instead of breaking the caller's request.
+- `npm run verify:auth` (`scripts/verify-auth-core.ts`) is a scripted
+  smoke check of the auth core — run it after touching anything under
+  `src/lib/auth/`.
 
 ## Origin Data Model (Excel → Prisma mapping)
 

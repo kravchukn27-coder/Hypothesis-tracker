@@ -111,7 +111,16 @@ export default async function BacklogPage({
     return `/backlog?${params.toString()}`;
   }
 
+  function resetColumnFiltersHref() {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    params.set("sort", sort);
+    params.set("dir", currentDir);
+    return `/backlog?${params.toString()}`;
+  }
+
   const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q);
+  const hasColumnFilters = Boolean(funnelLevelsFilter.length || statuses.length);
 
   // Page container matches the Backlog table so the header,
   // search box, and "+ Новая гипотеза" button share the table's exact
@@ -132,6 +141,15 @@ export default async function BacklogPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={resetColumnFiltersHref()}
+            aria-disabled={!hasColumnFilters}
+            className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
+              hasColumnFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
+            }`}
+          >
+            Сбросить фильтр
+          </Link>
           <Link
             href="/backlog/new"
             className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"

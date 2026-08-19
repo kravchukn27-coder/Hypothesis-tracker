@@ -176,7 +176,19 @@ export async function AllExperimentsTable({
     return `/calendar?${params.toString()}`;
   }
 
+  function resetColumnFiltersHref() {
+    const params = new URLSearchParams();
+    params.set("calendarView", "all");
+    if (hypothesisId) params.set("hypothesisId", hypothesisId);
+    if (q) params.set("q", q);
+    if (view) params.set("view", view);
+    params.set("sortBy", sortBy);
+    params.set("dir", currentDir);
+    return `/calendar?${params.toString()}`;
+  }
+
   const isFiltered = Boolean(stages.length || segmentsFilter.length || authors.length || funnelLevelsFilter.length || q || view);
+  const hasColumnFilters = Boolean(stages.length || segmentsFilter.length || authors.length || funnelLevelsFilter.length);
 
   return (
     // UI-041: this table now caps at TABLE_SURFACE_WIDTH (1014px, same
@@ -187,11 +199,20 @@ export async function AllExperimentsTable({
     // page's, keeping every row's left/right edges aligned with the
     // table below it.
     <div className={`${TABLE_SURFACE_WIDTH} flex flex-col gap-4`}>
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-zinc-500">
           {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
           {isFiltered ? " (с фильтром)" : ""}
         </p>
+        <Link
+          href={resetColumnFiltersHref()}
+          aria-disabled={!hasColumnFilters}
+          className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
+            hasColumnFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
+          }`}
+        >
+          Сбросить фильтр
+        </Link>
       </div>
 
       <SelectionProvider ids={experiments.map((e) => e.id)}>

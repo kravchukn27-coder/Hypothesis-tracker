@@ -2,14 +2,31 @@
 
 ## Unreleased
 
-- [UI-031] Renamed the hypothesis card's button to its experiment
-  (`backlog/[id]/page.tsx`) from "Показать эксперимент" to "Карточка
-  эксперимента" — the old label read as ambiguous next to "Открыть в
-  Calendar"/"Показать на календаре" elsewhere (open the card vs. show
-  it on the calendar), a leftover from when "Добавить эксперимент"
-  sat next to it (removed in PROD-034). Same `href`, same behavior —
-  text only. Verified live: button reads "Карточка эксперимента" and
-  still navigates to `/experiments/[id]`.
+- [UI-037] `/experiments/[id]` now reads as the same design pattern as
+  `/backlog/[id]` (`src/app/experiments/[id]/page.tsx`). Added the
+  equivalent hero block — a stage Badge (`STAGE_BADGE_CLASSES`/
+  `stageLabel`, "—" for TECH-005's unset state via `Badge`'s neutral
+  default) and a Funnel Level Badge (`FUNNEL_LEVEL_BADGE_COLOR`, from
+  `experiment.hypothesis.funnelLevel`) on the first row, then
+  "Гипотеза: {name}" paired with the "Показать на календаре" link on
+  the second — same `rounded-xl border border-zinc-200 bg-zinc-50 p-5`
+  shape, same two-row layout as the hypothesis card's hero. Moved
+  "Показать на календаре" out of the header (where it was a bordered
+  button, `flex shrink-0 items-center gap-3`) into the hero as an
+  underlined text link, and aligned the remaining header button
+  container's classes to the hypothesis page's
+  (`flex-wrap justify-end gap-2`) — same link, same target, only the
+  location/styling changed. Also caught on a second pass: `HypothesisForm`'s
+  `<form>` root carries the card wrapper itself
+  (`rounded-xl border border-zinc-200 bg-white p-5 pb-24 sm:p-7 sm:pb-24`)
+  — `ExperimentForm`'s `<form>` (`src/app/experiments/ExperimentForm.tsx`)
+  had no equivalent, so its fields sat directly on the page background
+  with no card framing at all. Matched the same classes. No schema or
+  domain-logic changes; save/archive/delete/calendar-link behavior is
+  identical. `tsc --noEmit`/`eslint src/` clean. Verified live: opened
+  an experiment card and its hypothesis's card side by side, confirmed
+  matching hero shape, badge styling, header button treatment, and now
+  matching form card framing too.
 
 - [UI-036] Renamed Calendar's undated-experiment sidebar header from
   "Без дат" to "Эксперименты без даты" (`calendar/page.tsx`) — the

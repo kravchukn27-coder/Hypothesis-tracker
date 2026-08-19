@@ -17,9 +17,11 @@ import { ExperimentForm } from "../ExperimentForm";
 import { ArchivePromptGate } from "../ArchivePromptGate";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { Badge } from "@/components/Badge";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { toDateParam } from "@/lib/calendar";
-import { currentStageOf } from "@/lib/experiment";
+import { STAGE_BADGE_CLASSES, currentStageOf, stageLabel } from "@/lib/experiment";
+import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -81,16 +83,7 @@ export default async function ExperimentDetailPage({
             )}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          {calendarHref && !isHiddenFromCalendar && (
-            <Link
-              href={calendarHref}
-              className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-            >
-              <CalendarDays className="size-4" aria-hidden />
-              Показать на календаре
-            </Link>
-          )}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {experiment.archived ? (
             <ConfirmDeleteButton
               onConfirm={unarchiveExperiment.bind(null, experiment.id)}
@@ -121,6 +114,29 @@ export default async function ExperimentDetailPage({
           />
         </div>
       </div>
+
+      <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge color={currentStage ? STAGE_BADGE_CLASSES[currentStage] : undefined}>
+            {stageLabel(currentStage)}
+          </Badge>
+          {experiment.hypothesis.funnelLevel && (
+            <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{experiment.hypothesis.funnelLevel.name}</Badge>
+          )}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-600">
+          <p>Гипотеза: {experiment.hypothesis.name}</p>
+          {calendarHref && !isHiddenFromCalendar && (
+            <Link
+              href={calendarHref}
+              className="inline-flex items-center gap-2 font-medium text-zinc-900 underline underline-offset-4"
+            >
+              <CalendarDays className="size-4" aria-hidden />
+              Показать на календаре
+            </Link>
+          )}
+        </div>
+      </section>
 
       <Suspense fallback={null}>
         <ArchivePromptGate experimentId={experiment.id} experimentName={experiment.name} />

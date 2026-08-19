@@ -102,7 +102,7 @@ export function ExperimentForm({
   }, [state.error, showToast]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-8 pb-20">
+    <form action={formAction} className="flex flex-col gap-8 rounded-xl border border-zinc-200 bg-white p-5 pb-24 sm:p-7 sm:pb-24">
       {state.error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-600/20">
           {state.error}

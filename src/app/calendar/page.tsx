@@ -181,25 +181,26 @@ export default async function CalendarPage({
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 px-6 py-8">
       <div className={`flex items-center justify-between gap-4 ${showAll ? TABLE_SURFACE_WIDTH : ""}`}>
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-900">Calendar</h1>
-          {!showAll && (
-            <p className="mt-1 text-sm text-zinc-500">
-              {displayedExperiments.length === 0
-                ? "Пока нет экспериментов"
-                : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}${outOfRange.length ? `, ${outOfRange.length} вне диапазона` : ""}`}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-zinc-900">Calendar</h1>
+            {!showAll && (
+              <p className="mt-1 text-sm text-zinc-500">
+                {displayedExperiments.length === 0
+                  ? "Пока нет экспериментов"
+                  : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}${outOfRange.length ? `, ${outOfRange.length} вне диапазона` : ""}`}
+              </p>
+            )}
+          </div>
           <Link
             href={showAll ? calendarHref() : "/calendar?calendarView=all"}
-            className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            className="mt-0.5 rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
             {showAll ? "Таймлайн" : "Показать все эксперименты"}
           </Link>
-          {!showAll && (
-            <>
+        </div>
+        {!showAll && (
+          <div className="flex items-center gap-2">
               <Link
                 href={todayHref}
                 aria-disabled={isToday}
@@ -223,9 +224,8 @@ export default async function CalendarPage({
               >
                 <ChevronRight className="h-4 w-4" />
               </Link>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {showAll && <AllExperimentsTable searchParams={params} />}

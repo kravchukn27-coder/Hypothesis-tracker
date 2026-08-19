@@ -43,7 +43,7 @@
 
 ## UI-043 — Отделить кнопку «Показать все эксперименты» от навигации по неделям в Calendar
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** UI / Calendar
 - **Type:** UI fix

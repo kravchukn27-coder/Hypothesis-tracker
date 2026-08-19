@@ -204,15 +204,6 @@ export async function AllExperimentsTable({
           {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
           {isFiltered ? " (с фильтром)" : ""}
         </p>
-        <Link
-          href={resetColumnFiltersHref()}
-          aria-disabled={!hasColumnFilters}
-          className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
-            hasColumnFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
-          }`}
-        >
-          Сбросить фильтр
-        </Link>
       </div>
 
       <SelectionProvider ids={experiments.map((e) => e.id)}>
@@ -230,7 +221,18 @@ export async function AllExperimentsTable({
               fields={[]}
             />
           </Suspense>
-          <SelectModeToggle />
+          <div className="flex items-center gap-3">
+            <Link
+              href={resetColumnFiltersHref()}
+              aria-disabled={!hasColumnFilters}
+              className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
+                hasColumnFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
+              }`}
+            >
+              Сбросить фильтр
+            </Link>
+            <SelectModeToggle />
+          </div>
         </div>
 
         <BulkActionBar

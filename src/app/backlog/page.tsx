@@ -103,13 +103,13 @@ export default async function BacklogPage({
   const now = new Date();
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-8">
       <Suspense fallback={null}>
         <SavedToastGate />
       </Suspense>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Backlog</h1>
+          <h1 className="text-xl font-semibold text-zinc-900">Backlog</h1>
           <p className="mt-1 text-sm text-zinc-500">
             {rows.length} {rows.length === 1 ? "гипотеза" : "гипотез"}
             {isFiltered ? " (с фильтром)" : ""}
@@ -172,10 +172,10 @@ export default async function BacklogPage({
           <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
             <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className={`${CHECKBOX_COL} px-4 py-3`}>
+                <th className={`${CHECKBOX_COL} px-4 py-2`}>
                   <SelectAllCheckbox />
                 </th>
-                <th className={`${NAME_COL} px-4 py-3`}>
+                <th className={`${NAME_COL} px-4 py-2`}>
                   <div className="flex items-center gap-2">
                     <SortableHeader
                       label="Name"
@@ -194,7 +194,7 @@ export default async function BacklogPage({
                     />
                   </div>
                 </th>
-                <th className={`${STATUS_COL} px-4 py-3 text-center`}>
+                <th className={`${STATUS_COL} px-4 py-2 text-center`}>
                   <div className="flex justify-center gap-1">
                     <SortableHeader
                       label="Status"
@@ -206,8 +206,8 @@ export default async function BacklogPage({
                     <HeaderMultiFilter name="status" label="Фильтр" options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] }))} />
                   </div>
                 </th>
-                <th className={`${FUNNEL_LEVEL_COL} px-4 py-3`}><HeaderMultiFilter name="funnelLevel" label="Funnel Level" options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))} /></th>
-                <th className={`${META_COL} px-4 py-3 text-left`}>
+                <th className={`${FUNNEL_LEVEL_COL} px-4 py-2`}><HeaderMultiFilter name="funnelLevel" label="Funnel Level" options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))} /></th>
+                <th className={`${META_COL} px-4 py-2 text-left`}>
                   <SortableHeader
                     label="Score"
                     active={sort === "score"}
@@ -216,7 +216,7 @@ export default async function BacklogPage({
                     href={(d) => sortHref("score", d)}
                   />
                 </th>
-                <th className={`${COMMENT_COL} px-4 py-3`}>Comment</th>
+                <th className={`${COMMENT_COL} px-4 py-2`}>Comment</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -248,10 +248,10 @@ export default async function BacklogPage({
                   key={h.id}
                   className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]}`}
                 >
-                  <td className={`${CHECKBOX_COL} px-4 py-3`}>
+                  <td className={`${CHECKBOX_COL} px-4 py-2`}>
                     <RowCheckbox id={h.id} />
                   </td>
-                  <td className={`${NAME_COL} min-w-0 px-4 py-3`}>
+                  <td className={`${NAME_COL} min-w-0 px-4 py-2`}>
                     <Link
                       href={`/backlog/${h.id}`}
                       title={h.name}
@@ -278,7 +278,7 @@ export default async function BacklogPage({
                       )
                     )}
                   </td>
-                  <td className={`${STATUS_COL} px-4 py-3 text-center`}>
+                  <td className={`${STATUS_COL} px-4 py-2 text-center`}>
                     <StatusCell
                       hypothesisId={h.id}
                       hypothesisName={h.name}
@@ -287,7 +287,7 @@ export default async function BacklogPage({
                     />
                     {h.status === "ACCEPTED" && <div className="mt-2"><TakeInWorkButton hypothesisId={h.id} /></div>}
                   </td>
-                  <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-3`}>
+                  <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-2`}>
                     {h.funnelLevel ? (
                       <span className="block max-w-full" title={h.funnelLevel.name}>
                         <Badge color={FUNNEL_LEVEL_BADGE_COLOR} className="max-w-full truncate">
@@ -298,10 +298,10 @@ export default async function BacklogPage({
                       <span className="text-zinc-500">—</span>
                     )}
                   </td>
-                  <td className={`${META_COL} px-4 py-3 text-left font-medium tabular-nums text-zinc-900`}>
+                  <td className={`${META_COL} px-4 py-2 text-left font-medium tabular-nums text-zinc-900`}>
                     {h.score.toFixed(2)}
                   </td>
-                  <td className={`${COMMENT_COL} px-4 py-3`}>
+                  <td className={`${COMMENT_COL} px-4 py-2`}>
                     {h.comment ? (
                       <Link
                         href={`/backlog/${h.id}`}

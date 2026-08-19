@@ -122,7 +122,7 @@ export async function AllExperimentsTable({
   const isFiltered = Boolean(stages.length || segmentsFilter.length || authors.length || q || view);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
         <p className="text-sm text-zinc-500">
           {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
@@ -173,10 +173,10 @@ export async function AllExperimentsTable({
             <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
               <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <tr>
-                  <th className={`${CHECKBOX_COL} px-4 py-3`}>
+                  <th className={`${CHECKBOX_COL} px-4 py-2`}>
                     <SelectAllCheckbox />
                   </th>
-                  <th className={`${NAME_COL} px-4 py-3`}>
+                  <th className={`${NAME_COL} px-4 py-2`}>
                     <div className="flex items-center gap-2">
                       <SortableHeader
                         label="Эксперимент"
@@ -195,7 +195,7 @@ export async function AllExperimentsTable({
                       />
                     </div>
                   </th>
-                  <th className={`${STATUS_COL} px-4 py-3`}>
+                  <th className={`${STATUS_COL} px-4 py-2`}>
                     <SortableHeader
                       label="Status"
                       active={sortBy === "stage"}
@@ -204,7 +204,7 @@ export async function AllExperimentsTable({
                       href={(d) => sortHref("stage", d)}
                     />
                   </th>
-                  <th className={`${META_COL} px-4 py-3`}>
+                  <th className={`${META_COL} px-4 py-2`}>
                     <SortableHeader
                       label="Автор"
                       active={sortBy === "author"}
@@ -213,7 +213,7 @@ export async function AllExperimentsTable({
                       href={(d) => sortHref("author", d)}
                     />
                   </th>
-                  <th className={`${SEGMENT_COL} px-4 py-3`}>
+                  <th className={`${SEGMENT_COL} px-4 py-2`}>
                     <SortableHeader
                       label="Segment"
                       active={sortBy === "segment"}
@@ -222,7 +222,7 @@ export async function AllExperimentsTable({
                       href={(d) => sortHref("segment", d)}
                     />
                   </th>
-                  <th className={`${DATE_COL} px-4 py-3`}>
+                  <th className={`${DATE_COL} px-4 py-2`}>
                     <SortableHeader
                       label="Даты"
                       active={sortBy === "startDate"}
@@ -247,10 +247,10 @@ export async function AllExperimentsTable({
                       data-highlighted={isHighlighted || undefined}
                       className={`border-l-4 transition-colors hover:bg-zinc-50 ${stageBorderClass(currentStage)} ${isHighlighted ? "bg-amber-50" : ""}`}
                     >
-                      <td className={`${CHECKBOX_COL} px-4 py-3`}>
+                      <td className={`${CHECKBOX_COL} px-4 py-2`}>
                         <RowCheckbox id={e.id} />
                       </td>
-                      <td className={`${NAME_COL} min-w-0 px-4 py-3`}>
+                      <td className={`${NAME_COL} min-w-0 px-4 py-2`}>
                         <Link
                           href={`/experiments/${e.id}`}
                           title={e.name}
@@ -266,7 +266,7 @@ export async function AllExperimentsTable({
                           {e.hypothesis.name}
                         </Link>
                       </td>
-                      <td className={`${STATUS_COL} px-4 py-3`}>
+                      <td className={`${STATUS_COL} px-4 py-2`}>
                         <StageCell
                           experimentId={e.id}
                           experimentName={e.name}
@@ -274,7 +274,7 @@ export async function AllExperimentsTable({
                           archived={e.archived}
                         />
                       </td>
-                      <td className={`${META_COL} min-w-0 px-4 py-3 text-zinc-600`}>
+                      <td className={`${META_COL} min-w-0 px-4 py-2 text-zinc-600`}>
                         {e.author ? (
                           <span className="flex min-w-0 items-center gap-2">
                             <Avatar name={e.author} />
@@ -284,13 +284,13 @@ export async function AllExperimentsTable({
                           "—"
                         )}
                       </td>
-                      <td className={`${SEGMENT_COL} px-4 py-3 text-zinc-500`}>
+                      <td className={`${SEGMENT_COL} px-4 py-2 text-zinc-500`}>
                         <span className="block truncate" title={segmentLabel(e) || undefined}>
                           {segmentLabel(e) || "—"}
                         </span>
                       </td>
                       <td
-                        className={`${DATE_COL} px-4 py-3 text-zinc-500`}
+                        className={`${DATE_COL} px-4 py-2 text-zinc-500`}
                         title={formatDateRange(e.startDate, e.endDate)}
                       >
                         {calendarHref ? (

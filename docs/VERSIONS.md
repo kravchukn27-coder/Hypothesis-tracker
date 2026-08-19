@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- [UI-029] Increased row density on Backlog, Calendar's timeline, and
+  the embedded Experiments table (`AllExperimentsTable.tsx`):
+  `backlog/page.tsx`, `calendar/page.tsx`,
+  `calendar/AllExperimentsTable.tsx` — page container `py-10 gap-6`
+  → `py-8 gap-4`, page title `text-2xl` → `text-xl`, table
+  header/body cell padding `px-4 py-3` → `px-4 py-2` (24 cells across
+  the two tables), plus matching header/name-cell padding in
+  Calendar's timeline. Left interactive control internals untouched
+  — `FIELD_CLASSES`/`Select`/`Input` (shared with the Hypothesis/
+  Experiment forms) and `ExperimentWeekRow`'s stage-bar sizing
+  (`h-11`, drag hit-targets) weren't touched, to avoid rippling into
+  unrelated screens or risking drag-and-drop precision. No new
+  scroll containers, no schema/domain-logic change. Verified live on
+  all three screens: visibly tighter rows/header/chrome, nothing
+  clipped; confirmed via `read_page` that every Backlog control
+  (status dropdowns, filter buttons, sort links, row links) is still
+  present and reachable.
+
 - [UI-037] `/experiments/[id]` now reads as the same design pattern as
   `/backlog/[id]` (`src/app/experiments/[id]/page.tsx`). Added the
   equivalent hero block — a stage Badge (`STAGE_BADGE_CLASSES`/

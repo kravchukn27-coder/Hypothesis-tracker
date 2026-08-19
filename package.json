@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "jiti prisma/seed.ts"
+    "db:seed": "jiti prisma/seed.ts",
+    "verify:auth": "jiti scripts/verify-auth-core.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

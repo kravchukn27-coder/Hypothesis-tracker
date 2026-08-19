@@ -381,6 +381,10 @@ The gitignored `.env` must define `BOOTSTRAP_NAME`, `BOOTSTRAP_EMAIL`, and
 run repeatedly: it creates the user only when that email does not already
 exist.
 
+`SESSION_SECRET` must also be set in `.env` to a random value of at least 32
+characters. It signs the seven-day authentication session cookies; it must not
+be committed or changed casually, since changing it invalidates every session.
+
 ## Documentation Map
 
 - `docs/PROJECT_CONTEXT.md` (this file) — project map, read first.

@@ -124,7 +124,7 @@
 
 ## TECH-007 — Auth: password hashing and signed-session core library
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Auth
 - **Type:** Feature

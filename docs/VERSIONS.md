@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+- Ad-hoc design polish on the app nav and Backlog's table, from live
+  user feedback (no backlog card):
+  - `layout.tsx`/`NavLinks.tsx`: header widened to `max-w-[1600px]`
+    (matches Calendar, the widest page) so "Hypothesis Tracker" sits
+    at the page's real left edge instead of a narrower centered
+    column; title bumped to `text-lg`; Backlog/Calendar are now
+    pill-toggle buttons (reused `FilterBar`'s existing quickFilter
+    pill pattern) instead of plain text links.
+  - `backlog/page.tsx`: page container narrowed to match
+    `TABLE_SURFACE_WIDTH` (1014px) so the search box and "+ Новая
+    гипотеза" share the table's exact edges instead of spanning a
+    wider outer container.
+  - `HeaderMultiFilter.tsx`: fixed a real bug — the dropdown
+    wrapper's `normal-case` reset (needed so popup option text isn't
+    uppercase) was leaking onto the trigger button itself, which is
+    why "Funnel Level" wasn't rendering uppercase like its sibling
+    headers. Also added a filter icon to the trigger (lucide
+    `Filter`) so filterable columns are visually distinct from plain
+    sortable ones; dropped the redundant "Фильтр" text on Backlog's
+    Status column since the icon now carries that meaning.
+  - `tableWidths.ts`/`backlog/page.tsx`: centered the header+content
+    of Name (later reverted per follow-up feedback, kept
+    left-aligned), Status, Funnel Level, and Score to match Status's
+    existing centered treatment; Comment stays left-aligned on
+    purpose (its right-edge fade-mask truncation assumes
+    left-to-right reading). Rebalanced column widths based on live
+    DOM measurement, not guesses: Funnel Level 176→166px (still
+    ≥123px+padding for the longest known tag, "Cancel Subscription",
+    confirmed to still fit), a new Backlog-local `SCORE_COL` (w-20,
+    not the shared `META_COL` — that also sizes Experiments' Author
+    column, which needs real room for an avatar+name) replacing the
+    oversized 112px Score column, and the freed width going to
+    Comment (240→288px). Left `STATUS_COL` untouched — measured zero
+    slack in "In progress"'s rendered width before touching it.
+  Verified live throughout: nav on both pages, filter dropdown still
+  opens and options render in sentence case, no text clipping on any
+  column at either old or newly-narrowed widths.
+
 - [UI-029] Increased row density on Backlog, Calendar's timeline, and
   the embedded Experiments table (`AllExperimentsTable.tsx`):
   `backlog/page.tsx`, `calendar/page.tsx`,

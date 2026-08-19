@@ -12,14 +12,22 @@ export function NavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-4 text-sm">
+    // Same pill-toggle language as FilterBar's quickFilters (Experiments'
+    // "Активные"/"Завершённые") — reused here instead of inventing a new
+    // button style for top-level nav.
+    <nav className="flex gap-2">
       {LINKS.map((link) => {
         const active = pathname?.startsWith(link.href);
         return (
           <Link
             key={link.href}
             href={link.href}
-            className={active ? "font-medium text-zinc-900" : "text-zinc-500 hover:text-zinc-900"}
+            aria-current={active ? "page" : undefined}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium ring-1 ring-inset transition-colors ${
+              active
+                ? "bg-zinc-900 text-white ring-zinc-900"
+                : "bg-white text-zinc-600 ring-zinc-300 hover:bg-zinc-50 hover:text-zinc-900"
+            }`}
           >
             {link.label}
           </Link>

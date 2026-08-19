@@ -31,9 +31,16 @@ export const META_COL = "w-28";
 export const LONG_TEXT_COL = "w-52";
 // Backlog's Funnel Level column (UI-015) — sized for its `Badge`
 // content (longest real value so far, "Cancel Subscription", is
-// ~123px), not a comfortable-reading-width like Comment.
-export const FUNNEL_LEVEL_COL = "w-44";
-export const COMMENT_COL = "w-60";
+// ~123px), not a comfortable-reading-width like Comment. Narrowed to
+// w-40 (was w-44) as part of a header-centering pass that freed the
+// difference to Comment — still ~5px above the 123px+cell-padding
+// minimum, with the Badge's own `truncate` as a graceful fallback if
+// a longer tag name ever shows up.
+export const FUNNEL_LEVEL_COL = "w-40";
+// Widened (was w-60) to absorb the width freed by narrowing
+// FUNNEL_LEVEL_COL and Backlog's local SCORE_COL — Comment is the
+// one genuinely long-form column, it should get the spare room.
+export const COMMENT_COL = "w-72";
 // UI-018: was `w-72` (288px) for the old side-by-side date inputs —
 // its replacement (a short week-range label, e.g. "32–35 нед.") needs
 // far less room.

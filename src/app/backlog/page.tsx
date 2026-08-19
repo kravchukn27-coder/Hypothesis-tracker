@@ -19,7 +19,6 @@ import {
   CHECKBOX_COL,
   COMMENT_COL,
   FUNNEL_LEVEL_COL,
-  META_COL,
   NAME_COL,
   STATUS_COL,
   TABLE_CONTENT_WIDTH,
@@ -27,6 +26,13 @@ import {
 } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
+
+// Local override, not the shared META_COL — that constant also sizes
+// Experiments' Author column (avatar + name), which needs real room.
+// Score only ever renders a short number ("0.16"–"5.00"), so it gets
+// its own, much narrower column here without touching META_COL's
+// other usage.
+const SCORE_COL = "w-20";
 
 export default async function BacklogPage({
   searchParams,
@@ -102,8 +108,12 @@ export default async function BacklogPage({
   const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q);
   const now = new Date();
 
+  // Page container matches TABLE_SURFACE_WIDTH (1014px) so the header,
+  // search box, and "+ Новая гипотеза" button share the table's exact
+  // left/right edges instead of spanning a wider outer column the table
+  // sits centered inside of.
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-8">
+    <div className="mx-auto flex w-full max-w-[1014px] flex-1 flex-col gap-4 px-6 py-8">
       <Suspense fallback={null}>
         <SavedToastGate />
       </Suspense>
@@ -203,11 +213,11 @@ export default async function BacklogPage({
                       defaultDir="asc"
                       href={(d) => sortHref("status", d)}
                     />
-                    <HeaderMultiFilter name="status" label="Фильтр" options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] }))} />
+                    <HeaderMultiFilter name="status" label="" options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s] }))} />
                   </div>
                 </th>
-                <th className={`${FUNNEL_LEVEL_COL} px-4 py-2`}><HeaderMultiFilter name="funnelLevel" label="Funnel Level" options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))} /></th>
-                <th className={`${META_COL} px-4 py-2 text-left`}>
+                <th className={`${FUNNEL_LEVEL_COL} px-4 py-2 text-center`}><HeaderMultiFilter name="funnelLevel" label="Funnel Level" options={funnelLevels.map((f) => ({ value: f.id, label: f.name }))} /></th>
+                <th className={`${SCORE_COL} px-4 py-2 text-center`}>
                   <SortableHeader
                     label="Score"
                     active={sort === "score"}
@@ -216,6 +226,11 @@ export default async function BacklogPage({
                     href={(d) => sortHref("score", d)}
                   />
                 </th>
+                {/* Left-aligned on purpose, unlike its siblings: Comment
+                    previews a long excerpt with a right-edge fade mask
+                    (see the body cell below) that assumes left-to-right
+                    reading — centering would fight that truncation
+                    pattern and read worse, not better. */}
                 <th className={`${COMMENT_COL} px-4 py-2`}>Comment</th>
               </tr>
             </thead>
@@ -287,7 +302,7 @@ export default async function BacklogPage({
                     />
                     {h.status === "ACCEPTED" && <div className="mt-2"><TakeInWorkButton hypothesisId={h.id} /></div>}
                   </td>
-                  <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-2`}>
+                  <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-2 text-center`}>
                     {h.funnelLevel ? (
                       <span className="block max-w-full" title={h.funnelLevel.name}>
                         <Badge color={FUNNEL_LEVEL_BADGE_COLOR} className="max-w-full truncate">
@@ -298,7 +313,7 @@ export default async function BacklogPage({
                       <span className="text-zinc-500">—</span>
                     )}
                   </td>
-                  <td className={`${META_COL} px-4 py-2 text-left font-medium tabular-nums text-zinc-900`}>
+                  <td className={`${SCORE_COL} px-4 py-2 text-center font-medium tabular-nums text-zinc-900`}>
                     {h.score.toFixed(2)}
                   </td>
                   <td className={`${COMMENT_COL} px-4 py-2`}>

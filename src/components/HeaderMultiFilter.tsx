@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Filter } from "lucide-react";
 
 export function HeaderMultiFilter({ name, label, options }: { name: string; label: string; options: { value: string; label: string }[] }) {
   const router = useRouter();
@@ -41,16 +42,24 @@ export function HeaderMultiFilter({ name, label, options }: { name: string; labe
   }
 
   return (
-    <div ref={containerRef} className="relative inline-block normal-case tracking-normal">
+    // UI: `normal-case tracking-normal` lives only on the dropdown panel
+    // now, not this wrapper — the trigger button needs to keep inheriting
+    // the table header's uppercase/tracking styling so it reads as the
+    // same kind of header as the plain SortableHeader sort links next to
+    // it; only the popup's own option labels should stay sentence-case.
+    <div ref={containerRef} className="relative inline-block">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={`cursor-pointer rounded px-1 py-0.5 text-xs font-medium hover:bg-zinc-200 ${selected.size ? "text-zinc-900" : ""}`}
+        aria-label={label ? undefined : "Фильтр"}
+        title={label ? undefined : "Фильтр"}
+        className={`inline-flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 hover:bg-zinc-200 ${selected.size ? "text-zinc-900" : ""}`}
       >
+        <Filter aria-hidden className="size-3" strokeWidth={2} />
         {label}{selected.size ? ` · ${selected.size}` : ""}
       </button>
       {open && (
-        <div className="absolute left-0 z-30 mt-2 w-52 rounded-lg border border-zinc-200 bg-white p-2 text-sm font-normal text-zinc-700 shadow-lg">
+        <div className="absolute left-0 z-30 mt-2 w-52 rounded-lg border border-zinc-200 bg-white p-2 text-sm font-normal normal-case tracking-normal text-zinc-700 shadow-lg">
           {options.map((option) => (
             <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-50">
               <input type="checkbox" checked={selected.has(option.value)} onChange={() => toggle(option.value)} />

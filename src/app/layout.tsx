@@ -28,8 +28,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-white text-zinc-900">
         <ToastProvider>
           <header className="border-b border-zinc-200">
-            <div className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-4">
-              <span className="text-sm font-semibold tracking-tight text-zinc-900">
+            {/* Matches Calendar's max-w-[1600px] (the widest page
+                container in the app) so the header's left edge lines up
+                with page content on every screen instead of floating
+                centered in its own narrower column. */}
+            <div className="mx-auto flex max-w-[1600px] items-center gap-8 px-6 py-3">
+              <span className="text-lg font-semibold tracking-tight text-zinc-900">
                 Hypothesis Tracker
               </span>
               <NavLinks />

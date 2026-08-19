@@ -25,6 +25,7 @@ import {
   TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
+import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
 // Local override, not the shared META_COL — that constant also sizes
@@ -119,6 +120,7 @@ export default async function BacklogPage({
       <Suspense fallback={null}>
         <SavedToastGate />
       </Suspense>
+      {hypothesisId && <ScrollToHighlighted />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">Backlog</h1>

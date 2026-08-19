@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- [BUG-013] Backlog now mounts the existing `ScrollToHighlighted`
+  client component whenever `?hypothesisId=` is present. After a
+  creation redirect or a linked return to Backlog, the highlighted row
+  smoothly scrolls into view without changing its existing amber
+  highlight, the creation redirect, filters, or table columns.
+
 - [BUG-015] Header filters now render their checkbox panel through a
   `createPortal` fixed to the viewport (`HeaderMultiFilter.tsx`) rather
   than as an absolutely positioned child of the table header. The panel

@@ -1,5 +1,61 @@
 # Tech Backlog
 
+## TECH-035 — PrismaClient has no `log` config for query/error/warn visibility
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Observability
+- **Type:** Chore
+- **Summary:** `src/lib/prisma.ts` constructs `PrismaClient` with no `log` option — slow queries, query-level errors, and warnings at the ORM layer are invisible unless the failure happens to bubble up to a call site that already logs it (which, per TECH-020, most don't yet).
+- **Description:**
+  Found during an observability audit (2026-08-20). Once TECH-020 lands, most mutation failures will get a `captureServerError` call from the action layer, but there's still no visibility into slow queries specifically, or into failures inside read paths (`findMany`/`findUnique` calls scattered across pages) that don't go through a try/catch at all. Prisma's own `log: ['warn', 'error']` (optionally `'query'` gated behind an env flag for local debugging only) is the cheapest way to close that gap without touching every call site.
+- **Acceptance Criteria:**
+  - `PrismaClient` is constructed with `log: ['warn', 'error']` at minimum, piped through `logWarn`/`logError` from `src/lib/log.ts` for structured output instead of Prisma's default stderr text.
+  - Query-level logging (`'query'`) is opt-in via an env var, not always-on, so production stays quiet by default.
+  - No change to any existing query's behavior or return values.
+
+## TECH-034 — Correlation ID helpers exist but are never called
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Observability
+- **Type:** Chore
+- **Summary:** `createOperationCorrelationId`/`withOperationCorrelation` (`src/lib/log.ts`) are defined and exported but have zero call sites anywhere in `src/` — no request currently gets an actual correlation ID threaded through its logs.
+- **Description:**
+  Found during an observability audit (2026-08-20). When a single failing request produces multiple log lines (e.g. a mutation, its derived-field recompute, and its audit write), there's currently no shared ID to join them — diagnosing requires correlating by timestamp alone. This depends on TECH-020 landing first (that's what adds most of the `captureServerError` call sites this would thread through).
+- **Acceptance Criteria:**
+  - A correlation ID is generated once per server action invocation (or centralized in a shared wrapper) and passed via `withOperationCorrelation` into every `logError`/`captureServerError`/audit call made during that action.
+  - Two log lines from the same failing request share the same `correlationId` value; log lines from different requests don't.
+  - No change to existing log payload shape beyond the added `correlationId` field.
+
+## TECH-033 — loginAsUser uses unsafe writeAuditLog instead of safeWriteAuditLog
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Observability
+- **Type:** Fix
+- **Summary:** `loginAsUser` (`src/lib/auth/actions.ts`) calls the unsafe `writeAuditLog` for `LOGIN_FAILURE`/`LOGIN_SUCCESS` instead of `safeWriteAuditLog` — if that DB insert throws (a transient blip), the whole login action throws unhandled instead of degrading gracefully, and `writeAuditLog` itself has no catch, so the failure isn't logged anywhere either.
+- **Description:**
+  Found during an observability audit (2026-08-20). `backlog/actions.ts` and `experiments/actions.ts` already use `safeWriteAuditLog` for their own audit writes — `auth/actions.ts` predates that convention and was missed.
+- **Acceptance Criteria:**
+  - `loginAsUser`'s `writeAuditLog` calls switch to `safeWriteAuditLog`.
+  - A simulated audit-log DB failure during login no longer crashes the login attempt — the user still gets the normal success/failure redirect, and the audit-write failure itself produces one `ErrorEvent` row via `captureServerError`.
+  - No change to `LOGIN_SUCCESS`/`LOGIN_FAILURE` event semantics or existing `AuditLog` rows on the healthy path.
+
+## TECH-032 — Login brute-force protection disabled with no compensating alert
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Security / Observability
+- **Type:** Fix
+- **Summary:** `LOGIN_RATE_LIMIT_ENABLED = false` (`src/lib/auth/login-rate-limit.ts:6`) fully disables login rate limiting via a "temporary switch," and nothing else compensates — `LOGIN_FAILURE` events are written to `AuditLog` but nothing reads that table for spike-based alerting the way `error-events.ts` does for application errors.
+- **Description:**
+  Found during an observability audit (2026-08-20). With rate limiting off, an attacker can submit unlimited password guesses per IP/email with zero blocking, and unlike application errors (which get a Telegram alert at ≥10 occurrences in a 5-minute window via `recordErrorEvent`), repeated `LOGIN_FAILURE` audit rows currently trigger no alert at all — a credential-stuffing run produces zero monitoring signal.
+- **Acceptance Criteria:**
+  - Either re-enable `LOGIN_RATE_LIMIT_ENABLED`, or add spike detection over `AuditLog` `LOGIN_FAILURE` rows (same signature/rate-alert shape as `recordErrorEvent`) so repeated failures from one IP/email trigger a Telegram alert even while blocking stays off.
+  - If re-enabling, confirm with the user first — the switch was deliberately flipped off, per its comment, so silently reverting that decision isn't appropriate; surface the choice instead of assuming it.
+  - No change to normal login behavior for legitimate users on the happy path.
+
 ## TECH-031 — HypothesisComment: consolidate three single-column indexes into one composite
 
 - **Status:** TODO
@@ -149,11 +205,14 @@
 - **Summary:** Only `/calendar` (`src/app/calendar/error.tsx`) has a route-level error boundary — `/backlog`, `/experiments`, `/users`, `/activity`, and every other route fall through to Next.js's default error page on any unhandled failure, and that failure is never captured by TECH-013's logging/alerting pipeline.
 - **Description:**
   Found during a resilience audit (2026-08-20). A DB failure on any unprotected route currently shows a generic/stack-leaking dev error or a bare 500 in prod, with no retry UI and no `captureServerError` call — so outages on those routes are both unhandled *and* unnoticed by the Telegram alerting TECH-013/014 already built. Add a root `src/app/error.tsx` mirroring the calendar one (retry button, no stack trace shown to the user) and a `global-error.tsx` for failures in the root layout itself, which a route-level `error.tsx` can't catch.
+
+  **Amendment (observability audit, 2026-08-20):** `/calendar`'s *existing* `error.tsx` has the same underlying gap — it only does `console.error(error)` in the browser, never reporting back to the server-side pipeline. Since a client error boundary can't call server-only code like `captureServerError` directly, this needs a small server action (or API route) the boundary can call to log the error server-side. Fix it alongside the new boundaries so all of them share one reporting path, instead of leaving the original one as the odd one out.
 - **Acceptance Criteria:**
-  - `src/app/error.tsx` exists, calls `captureServerError` (or equivalent logging) on mount, and shows a generic retry UI matching the calendar error page's style.
+  - `src/app/error.tsx` exists, reports the error to the server-side pipeline (via a server action wrapping `captureServerError`) on mount, and shows a generic retry UI matching the calendar error page's style.
   - `src/app/global-error.tsx` exists to catch root-layout-level failures.
+  - `/calendar`'s existing `error.tsx` is updated to use the same server-reporting call as the new boundaries, not left calling only `console.error`.
   - A deliberately-thrown error on an unprotected route (e.g. `/users`) now shows the new boundary instead of Next's default error page, and produces one `ErrorEvent` row.
-  - `/calendar`'s existing `error.tsx` is untouched.
+  - A deliberately-thrown error on `/calendar` also produces one `ErrorEvent` row now, matching the other routes.
 
 ## TECH-020 — Wrap Prisma calls in mutation server actions with try/catch + captureServerError
 

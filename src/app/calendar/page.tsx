@@ -17,7 +17,7 @@ import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
 import { OutOfRangeRow } from "./OutOfRangeRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
-import { CALENDAR_SURFACE_WIDTH, TABLE_CONTENT_WIDTH } from "@/components/tableWidths";
+import { CALENDAR_SURFACE_WIDTH, TABLE_CONTENT_WIDTH, TABLE_SURFACE_WIDTH } from "@/components/tableWidths";
 import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { RolloutCell } from "./RolloutCell";
 import { AuthorCell } from "./AuthorCell";
@@ -180,7 +180,7 @@ export default async function CalendarPage({
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 px-6 py-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className={`flex items-center justify-between gap-4 ${showAll ? TABLE_SURFACE_WIDTH : ""}`}>
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">Calendar</h1>
           {!showAll && (

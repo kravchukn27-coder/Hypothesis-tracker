@@ -2,6 +2,94 @@
 
 ## Unreleased
 
+- [UI-041] Redesigned "Показать все эксперименты"
+  (`AllExperimentsTable.tsx`, Calendar's embedded show-all mode) to
+  match Backlog's width/style system instead of its own wider
+  `CALENDAR_SURFACE_WIDTH` (1600px) — now `TABLE_SURFACE_WIDTH`
+  (1014px), `overflow-x-hidden`, same `table-fixed` structure, and its
+  count/search/bulk-action rows now share that same 1014px cap (their
+  own wrapper, since the outer Calendar page's `max-w-[1600px]` chrome
+  is shared with Timeline and stays wide on purpose) instead of
+  stretching to the page's full width, and the page's own title/nav row
+  (`page.tsx`, "Calendar" + "Таймлайн"/etc.) picks up the same cap only
+  when `showAll` is true — so every row's edges line up with the table
+  below it, not just the table itself, while the Timeline view's title
+  row stays at the wide layout its own week grid needs. Added three
+  columns: Funnel Level (`hypothesis.funnelLevel.name`, same
+  `Badge`/`FUNNEL_LEVEL_BADGE_COLOR` as Backlog, "—" when unset — query
+  now includes `hypothesis: { include: { funnelLevel: true } }`),
+  Раскатка (reused `RolloutCell` as-is, inline-editable, confirmed with
+  the user to match the main Calendar timeline table rather than making
+  it read-only), and an always-visible "Показать на календаре" icon
+  button per row (replaces the old hidden-inside-Dates link; present
+  even for fully undated experiments, linking to
+  `/calendar?experimentId=...` without `&start=` — the same convention
+  already used in `backlog/page.tsx`/`experiments/[id]/page.tsx`, where
+  the highlight lands in the "Без дат" sidebar instead of the
+  timeline). Status/Автор/Segment are now centered (header + cell,
+  matching Backlog's own centered Status column) instead of hugging the
+  left edge of their column. Автор was later simplified further (user
+  request) to just the initials `Avatar`, name dropped — a hover
+  `title` keeps the full name available — and its column narrowed from
+  `w-24` to `w-20` to match (not narrower: the "АВТОР" header text
+  needs that much room on its own, independent of the avatar). Funnel
+  Level's column also moved off the shared `FUNNEL_LEVEL_COL` (160px,
+  still exact in Backlog) onto a local `w-24` override at the user's
+  request to pack Автор/Funnel Level/Segment tighter together and free
+  the width for Раскатка, now `w-48` (from `w-32`) — safe to shrink
+  since its header already carries `break-words` (wraps onto two
+  lines instead of bleeding) and its Badge already truncates.
+
+  Fitting 9 columns into Backlog's 1014px budget took three passes,
+  each caught by measuring rendered vs. surface width rather than
+  trusting the layout to proportionally shrink (it doesn't — table-fixed
+  just overflows and `overflow-x-hidden` silently clips whatever
+  doesn't fit): an initial pass summed to 1250px and clipped the last
+  two columns entirely; fixing that to fit still left Rollout too
+  narrow (`w-12`/48px) for its own header — the unbreakable word
+  "РАСКАТКА" bled into the "Даты" header next to it, since this app's
+  table headers have never needed `truncate` (only body cells do); and
+  a later attempt to widen Rollout by capping the *outer page
+  container* per-view instead of a local wrapper double-counted that
+  container's own `px-6` padding, shrinking the real available width to
+  966px and clipping the table again. Settled shape: Name/Автор/Segment/
+  Раскатка/Даты are local-override widths (`w-48`/`w-24`/`w-20`/`w-32`/
+  `w-24`) sized for this table's actual content rather than the shared
+  constants (this file is the sole consumer of the ones that diverge
+  from Backlog, so none of it can affect Backlog or any other screen),
+  `break-words` on Раскатка/Funnel Level headers as a defensive
+  fallback against the same overflow-bleed class of bug, and the
+  count/search/bulk rows' own `TABLE_SURFACE_WIDTH` wrapper instead of
+  touching the shared outer container. Backlog itself, its columns/
+  width, filters, sort, search, bulk actions, and `hypothesisId`
+  highlighting are unchanged — none of that code was touched.
+  `tsc --noEmit`/`eslint src/` clean. Verified live at each pass:
+  final state renders the table at 1012px with every header's
+  `scrollWidth` equal to its `offsetWidth` (no overflow anywhere),
+  search/bulk-toggle row edges within 1px of the table's edges, Status/
+  Автор/Segment visibly centered, Раскатка showing meaningfully more
+  text before truncating, sort still working (re-clicked Status),
+  Funnel Level badge and its "—" unset case both correct, the calendar
+  button jumping/highlighting both a dated and an undated experiment
+  correctly, and Backlog re-checked unaffected (9 hypotheses, unchanged
+  layout).
+
+- [UI-027] Closed as already delivered by later work, no code changes.
+  Re-checked every criterion against the current codebase: the
+  "Просмотр: … / Показать все эксперименты" banner is gone, week
+  headers show only the date (`WeekHeaderCell.tsx`), the current week
+  is highlighted light-blue across the full column height in both
+  header and body cells (`ExperimentWeekRow.tsx:231`), per-week stage
+  filters persist to the URL with OR-across-columns semantics, and
+  undated experiments render as compact name-only draggable stickers
+  (`UndatedRow.tsx`) — all shipped by PROD-017/019 and UI-035/036. The
+  one remaining criterion — `experimentId` should still *filter* the
+  table to one experiment — contradicts UI-030, which deliberately
+  replaced that filtering with a highlight-only ring/amber treatment
+  because hiding every other row made the view harder to read in
+  context (see the comment at `page.tsx:102`). Confirmed with the user
+  to treat that criterion as superseded rather than reverting UI-030.
+
 - [UI-038] A newly created hypothesis is now highlighted (`bg-amber-50`)
   in the Backlog table right after creation, same pattern already used
   for `experimentId` on the Calendar timeline (UI-030) and

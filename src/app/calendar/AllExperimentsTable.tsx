@@ -1,37 +1,67 @@
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { CalendarDays, Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   currentStageOf,
-  formatDateRange,
   formatWeekRange,
   stageBorderClass,
   stageRank,
 } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
+import { Badge } from "@/components/Badge";
 import { archiveExperiments, deleteExperiments } from "../experiments/actions";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
-  CALENDAR_SURFACE_WIDTH,
+  ACTION_COL,
   CHECKBOX_COL,
-  DATE_COL,
-  META_COL,
-  NAME_COL,
   STATUS_COL,
   TABLE_CONTENT_WIDTH,
+  TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
+import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StageCell } from "../experiments/StageCell";
+import { RolloutCell } from "./RolloutCell";
 import { toDateParam } from "@/lib/calendar";
 
-// UI-033: Calendar's wider surface leaves the shared LONG_TEXT_COL width
-// (also used by Backlog/Experiments) too narrow to fill the extra room —
-// a local, calendar-only override so the space goes to real content
-// instead of blank trailing space.
-const SEGMENT_COL = "w-96";
+// UI-041: this table's 9 columns don't all fit at their shared-constant
+// widths within Backlog's narrower TABLE_SURFACE_WIDTH (1014px), so
+// several stay local overrides rather than the shared NAME_COL/
+// META_COL/LONG_TEXT_COL/DATE_COL — same "local override" pattern this
+// file already used for Segment before the redesign. NAME_COL and
+// META_COL are trimmed slightly (both still use `truncate`, so a
+// narrower column just truncates a bit sooner — safe); DATE_COL is
+// narrower because this table's Dates cell renders a short duration
+// ("34 нед."), not the wider date-range text the shared constant was
+// sized for. This file is the sole consumer of all of them, so none of
+// this can affect Backlog or any other screen.
+//
+// Rollout in particular needed real width, not just enough to avoid
+// truncating instantly: at 48px the unbreakable header word "РАСКАТКА"
+// bled into the Даты header next to it (headers here have no
+// `truncate` treatment, unlike body cells, so a too-narrow column
+// doesn't ellide — it overflows into its neighbor). `break-words`
+// stops the bleed at any width, but a legible content column still
+// needs real room, reclaimed from Name/Author's slack below.
+const NAME_COL = "w-48";
+// Icon-only now (Автор shows just the initials Avatar, no name text,
+// per user request for a more compact look) — sized for the "АВТОР"
+// header text plus its cell padding (the avatar itself needs far
+// less), not for name text anymore. Going narrower risks the same
+// header overflow-bleed class of bug already hit on Раскатка.
+const META_COL = "w-20";
+// Local override of the shared FUNNEL_LEVEL_COL (160px, matches
+// Backlog exactly there) — narrowed here at the user's request to free
+// width for Раскатка. Safe to go tight: the header already carries
+// `break-words` (wraps "FUNNEL"/"LEVEL" onto two lines instead of
+// bleeding), and the Badge itself truncates long values.
+const FUNNEL_LEVEL_COL = "w-24";
+const SEGMENT_COL = "w-20";
+const ROLLOUT_COL = "w-48";
+const DATE_COL = "w-24";
 
 // PROD-031: this is the former /experiments list, moved in as Calendar's
 // "show all experiments" mode — same table, filters, sort, and bulk
@@ -65,7 +95,7 @@ export async function AllExperimentsTable({
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
     },
     include: {
-      hypothesis: true,
+      hypothesis: { include: { funnelLevel: true } },
       segments: true,
       weekStages: { select: { weekStart: true, stage: true }, orderBy: { weekStart: "asc" } },
     },
@@ -122,7 +152,14 @@ export async function AllExperimentsTable({
   const isFiltered = Boolean(stages.length || segmentsFilter.length || authors.length || q || view);
 
   return (
-    <div className="flex flex-col gap-4">
+    // UI-041: this table now caps at TABLE_SURFACE_WIDTH (1014px, same
+    // as Backlog) instead of the outer Calendar page's own wider
+    // max-w-[1600px] chrome — that outer cap is shared with the
+    // Timeline view and stays wide on purpose, so the count/search/bulk
+    // rows get their own matching cap here rather than inheriting the
+    // page's, keeping every row's left/right edges aligned with the
+    // table below it.
+    <div className={`${TABLE_SURFACE_WIDTH} flex flex-col gap-4`}>
       <div>
         <p className="text-sm text-zinc-500">
           {experiments.length} {experiments.length === 1 ? "эксперимент" : "экспериментов"}
@@ -156,7 +193,7 @@ export async function AllExperimentsTable({
         />
 
         {experiments.length === 0 ? (
-          <div className={`flex ${CALENDAR_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+          <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
             <p className="text-sm text-zinc-500">
               {q
                 ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
@@ -169,7 +206,7 @@ export async function AllExperimentsTable({
             </Link>
           </div>
         ) : (
-          <div className={`${CALENDAR_SURFACE_WIDTH} rounded-xl border border-zinc-200`}>
+          <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
             <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
               <thead className="bg-zinc-50 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 <tr>
@@ -195,33 +232,41 @@ export async function AllExperimentsTable({
                       />
                     </div>
                   </th>
-                  <th className={`${STATUS_COL} px-4 py-2`}>
-                    <SortableHeader
-                      label="Status"
-                      active={sortBy === "stage"}
-                      dir={currentDir}
-                      defaultDir="asc"
-                      href={(d) => sortHref("stage", d)}
-                    />
+                  <th className={`${STATUS_COL} px-4 py-2 text-center`}>
+                    <div className="flex justify-center">
+                      <SortableHeader
+                        label="Status"
+                        active={sortBy === "stage"}
+                        dir={currentDir}
+                        defaultDir="asc"
+                        href={(d) => sortHref("stage", d)}
+                      />
+                    </div>
                   </th>
-                  <th className={`${META_COL} px-4 py-2`}>
-                    <SortableHeader
-                      label="Автор"
-                      active={sortBy === "author"}
-                      dir={currentDir}
-                      defaultDir="asc"
-                      href={(d) => sortHref("author", d)}
-                    />
+                  <th className={`${META_COL} px-4 py-2 text-center`}>
+                    <div className="flex justify-center">
+                      <SortableHeader
+                        label="Автор"
+                        active={sortBy === "author"}
+                        dir={currentDir}
+                        defaultDir="asc"
+                        href={(d) => sortHref("author", d)}
+                      />
+                    </div>
                   </th>
-                  <th className={`${SEGMENT_COL} px-4 py-2`}>
-                    <SortableHeader
-                      label="Segment"
-                      active={sortBy === "segment"}
-                      dir={currentDir}
-                      defaultDir="asc"
-                      href={(d) => sortHref("segment", d)}
-                    />
+                  <th className={`${FUNNEL_LEVEL_COL} break-words px-4 py-2 text-center`}>Funnel Level</th>
+                  <th className={`${SEGMENT_COL} px-4 py-2 text-center`}>
+                    <div className="flex justify-center">
+                      <SortableHeader
+                        label="Segment"
+                        active={sortBy === "segment"}
+                        dir={currentDir}
+                        defaultDir="asc"
+                        href={(d) => sortHref("segment", d)}
+                      />
+                    </div>
                   </th>
+                  <th className={`${ROLLOUT_COL} break-words px-4 py-2`}>Раскатка</th>
                   <th className={`${DATE_COL} px-4 py-2`}>
                     <SortableHeader
                       label="Даты"
@@ -231,6 +276,7 @@ export async function AllExperimentsTable({
                       href={(d) => sortHref("startDate", d)}
                     />
                   </th>
+                  <th className={`${ACTION_COL} px-4 py-2`} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
@@ -238,9 +284,6 @@ export async function AllExperimentsTable({
                   const isHighlighted = e.hypothesisId === hypothesisId;
                   const currentStage = currentStageOf(e, now);
                   const calendarStart = e.weekStages[0]?.weekStart ?? e.startDate;
-                  const calendarHref = calendarStart
-                    ? `/calendar?experimentId=${e.id}&start=${toDateParam(calendarStart)}`
-                    : null;
                   return (
                     <tr
                       key={e.id}
@@ -266,40 +309,56 @@ export async function AllExperimentsTable({
                           {e.hypothesis.name}
                         </Link>
                       </td>
-                      <td className={`${STATUS_COL} px-4 py-2`}>
-                        <StageCell
-                          experimentId={e.id}
-                          experimentName={e.name}
-                          stage={currentStage}
-                          archived={e.archived}
-                        />
+                      <td className={`${STATUS_COL} px-4 py-2 text-center`}>
+                        <div className="flex justify-center">
+                          <StageCell
+                            experimentId={e.id}
+                            experimentName={e.name}
+                            stage={currentStage}
+                            archived={e.archived}
+                          />
+                        </div>
                       </td>
-                      <td className={`${META_COL} min-w-0 px-4 py-2 text-zinc-600`}>
+                      <td className={`${META_COL} min-w-0 px-4 py-2 text-center text-zinc-600`}>
                         {e.author ? (
-                          <span className="flex min-w-0 items-center gap-2">
+                          <span className="flex min-w-0 items-center justify-center" title={e.author}>
                             <Avatar name={e.author} />
-                            <span className="truncate" title={e.author}>{e.author}</span>
                           </span>
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className={`${SEGMENT_COL} px-4 py-2 text-zinc-500`}>
+                      <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-2 text-center`}>
+                        {e.hypothesis.funnelLevel ? (
+                          <span className="block max-w-full" title={e.hypothesis.funnelLevel.name}>
+                            <Badge color={FUNNEL_LEVEL_BADGE_COLOR} className="max-w-full truncate">
+                              {e.hypothesis.funnelLevel.name}
+                            </Badge>
+                          </span>
+                        ) : (
+                          <span className="text-zinc-500">—</span>
+                        )}
+                      </td>
+                      <td className={`${SEGMENT_COL} px-4 py-2 text-center text-zinc-500`}>
                         <span className="block truncate" title={segmentLabel(e) || undefined}>
                           {segmentLabel(e) || "—"}
                         </span>
                       </td>
-                      <td
-                        className={`${DATE_COL} px-4 py-2 text-zinc-500`}
-                        title={formatDateRange(e.startDate, e.endDate)}
-                      >
-                        {calendarHref ? (
-                          <Link href={calendarHref} className="font-medium text-zinc-700 hover:underline">
-                            {formatWeekRange(e.startDate, e.endDate)}
-                          </Link>
-                        ) : (
-                          formatWeekRange(e.startDate, e.endDate)
-                        )}
+                      <td className={`${ROLLOUT_COL} min-w-0 px-1 py-2`}>
+                        <RolloutCell experimentId={e.id} value={e.rollout} />
+                      </td>
+                      <td className={`${DATE_COL} px-4 py-2 text-zinc-500`}>
+                        {formatWeekRange(e.startDate, e.endDate)}
+                      </td>
+                      <td className={`${ACTION_COL} px-4 py-2`}>
+                        <Link
+                          href={`/calendar?experimentId=${e.id}${calendarStart ? `&start=${toDateParam(calendarStart)}` : ""}`}
+                          aria-label="Показать на календаре"
+                          title="Показать на календаре"
+                          className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                        >
+                          <CalendarDays className="h-4 w-4" />
+                        </Link>
                       </td>
                     </tr>
                   );

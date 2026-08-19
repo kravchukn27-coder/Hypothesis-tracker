@@ -1,5 +1,88 @@
 # Tech Backlog
 
+## TECH-031 — HypothesisComment: consolidate three single-column indexes into one composite
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `HypothesisComment` has `@@index([hypothesisId])`, `@@index([authorUserId])`, and `@@index([createdAt])` as three separate indexes, but the only real query against this table (`backlog/page.tsx` — latest comment per hypothesis) needs `hypothesisId` + `createdAt` together.
+- **Description:**
+  Found during a data/schema audit (2026-08-20). The backlog list's nested query is `where hypothesisId, orderBy createdAt desc, take 1` — a composite `@@index([hypothesisId, createdAt])` serves that directly; the current three-index setup costs extra write amplification (three B-tree updates per insert) without buying anything the composite wouldn't. `authorUserId` has no query using it as a filter anywhere in the codebase today.
+- **Acceptance Criteria:**
+  - `@@index([hypothesisId])` and `@@index([createdAt])` replaced with `@@index([hypothesisId, createdAt])`.
+  - `@@index([authorUserId])` kept only if a concrete near-term use is identified; otherwise dropped.
+  - `npx prisma db push` applied cleanly against the local dev DB.
+
+## TECH-030 — User.invitedBy: nullable self-relation defaults to Restrict instead of SetNull
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `User.invitedBy` (`invitedById`, nullable FK) has no explicit `onDelete`, so Prisma emits `NO ACTION` (Restrict-equivalent) at the DB level instead of `SetNull` — deleting a user who has invited others would fail with a raw FK-violation error rather than cleanly nulling the reference.
+- **Description:**
+  Found during a data/schema audit (2026-08-20). No "delete user" feature exists today (only `isActive` toggling), so this is dormant risk rather than an active bug — but the field being optional signals the intended behavior is "just clear the reference," and the failure mode if this surfaces later (an opaque constraint error, not a clean null-out) is worse than doing nothing.
+- **Acceptance Criteria:**
+  - `invitedBy` relation gets `onDelete: SetNull`.
+  - `npx prisma db push` applied cleanly against the local dev DB.
+  - No behavior change to any existing screen (nothing deletes users today).
+
+## TECH-029 — ErrorEvent.lastUserId unindexed despite being filtered on the Activity page
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `ErrorEvent` has indexes on `lastSeenAt` and `route`, but the Activity page filters by `lastUserId` (`where: { lastUserId: user }`), which has no index at all.
+- **Description:**
+  Found during a data/schema audit (2026-08-20). The one column this specific page filters on isn't indexed, so that predicate forces a scan while `orderBy lastSeenAt` at least gets index support from the existing index.
+- **Acceptance Criteria:**
+  - Add `@@index([lastUserId])`, or a composite `@@index([lastUserId, lastSeenAt])` covering both the filter and the sort used by the Activity page query.
+  - `npx prisma db push` applied cleanly against the local dev DB.
+
+## TECH-028 — AuditLog has no indexes despite being filtered/sorted on every Activity page load
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `AuditLog` has zero indexes, but the Activity page filters by `userId`, does substring search on `event`, and always runs `orderBy: createdAt desc, take: 100`.
+- **Description:**
+  Found during a data/schema audit (2026-08-20). This table is append-only and grows forever — every backlog/experiment action writes an audit row across dozens of call sites — and is never pruned. Sorting 100 rows out of an ever-growing unindexed table means a full scan + sort on every Activity page view, and it only gets worse over the project's life.
+- **Acceptance Criteria:**
+  - Add `@@index([createdAt])` at minimum; consider `@@index([userId, createdAt])` given `userId` is a common filter.
+  - `npx prisma db push` applied cleanly against the local dev DB.
+  - (Retention/pruning policy is a separate concern, not required for this card.)
+
+## TECH-027 — Experiment: missing indexes on hypothesisId, archived, startDate
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `Experiment.hypothesisId` (a required FK) has no index, and there's no index on `archived`/`startDate` either, despite both being the filter/sort keys for the Calendar's main query.
+- **Description:**
+  Found during a data/schema audit (2026-08-20). Postgres does not auto-index foreign key columns — Prisma only adds one if `@@index` is declared or the FK participates in a `@@unique`. `hypothesisId` is looked up directly in at least 6 places (`backlog/actions.ts`, `experiments/actions.ts`) via `findFirst`/`findMany`, and the Calendar page (`calendar/page.tsx:79-85`) — the app's other main screen — filters by `archived` and orders by `startDate` on every load. All of these currently force sequential scans.
+- **Acceptance Criteria:**
+  - Add `@@index([hypothesisId])`.
+  - Add `@@index([archived])` or a composite `@@index([archived, startDate])` matching the Calendar page's actual predicate + sort.
+  - `npx prisma db push` applied cleanly against the local dev DB.
+
+## TECH-026 — Hypothesis: missing indexes on archived, funnelLevelId, status
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `Hypothesis` has no index covering `archived`, `funnelLevelId`, or `status`, all three of which are combined in the backlog list's `WHERE` clause (and `FunnelLevel`'s `hypotheses: { some: { archived: false } }` filter uses the same columns from the other side).
+- **Description:**
+  Found during a data/schema audit (2026-08-20). Every backlog page load — the primary landing page of the app — does a full table scan of `Hypothesis` filtered by `archived` (and often `status`/`funnelLevelId`), queried at `backlog/page.tsx:59` and `backlog/page.tsx:88`. This degrades linearly as hypotheses accumulate, with nothing to index-scan against today.
+- **Acceptance Criteria:**
+  - Add `@@index([archived, status])`.
+  - Add an index covering `funnelLevelId` (standalone or composite with `archived`, per real query shape).
+  - `npx prisma db push` applied cleanly against the local dev DB.
+
 ## TECH-025 — Stand up a test runner and cover critical business logic with minimal unit tests
 
 - **Status:** TODO

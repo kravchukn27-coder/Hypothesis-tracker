@@ -85,7 +85,7 @@ export function HypothesisForm({
   });
 
   return (
-    <form action={formAction} className="flex flex-col gap-8 rounded-xl border border-zinc-200 bg-white p-5 pb-24 sm:p-7 sm:pb-24">
+    <form action={formAction} className="flex flex-col gap-8 rounded-xl border border-zinc-200 bg-white p-5 sm:p-7">
       {state.error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-600/20">
           {state.error}
@@ -109,7 +109,7 @@ export function HypothesisForm({
             name="text"
             defaultValue={values.text}
             required
-            rows={6}
+            rows={3}
             placeholder="Если мы сделаем X, то метрика Y вырастет, потому что..."
           />
         </Field>

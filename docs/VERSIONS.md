@@ -2,20 +2,43 @@
 
 ## Unreleased
 
-- [UI-045] `/experiments/[id]`: "Показать на календаре" is now a
-  bordered button (`rounded-lg border border-zinc-300 px-4 py-2.5...`)
-  matching Backlog's "Открыть в Calendar", instead of a plain
-  underlined text link. The "Гипотеза" link moved out of
-  `ExperimentForm.tsx` (was a full-width block with the hypothesis
-  name and an arrow icon) into a compact button in the page header
-  (`experiments/[id]/page.tsx`), next to Архивировать/Удалить —
-  matching Backlog's "Карточка эксперимента" placement and style.
-  The hidden `hypothesisId` input stays in the form for submission;
-  only the visible link moved. No change to `FunnelLevelField` or
-  any other form editing. Verified live: both buttons render and
-  link correctly (`/backlog/[hypothesisId]` and
-  `/calendar?experimentId=...`), hidden `hypothesisId` still present
-  in the DOM and matches the visible button's target.
+- [UI-042] Three UI fixes on the Backlog hypothesis card
+  (`/backlog/[id]`), two of which also apply to the Experiment card
+  (`/experiments/[id]`) since they share components:
+  1. `StickyFormSubmit.tsx`'s Save button no longer pins to the
+     browser window's right edge (`fixed ... lg:right-8`) — it's a
+     `position: sticky` docked toolbar bar now (opaque `bg-white`,
+     `border-t`, negative margins spanning the card's full width,
+     `rounded-b-xl` matching the card's own corners), so it aligns to
+     the card's edge on every page regardless of that page's own
+     container width (`max-w-2xl` vs `max-w-4xl` differ across the 4
+     pages using this component). First attempt only fixed the
+     horizontal alignment and dropped the form's `pb-24` reserve,
+     which made the floating button visibly overlap the Описание
+     field's text while scrolling — a bare floating element always
+     overlaps whatever's currently behind it in a tall form; sticky
+     alone doesn't prevent that, only an opaque backing does. The
+     docked-bar treatment fixes it properly, so the `pb-24` hack is
+     gone from `HypothesisForm.tsx`/`ExperimentForm.tsx` too.
+  2. "Открыть в Calendar" on the hypothesis card
+     (`backlog/[id]/page.tsx`) is now a real bordered button matching
+     its header siblings ("Карточка эксперимента"/"Архивировать"),
+     was a plain underlined text link. Href/visibility condition
+     unchanged.
+  3. The "Описание" textarea in `HypothesisForm.tsx` is now `rows={3}`
+     (was `rows={6}`) — halved by height, not width (an earlier pass
+     misread the request as width and wrapped it in `sm:w-1/2`,
+     corrected after user feedback). No equivalent "Описание" field
+     exists in `ExperimentForm.tsx` (its only textarea is "Раскатка",
+     a different short field), so nothing to mirror there.
+
+  `tsc --noEmit`/`eslint` clean (one pre-existing, unrelated `tsc`
+  error in `src/lib/error-events.ts` — untracked file from in-progress
+  auth/logging work, not touched). Verified live on both
+  `/backlog/[id]` and `/experiments/[id]`: Save bar renders flush with
+  the card's edges (measured within 1px) with no text overlap
+  underneath its opaque background, "Открыть в Calendar" renders as a
+  proper button, Описание is visibly shorter.
 
 - [UI-041] Redesigned "Показать все эксперименты"
   (`AllExperimentsTable.tsx`, Calendar's embedded show-all mode) to

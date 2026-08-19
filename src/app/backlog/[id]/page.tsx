@@ -140,7 +140,12 @@ export default async function HypothesisDetailPage({
           {currentExperiments.length === 0 ? (
             <Link href={`/experiments/new?hypothesisId=${hypothesis.id}`} className="font-medium text-zinc-900 underline underline-offset-4">Создать эксперимент</Link>
           ) : activeExperiment ? (
-            <Link href={`/calendar?experimentId=${activeExperiment.id}`} className="font-medium text-zinc-900 underline underline-offset-4">Открыть в Calendar</Link>
+            <Link
+              href={`/calendar?experimentId=${activeExperiment.id}`}
+              className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              Открыть в Calendar
+            </Link>
           ) : (
             <span className="font-medium text-zinc-900">Все проверки завершены — можно архивировать</span>
           )}

@@ -17,7 +17,9 @@ Source of truth for the original data model: a Google Sheet exported as
 - Prisma + PostgreSQL
 
 Authentication uses local email/password accounts. Every app page is protected
-by the signed-session proxy; `/login` is the public entry point.
+by the signed-session proxy; `/login` and one-time `/invite/[token]` password
+setup links are the public entry points. Any authenticated user can issue an
+invite manually; the app sends no email.
 
 ## Screens (build order)
 

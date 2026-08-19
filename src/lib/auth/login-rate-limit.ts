@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export const LOGIN_RATE_LIMIT_MAX_FAILURES = 10;
+// Temporary switch: retain the rate-limit implementation, but do not block logins.
+export const LOGIN_RATE_LIMIT_ENABLED = false;
 const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_RATE_LIMIT_COOLDOWN_MS = 15 * 60 * 1000;
 
@@ -80,6 +82,8 @@ export async function getLoginClientIp(): Promise<string> {
 }
 
 export async function isLoginRateLimited(ip: string, email: string): Promise<boolean> {
+  if (!LOGIN_RATE_LIMIT_ENABLED) return false;
+
   const now = Date.now();
   const [ipBucket, emailBucket] = await Promise.all([
     getBucket("ip", normalizeScopeKey(ip), now),
@@ -93,6 +97,8 @@ export async function isLoginRateLimited(ip: string, email: string): Promise<boo
 }
 
 export async function recordLoginFailure(ip: string, email: string): Promise<boolean> {
+  if (!LOGIN_RATE_LIMIT_ENABLED) return false;
+
   const now = Date.now();
   const scopes: Array<[RateLimitScope, string]> = [
     ["ip", normalizeScopeKey(ip)],

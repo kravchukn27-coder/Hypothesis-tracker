@@ -78,7 +78,7 @@
 
 ## TECH-009 — Auth: invite-based user creation and password set
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Auth
 - **Type:** Feature

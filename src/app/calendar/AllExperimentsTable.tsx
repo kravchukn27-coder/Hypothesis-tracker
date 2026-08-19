@@ -297,16 +297,9 @@ export async function AllExperimentsTable({
                         <Link
                           href={`/experiments/${e.id}`}
                           title={e.name}
-                          className="block truncate font-medium text-zinc-900 hover:underline"
+                          className="line-clamp-2 font-medium text-zinc-900 hover:underline"
                         >
                           {e.name}
-                        </Link>
-                        <Link
-                          href={`/backlog/${e.hypothesisId}`}
-                          title={e.hypothesis.name}
-                          className="mt-0.5 block truncate text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
-                        >
-                          {e.hypothesis.name}
                         </Link>
                       </td>
                       <td className={`${STATUS_COL} px-4 py-2 text-center`}>

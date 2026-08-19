@@ -345,18 +345,12 @@ export default async function CalendarPage({
                         /experiments/[id] — now that each week is its own
                         stage-editing button, the name here is the only
                         click-through to the experiment's own card. */}
-                    <div className="min-w-0 px-3 py-2"><Link
+                    <div className="min-w-0 px-3 py-2 text-sm"><Link
                       href={`/experiments/${e.id}`}
                       title={e.name}
-                      className="block truncate text-sm font-medium text-zinc-900 hover:underline"
+                      className="line-clamp-2 font-medium text-zinc-900 hover:underline"
                     >
                       {e.name}
-                    </Link><Link
-                      href={`/backlog/${e.hypothesisId}`}
-                      title={`Гипотеза: ${e.hypothesisName}`}
-                      className="mt-0.5 block truncate text-xs text-zinc-400 hover:underline"
-                    >
-                      {e.hypothesisName}
                     </Link></div>
                     <div className="min-w-0 px-1 py-2"><AuthorCell experimentId={e.id} value={details?.author ?? null} options={authorNames} /></div>
                     <div className="min-w-0 px-1 py-2"><RolloutCell experimentId={e.id} value={details?.rollout ?? null} /></div>

@@ -23,7 +23,7 @@
 
 ## UI-053 — Закрепить шапку таблиц (Calendar, Backlog, «Показать все эксперименты») при прокрутке
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Calendar, Backlog
 - **Type:** UI fix

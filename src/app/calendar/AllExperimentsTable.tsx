@@ -254,9 +254,9 @@ export async function AllExperimentsTable({
             </Link>
           </div>
         ) : (
-          <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
+          <div className={`${TABLE_SURFACE_WIDTH} overflow-x-clip rounded-xl border border-zinc-200`}>
             <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
-              <thead className="bg-zinc-50 text-xs font-medium text-zinc-500">
+              <thead className="sticky top-0 z-20 bg-zinc-50 text-xs font-medium text-zinc-500">
                 <tr>
                   <th className={`${CHECKBOX_COL} px-4 py-2`}>
                     <SelectAllCheckbox />

@@ -90,11 +90,12 @@ export async function AllExperimentsTable({
   const funnelLevelsFilter = Array.isArray(funnelLevel) ? funnelLevel : funnelLevel ? [funnelLevel] : [];
   const currentDir: SortDir =
     dir === "asc" ? "asc" : dir === "desc" ? "desc" : sortBy === "createdAt" ? "desc" : "asc";
+  const isArchivedView = view === "archived";
 
   const [allExperiments, usedFunnelLevels, usedSegments, usedAuthors] = await Promise.all([
     prisma.experiment.findMany({
       where: {
-        archived: false,
+        archived: isArchivedView,
         ...(segmentsFilter.length ? { segments: { some: { id: { in: segmentsFilter } } } } : {}),
         ...(authors.length ? { author: { in: authors } } : {}),
         ...(funnelLevelsFilter.length ? { hypothesis: { funnelLevelId: { in: funnelLevelsFilter } } } : {}),
@@ -107,15 +108,15 @@ export async function AllExperimentsTable({
       },
     }),
     prisma.funnelLevel.findMany({
-      where: { hypotheses: { some: { archived: false, experiments: { some: { archived: false } } } } },
+      where: { hypotheses: { some: { archived: false, experiments: { some: { archived: isArchivedView } } } } },
       orderBy: { name: "asc" },
     }),
     prisma.segment.findMany({
-      where: { experiments: { some: { archived: false } } },
+      where: { experiments: { some: { archived: isArchivedView } } },
       orderBy: { name: "asc" },
     }),
     prisma.experiment.findMany({
-      where: { archived: false, author: { not: null } },
+      where: { archived: isArchivedView, author: { not: null } },
       select: { author: true },
       distinct: ["author"],
       orderBy: { author: "asc" },
@@ -216,6 +217,7 @@ export async function AllExperimentsTable({
                 options: [
                   { value: "active", label: "Активные" },
                   { value: "completed", label: "Завершённые" },
+                  { value: "archived", label: "Архивные" },
                 ],
               }}
               fields={[]}

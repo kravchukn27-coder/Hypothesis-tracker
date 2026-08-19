@@ -25,7 +25,10 @@ export function SavedToastGate() {
     if (shouldShow && !fired.current) {
       fired.current = true;
       showToast("Сохранено");
-      router.replace(pathname, { scroll: false });
+      const remaining = new URLSearchParams(searchParams.toString());
+      remaining.delete("saved");
+      const query = remaining.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     }
     // Only fire once, on mount for this navigation.
     // eslint-disable-next-line react-hooks/exhaustive-deps

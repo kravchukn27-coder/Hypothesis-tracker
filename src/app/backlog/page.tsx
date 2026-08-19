@@ -45,9 +45,10 @@ export default async function BacklogPage({
     q?: string;
     view?: string;
     archived?: string;
+    hypothesisId?: string;
   }>;
 }) {
-  const { sort = "score", dir, funnelLevel, status, q } = await searchParams;
+  const { sort = "score", dir, funnelLevel, status, q, hypothesisId } = await searchParams;
   const funnelLevelsFilter = Array.isArray(funnelLevel) ? funnelLevel : funnelLevel ? [funnelLevel] : [];
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
   const currentDir: SortDir =
@@ -258,10 +259,12 @@ export default async function BacklogPage({
                     ? "Связанные эксперименты в архиве"
                     : null;
 
+                const isHighlighted = h.id === hypothesisId;
                 return (
                   <tr
                   key={h.id}
-                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]}`}
+                  data-highlighted={isHighlighted || undefined}
+                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]} ${isHighlighted ? "bg-amber-50" : ""}`}
                 >
                   <td className={`${CHECKBOX_COL} px-4 py-2`}>
                     <RowCheckbox id={h.id} />

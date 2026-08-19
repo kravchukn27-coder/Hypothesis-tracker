@@ -48,7 +48,7 @@ export async function createHypothesis(
   const data = parsed.data;
   const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
 
-  await prisma.hypothesis.create({
+  const created = await prisma.hypothesis.create({
     data: {
       name: data.name,
       text: data.text,
@@ -68,7 +68,7 @@ export async function createHypothesis(
   });
 
   revalidatePath("/backlog");
-  redirect("/backlog?saved=1");
+  redirect(`/backlog?saved=1&hypothesisId=${created.id}`);
 }
 
 export async function updateHypothesis(

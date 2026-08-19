@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- [UI-038] A newly created hypothesis is now highlighted (`bg-amber-50`)
+  in the Backlog table right after creation, same pattern already used
+  for `experimentId` on the Calendar timeline (UI-030) and
+  `hypothesisId` in `AllExperimentsTable`. `createHypothesis`
+  (`src/app/backlog/actions.ts`) redirects to
+  `/backlog?saved=1&hypothesisId=${created.id}` instead of just
+  `?saved=1`; `BacklogPage` (`src/app/backlog/page.tsx`) reads
+  `hypothesisId` from `searchParams` and adds `bg-amber-50` to the
+  matching row's `<tr>` alongside the existing
+  `border-l-4`/`STATUS_BORDER_CLASSES` status stripe (unchanged).
+  Along the way found and fixed a real bug this surfaced:
+  `SavedToastGate` (`src/components/toast/SavedToastGate.tsx`) cleared
+  *all* query params via `router.replace(pathname, ...)` on mount to
+  hide the toast flag, which silently wiped `hypothesisId` (and any
+  other param) before the user ever saw the highlight — now it only
+  strips `saved` and preserves the rest of the query string.
+  `tsc --noEmit`/`eslint src/` clean. Verified live end-to-end: created
+  a hypothesis via the form, confirmed the redirect URL kept
+  `hypothesisId`, confirmed the new row rendered with `bg-amber-50` and
+  `data-highlighted="true"` next to its unchanged status stripe, then
+  deleted the disposable test hypotheses and confirmed the table
+  returned to its original row count.
+
 - [UI-040] Calendar experiments whose real dates fall entirely outside
   the current 8-week window no longer vanish silently. `buildTimeline`
   (`src/lib/calendar.ts`) now collects them into a new `outOfRange`

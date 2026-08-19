@@ -7,23 +7,30 @@ import { ArchiveHypothesisModal } from "./ArchiveHypothesisModal";
 /**
  * Shows the "archive this?" prompt on the hypothesis detail page after
  * a status-changing save reaches Done (PROD-018, mirrors BUG-001's
- * ExperimentPromptGate). `updateHypothesis` redirects here with
- * `?promptArchive=1` when `shouldPromptArchiveHypothesis` says to.
+ * ExperimentPromptGate). Two triggers: `updateHypothesis` redirects
+ * here with `?promptArchive=1` when a direct status edit reaches Done
+ * (`shouldPromptArchiveHypothesis`); `alreadyDone` covers the case
+ * where the status instead synced to Done from an experiment-side
+ * action (Calendar/experiment card/list — none of which redirect
+ * here), so the prompt still surfaces the next time this page loads
+ * (PROD-026 follow-up).
  */
 export function ArchivePromptGate({
   hypothesisId,
   hypothesisName,
+  alreadyDone = false,
 }: {
   hypothesisId: string;
   hypothesisName: string;
+  alreadyDone?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const shouldShow = searchParams.get("promptArchive") === "1";
-  const [open, setOpen] = useState(shouldShow);
+  const fromRedirect = searchParams.get("promptArchive") === "1";
+  const [open, setOpen] = useState(fromRedirect || alreadyDone);
 
   useEffect(() => {
-    if (shouldShow) {
+    if (fromRedirect) {
       router.replace(`/backlog/${hypothesisId}`, { scroll: false });
     }
     // Only strip the URL once, on mount for this navigation.

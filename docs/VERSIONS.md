@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- [PROD-026] The hypothesis card's summary block (status, Score,
+  Funnel Level, linked experiment + current stage, Result, and a
+  context-aware next action) and the status-sync-to-IN_PROGRESS/DONE
+  logic (`syncHypothesisStatusForExperiment`) already existed going
+  into this task — verified against every acceptance criterion, only
+  one gap found: the "archive this?" prompt only fired when a status
+  edit happened directly on the hypothesis form or the Backlog list's
+  inline cell (`shouldPromptArchiveHypothesis`, checked client-side
+  after `updateHypothesis`/`updateHypothesisStatus`). When status
+  instead synced to Done from an *experiment*-side action (Calendar,
+  experiment card, Experiments list — none of which redirect to the
+  hypothesis page), no prompt ever appeared. `ArchivePromptGate`
+  (`src/app/backlog/ArchivePromptGate.tsx`) gained an `alreadyDone`
+  prop, computed server-side in `/backlog/[id]/page.tsx` via the same
+  `shouldPromptArchiveHypothesis` helper — the prompt now also opens
+  whenever the hypothesis detail page loads with status `DONE` and not
+  yet archived, regardless of how it got there. Verified live: flipped
+  a week-tracked experiment to Done from its own card, landed on
+  `/backlog/[id]`, and the archive prompt appeared automatically;
+  reverted the stage and confirmed the hypothesis returned to
+  `IN_PROGRESS` with no lingering prompt.
+
 - [UI-052] Added a "Сбросить фильтр" button to Calendar's header,
   next to "Сегодня"/‹/›, that clears every per-week status filter
   (`?weekStage=...`) in one click. `calendarHref` (`page.tsx`) gained

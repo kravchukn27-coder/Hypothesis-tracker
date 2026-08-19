@@ -16,7 +16,7 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { Badge } from "@/components/Badge";
-import { computeScore, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
+import { computeScore, shouldPromptArchiveHypothesis, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
 import { currentStageOf, stageLabel } from "@/lib/experiment";
 import { requireUserPage } from "@/lib/auth/page-guards";
 import { CommentFeed } from "./CommentFeed";
@@ -161,7 +161,11 @@ export default async function HypothesisDetailPage({
         />
       </Suspense>
       <Suspense fallback={null}>
-        <ArchivePromptGate hypothesisId={hypothesis.id} hypothesisName={hypothesis.name} />
+        <ArchivePromptGate
+          hypothesisId={hypothesis.id}
+          hypothesisName={hypothesis.name}
+          alreadyDone={shouldPromptArchiveHypothesis(hypothesis.status, hypothesis.archived)}
+        />
       </Suspense>
 
       <HypothesisForm

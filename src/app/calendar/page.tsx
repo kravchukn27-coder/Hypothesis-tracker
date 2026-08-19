@@ -248,8 +248,8 @@ export default async function CalendarPage({
               <div className="w-56 shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <CalendarOff className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} />
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                    Без дат
+                  <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Эксперименты без даты
                   </p>
                   <span className="rounded-full bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-600">
                     {undated.length}

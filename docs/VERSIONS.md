@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- [UI-036] Renamed Calendar's undated-experiment sidebar header from
+  "Без дат" to "Эксперименты без даты" (`calendar/page.tsx`) — the
+  short label wasn't obviously about experiments at a glance. Text
+  wraps to two lines in the `w-56` sidebar now, so also centered it
+  (`text-center`); no other markup changed. Drag-and-drop and the
+  sidebar's `undated.length > 0` visibility are untouched. Verified
+  live.
+
 - [UI-026] Closed with no code change — its acceptance criteria were
   already fully met: no "Изменить" link (name links straight to the
   card), no quick-action arrows/plus column in Backlog, `ACCEPTED`

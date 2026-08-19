@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- [UI-052] Added a "Сбросить фильтр" button to Calendar's header,
+  next to "Сегодня"/‹/›, that clears every per-week status filter
+  (`?weekStage=...`) in one click. `calendarHref` (`page.tsx`) gained
+  a `clearWeekStage` option; the button uses it while explicitly
+  passing the current `windowStart`, so the window position,
+  `calendarAuthor`, and `experimentId` all stay put — only `weekStage`
+  is dropped. Disabled (greyed, `pointer-events-none`) whenever
+  `hasWeekStageFilters` is false, mirroring the existing "Сегодня"
+  disabled-state pattern.
+
 - [UI-048] Long experiment names in the "Без даты"/"Вне диапазона"
   side cards (`UndatedRow.tsx`, `OutOfRangeRow.tsx`) no longer get cut
   off with `truncate` — they wrap across lines instead

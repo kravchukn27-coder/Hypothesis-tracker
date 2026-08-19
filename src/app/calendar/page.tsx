@@ -149,13 +149,16 @@ export default async function CalendarPage({
   function calendarHref({
     start: nextStart,
     focused = Boolean(focusedExperiment),
+    clearWeekStage = false,
   }: {
     start?: Date;
     focused?: boolean;
+    /** UI-052: drop the per-week status filters while keeping every other param. */
+    clearWeekStage?: boolean;
   } = {}): string {
     const params = new URLSearchParams();
     if (nextStart) params.set("start", toDateParam(nextStart));
-    weekStageEntries.forEach((entry) => params.append("weekStage", entry));
+    if (!clearWeekStage) weekStageEntries.forEach((entry) => params.append("weekStage", entry));
     authorsFilter.forEach((value) => params.append("calendarAuthor", value));
     if (focused && focusedExperiment) params.set("experimentId", focusedExperiment.id);
     const query = params.toString();
@@ -168,6 +171,7 @@ export default async function CalendarPage({
   const nextHref = calendarHref({ start: addWeeks(windowStart, PAGE_STEP_WEEKS) });
   const todayHref = calendarHref();
   const isToday = windowStart.getTime() === parseWindowStart(undefined).getTime();
+  const resetWeekStageHref = calendarHref({ start: windowStart, clearWeekStage: true });
 
   function cellMatchesFilter(cellStage: string | null, weekStartISO: string): boolean {
     const selectedStage = weekStageFilters.get(weekStartISO);
@@ -200,6 +204,15 @@ export default async function CalendarPage({
         </div>
         {!showAll && (
           <div className="flex items-center gap-2">
+              <Link
+                href={resetWeekStageHref}
+                aria-disabled={!hasWeekStageFilters}
+                className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
+                  hasWeekStageFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
+                }`}
+              >
+                Сбросить фильтр
+              </Link>
               <Link
                 href={todayHref}
                 aria-disabled={isToday}

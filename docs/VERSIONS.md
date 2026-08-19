@@ -2,61 +2,25 @@
 
 ## Unreleased
 
-- Ad-hoc design polish on the app nav and Backlog's table, from live
-  user feedback (no backlog card):
-  - `layout.tsx`/`NavLinks.tsx`: header widened to `max-w-[1600px]`
-    (matches Calendar, the widest page) so "Hypothesis Tracker" sits
-    at the page's real left edge instead of a narrower centered
-    column; title bumped to `text-lg`; Backlog/Calendar are now
-    pill-toggle buttons (reused `FilterBar`'s existing quickFilter
-    pill pattern) instead of plain text links.
-  - `backlog/page.tsx`: page container narrowed to match
-    `TABLE_SURFACE_WIDTH` (1014px) so the search box and "+ Новая
-    гипотеза" share the table's exact edges instead of spanning a
-    wider outer container.
-  - `HeaderMultiFilter.tsx`: fixed a real bug — the dropdown
-    wrapper's `normal-case` reset (needed so popup option text isn't
-    uppercase) was leaking onto the trigger button itself, which is
-    why "Funnel Level" wasn't rendering uppercase like its sibling
-    headers. Also added a filter icon to the trigger (lucide
-    `Filter`) so filterable columns are visually distinct from plain
-    sortable ones; dropped the redundant "Фильтр" text on Backlog's
-    Status column since the icon now carries that meaning.
-  - `tableWidths.ts`/`backlog/page.tsx`: centered the header+content
-    of Name (later reverted per follow-up feedback, kept
-    left-aligned), Status, Funnel Level, and Score to match Status's
-    existing centered treatment; Comment stays left-aligned on
-    purpose (its right-edge fade-mask truncation assumes
-    left-to-right reading). Rebalanced column widths based on live
-    DOM measurement, not guesses: Funnel Level 176→166px (still
-    ≥123px+padding for the longest known tag, "Cancel Subscription",
-    confirmed to still fit), a new Backlog-local `SCORE_COL` (w-20,
-    not the shared `META_COL` — that also sizes Experiments' Author
-    column, which needs real room for an avatar+name) replacing the
-    oversized 112px Score column, and the freed width going to
-    Comment (240→288px). Left `STATUS_COL` untouched — measured zero
-    slack in "In progress"'s rendered width before touching it.
-  Verified live throughout: nav on both pages, filter dropdown still
-  opens and options render in sentence case, no text clipping on any
-  column at either old or newly-narrowed widths.
-
-- [UI-029] Increased row density on Backlog, Calendar's timeline, and
-  the embedded Experiments table (`AllExperimentsTable.tsx`):
-  `backlog/page.tsx`, `calendar/page.tsx`,
-  `calendar/AllExperimentsTable.tsx` — page container `py-10 gap-6`
-  → `py-8 gap-4`, page title `text-2xl` → `text-xl`, table
-  header/body cell padding `px-4 py-3` → `px-4 py-2` (24 cells across
-  the two tables), plus matching header/name-cell padding in
-  Calendar's timeline. Left interactive control internals untouched
-  — `FIELD_CLASSES`/`Select`/`Input` (shared with the Hypothesis/
-  Experiment forms) and `ExperimentWeekRow`'s stage-bar sizing
-  (`h-11`, drag hit-targets) weren't touched, to avoid rippling into
-  unrelated screens or risking drag-and-drop precision. No new
-  scroll containers, no schema/domain-logic change. Verified live on
-  all three screens: visibly tighter rows/header/chrome, nothing
-  clipped; confirmed via `read_page` that every Backlog control
-  (status dropdowns, filter buttons, sort links, row links) is still
-  present and reachable.
+- [UI-040] Calendar experiments whose real dates fall entirely outside
+  the current 8-week window no longer vanish silently. `buildTimeline`
+  (`src/lib/calendar.ts`) now collects them into a new `outOfRange`
+  array (instead of returning `null` and dropping the row) with each
+  entry's earliest real week as a `jumpStart`. A new sidebar section
+  "Вне диапазона" (`src/app/calendar/OutOfRangeRow.tsx`) renders
+  stacked below the existing "Эксперименты без даты" section in the
+  same sidebar column — not a second side-by-side column, to keep the
+  week grid at full width — with the same card styling, minus
+  drag-and-drop (these experiments are already scheduled). Clicking a
+  card jumps the timeline via the existing
+  `experimentId` + `start` mechanism (UI-030), same pattern already
+  used from the hypothesis/experiment cards. "Показать все
+  эксперименты" mode, the week grid, and stage/visibility rules are
+  unchanged. `tsc --noEmit`/`eslint src/` clean. Verified live: an
+  experiment with weeks outside the current window appeared in the new
+  section; clicking it jumped and highlighted it on the timeline, and
+  the previously-visible experiments correctly moved into "Вне
+  диапазона" for the new window.
 
 - [UI-037] `/experiments/[id]` now reads as the same design pattern as
   `/backlog/[id]` (`src/app/experiments/[id]/page.tsx`). Added the

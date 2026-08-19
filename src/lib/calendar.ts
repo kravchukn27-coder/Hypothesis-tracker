@@ -120,6 +120,16 @@ export type TimelineRow = {
   overdueWeekStart: Date | null;
 };
 
+// UI-040: a dated experiment whose weeks fall entirely outside the
+// current window — `buildTimeline` used to just drop these (see the
+// `null` return below), which made them look lost from the Calendar
+// during normal navigation. `jumpStart` is the earliest real week so a
+// sidebar link can jump the window straight to it.
+export type OutOfRangeExperiment = {
+  experiment: TimelineExperiment;
+  jumpStart: Date;
+};
+
 /**
  * PROD-025: the Calendar's single overdue source of truth. A reminder
  * is due only when a real (not legacy synthesized) last week entry is
@@ -167,6 +177,7 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
 
   const dated = experiments.filter((e) => e.weekStages.length > 0 || (e.startDate && e.endDate));
   const undated = experiments.filter((e) => e.weekStages.length === 0 && !(e.startDate && e.endDate));
+  const outOfRange: OutOfRangeExperiment[] = [];
 
   const rows: TimelineRow[] = dated
     .map((e) => {
@@ -194,7 +205,12 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
         };
       });
 
-      if (!cells.some((c) => c.stage !== null)) return null; // nothing in this window
+      if (!cells.some((c) => c.stage !== null)) {
+        // Nothing in this window — dated but not here, not "undated".
+        const earliest = [...entries].sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime())[0];
+        if (earliest) outOfRange.push({ experiment: e, jumpStart: earliest.weekStart });
+        return null;
+      }
 
       const overdueWeek = getOverdueWeek(e, today);
 
@@ -202,5 +218,5 @@ export function buildTimeline(experiments: TimelineExperiment[], windowStart: Da
     })
     .filter((r): r is TimelineRow => r !== null);
 
-  return { weeks: weekList, rows, undated, todayColumn };
+  return { weeks: weekList, rows, undated, outOfRange, todayColumn };
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarOff, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   addWeeks,
@@ -15,6 +15,7 @@ import { STAGE_LABELS, currentStageOf } from "@/lib/experiment";
 import { ExperimentWeekRow } from "./ExperimentWeekRow";
 import { WeekHeaderCell } from "./WeekHeaderCell";
 import { UndatedRow } from "./UndatedRow";
+import { OutOfRangeRow } from "./OutOfRangeRow";
 import { OverdueExperimentReminder } from "./OverdueExperimentReminder";
 import { CALENDAR_SURFACE_WIDTH, TABLE_CONTENT_WIDTH } from "@/components/tableWidths";
 import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
@@ -115,7 +116,7 @@ export default async function CalendarPage({
     stage: e.stage,
     weekStages: e.weekStages.map((w) => ({ weekStart: w.weekStart, stage: w.stage, completed: w.completed })),
   }));
-  const { weeks, rows, undated, todayColumn } = buildTimeline(timelineExperiments, windowStart);
+  const { weeks, rows, undated, outOfRange, todayColumn } = buildTimeline(timelineExperiments, windowStart);
   const calendarDetails = new Map(
     displayedExperiments.map((experiment) => [
       experiment.id,
@@ -186,7 +187,7 @@ export default async function CalendarPage({
             <p className="mt-1 text-sm text-zinc-500">
               {displayedExperiments.length === 0
                 ? "Пока нет экспериментов"
-                : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}`}
+                : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}${outOfRange.length ? `, ${outOfRange.length} вне диапазона` : ""}`}
             </p>
           )}
         </div>
@@ -244,27 +245,56 @@ export default async function CalendarPage({
           <OverdueExperimentReminder reminders={overdueReminders} />
 
           <div className={`${CALENDAR_SURFACE_WIDTH} flex items-start gap-4`}>
-            {undated.length > 0 && (
-              <div className="w-56 shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <CalendarOff className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} />
-                  <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                    Эксперименты без даты
-                  </p>
-                  <span className="rounded-full bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-600">
-                    {undated.length}
-                  </span>
-                </div>
-                <ul className="flex flex-col gap-1.5">
-                  {undated.map((e) => (
-                    <UndatedRow
-                      key={e.id}
-                      experimentId={e.id}
-                      name={e.name}
-                      highlighted={e.id === experimentId}
-                    />
-                  ))}
-                </ul>
+            {(undated.length > 0 || outOfRange.length > 0) && (
+              <div className="flex w-56 shrink-0 flex-col gap-4">
+                {undated.length > 0 && (
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <CalendarOff className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} />
+                      <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                        Эксперименты без даты
+                      </p>
+                      <span className="rounded-full bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-600">
+                        {undated.length}
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {undated.map((e) => (
+                        <UndatedRow
+                          key={e.id}
+                          experimentId={e.id}
+                          name={e.name}
+                          highlighted={e.id === experimentId}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {outOfRange.length > 0 && (
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <CalendarRange className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} />
+                      <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                        Вне диапазона
+                      </p>
+                      <span className="rounded-full bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-600">
+                        {outOfRange.length}
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {outOfRange.map(({ experiment: e, jumpStart }) => (
+                        <OutOfRangeRow
+                          key={e.id}
+                          experimentId={e.id}
+                          name={e.name}
+                          jumpStart={jumpStart}
+                          highlighted={e.id === experimentId}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 

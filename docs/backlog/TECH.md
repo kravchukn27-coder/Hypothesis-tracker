@@ -1,5 +1,97 @@
 # Tech Backlog
 
+## TECH-042 — typescript/@types/node/eslint pinned several majors behind latest
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Dependencies
+- **Type:** Chore
+- **Summary:** `typescript` (`^5`), `@types/node` (`^20`), and `eslint` (`^9`) are range-pinned to majors well behind what's on the registry (`typescript` latest is 7.x, `@types/node` latest is 26.x, `eslint` latest is 10.x per `npm outdated`).
+- **Description:**
+  Found during a dependency audit (2026-08-20). The gap is likely intentional short-term (Next 16 / React 19's toolchain compatibility with these newer majors isn't confirmed), but with no tracked plan it will keep widening every time a new major ships, eventually forcing a large risky jump instead of incremental ones.
+- **Acceptance Criteria:**
+  - Decide and record (here or in `docs/VERSIONS.md`) whether these are deliberately capped and why, or schedule an upgrade pass.
+  - No dependency version changes required to close this card if the decision is "stay capped for now" — documenting the reasoning is sufficient.
+
+## TECH-041 — pg / @types/pg declared as direct deps but never imported directly
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Dependencies
+- **Type:** Chore
+- **Summary:** `pg` and `@types/pg` are direct dependencies in `package.json`, but nothing in `src/` or `prisma/` imports `pg` directly — only `@prisma/adapter-pg` is imported (`prisma/seed.ts`, `src/lib/prisma.ts`), and that package already bundles its own `pg`/`@types/pg`.
+- **Description:**
+  Found during a dependency audit (2026-08-20). Duplicating them at the top level risks version drift between the app's pinned versions and what `@prisma/adapter-pg` actually resolves/expects, for no functional benefit today.
+- **Acceptance Criteria:**
+  - Confirm whether `pg`/`@types/pg` are pinned deliberately (e.g. to control the connection-pool version independent of the adapter); if so, leave a comment explaining why.
+  - Otherwise, remove both from `package.json` and confirm `npm install` + `npm run build` still succeed with `@prisma/adapter-pg` supplying its own `pg`.
+
+## TECH-040 — deepmerge-ts high-severity DoS advisory has no real fix yet
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Dependencies
+- **Type:** Chore
+- **Summary:** `npm audit` flags `deepmerge-ts@7.1.5` (transitive, via `@prisma/config` ← `prisma@7.9.1`) for a high-severity stack-exhaustion DoS ([GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx)) with no non-major fix currently available.
+- **Description:**
+  Found during a dependency audit (2026-08-20). Exposure is low in practice — it's used inside Prisma's own CLI/config tooling, not app runtime request handling. `npm audit fix` only offers `prisma@6.12.0`, a major *downgrade* from the already-newer installed 7.9.1, since the vulnerable range is open-ended and hasn't been patched upstream yet. No action is available today beyond tracking it.
+- **Acceptance Criteria:**
+  - Re-run `npm audit` after future `prisma`/`@prisma/config` releases; close this card once `deepmerge-ts` resolves to `>=8.0.0` with no downgrade required.
+  - No dependency changes needed to close this card immediately — it exists to track the advisory, not to force a premature downgrade.
+
+## TECH-039 — Duplicated startOfWeek()/MS_PER_DAY instead of importing the canonical lib/calendar.ts versions
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Architecture
+- **Type:** Fix
+- **Summary:** `src/app/experiments/actions.ts:78-87` reimplements `startOfWeek()` and `MS_PER_DAY` from scratch instead of importing the canonical exported versions from `src/lib/calendar.ts` — which `src/lib/experiment.ts` already imports correctly.
+- **Description:**
+  Found during a tech-debt/architecture audit (2026-08-20). Week-stage math in `actions.ts` (per-week upserts, and the drag-to-move/resize collision checks in `shiftExperimentWeeks`/`resizeExperimentWeeks`) computes week boundaries from its own private copy instead of the one the Calendar grid itself renders from (`buildTimeline` in `lib/calendar.ts`). Any future fix to Monday-start convention or DST handling in one copy silently doesn't reach the other, and the two could drift without any type error surfacing it.
+- **Acceptance Criteria:**
+  - `src/app/experiments/actions.ts` imports `startOfWeek` and the week-length constant from `src/lib/calendar.ts` instead of defining its own copies.
+  - No behavior change to any existing week-stage/calendar action.
+
+## TECH-038 — "Find-or-create tag by name" solved two different ways for the same kind of entity
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `resolveFunnelLevelId` (`src/lib/funnelLevel.ts`) and `resolveTagIds` (`src/app/experiments/actions.ts:155-166`) both upsert-by-name into a taggable entity (`{where:{name}, update:{}, create:{name, isCustom:true}}`), but via two unrelated-looking implementations — one a dedicated named function, the other a generic delegate-based helper used for Product/Segment.
+- **Description:**
+  Found during a tech-debt/architecture audit (2026-08-20). A developer fixing a bug in the upsert-by-name behavior (e.g. a race condition on concurrent creates) or adding a fifth taggable category has no single place to look — they have to know which of the two implementations is relevant, and neither reuses the other despite doing identical work.
+- **Acceptance Criteria:**
+  - One shared helper implements the upsert-by-name shape; `resolveFunnelLevelId` and `resolveTagIds` (or their replacement) both call it, ideally consolidated into one module (e.g. `lib/tags.ts`).
+  - No behavior change to Funnel Level, Product, or Segment tag resolution.
+
+## TECH-037 — experiments/actions.ts is an 849-line god-module mixing five unrelated concerns
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `src/app/experiments/actions.ts` mixes zod schema/validation, tag resolution, week-stage/calendar block math (drag/resize/collision), plain CRUD, and audit logging in one 849-line file with no internal module boundaries.
+- **Description:**
+  Found during a tech-debt/architecture audit (2026-08-20). The Calendar drag-to-move/resize block logic (`getBlockEntries`, `hasEntriesInRange`, `shiftExperimentWeeks`, `resizeExperimentWeeks`, lines 618-744) has a different mental model and different callers than the CRUD/archive functions at the bottom of the same file. No submodule grouping means every change requires scrolling past unrelated logic, and increases the chance of an unnoticed naming collision as the file keeps growing.
+- **Acceptance Criteria:**
+  - The file is split into cohesive modules reflecting its actual concerns (e.g. `experiments/actions/weekStages.ts`, `experiments/actions/tags.ts`, `experiments/actions/crud.ts`), re-exported so existing imports elsewhere in the app don't need to change.
+  - No behavior change to any exported action.
+
+## TECH-036 — Near-identical audit-log wrapper functions copy-pasted per action file
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `auditBacklogEvent` (`src/app/backlog/actions.ts:13-16`) and `auditExperimentEvent` (`src/app/experiments/actions.ts:12-15`) are near-identical wrappers around `safeWriteAuditLog`, differing only in a hardcoded route string — and even within `experiments/actions.ts`, `reorderCalendarExperiments` (line 485) bypasses the local wrapper and calls `safeWriteAuditLog` directly.
+- **Description:**
+  Found during a tech-debt/architecture audit (2026-08-20). Any change to how the acting user is resolved for audit entries (e.g. adding an impersonation check) currently requires updating N near-identical copies instead of one shared place, and the existing inconsistent use of the wrapper within one file shows the duplication is already causing drift.
+- **Acceptance Criteria:**
+  - `src/lib/audit-log.ts` exposes an `auditEvent(route)` factory (or equivalent) that returns a bound logger.
+  - `backlog/actions.ts` and `experiments/actions.ts` (including `reorderCalendarExperiments`) use it consistently instead of ad hoc local wrappers.
+  - No change to any existing `AuditLog` event name, metadata shape, or route string value.
+
 ## TECH-035 — PrismaClient has no `log` config for query/error/warn visibility
 
 - **Status:** TODO

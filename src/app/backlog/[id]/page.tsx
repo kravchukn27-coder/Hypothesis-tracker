@@ -75,7 +75,7 @@ export default async function HypothesisDetailPage({
               href={`/experiments/${hypothesis.experiments[0].id}`}
               className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              Показать эксперимент
+              Карточка эксперимента
             </Link>
           ) : (
             <Link

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- [UI-031] Renamed the hypothesis card's button to its experiment
+  (`backlog/[id]/page.tsx`) from "Показать эксперимент" to "Карточка
+  эксперимента" — the old label read as ambiguous next to "Открыть в
+  Calendar"/"Показать на календаре" elsewhere (open the card vs. show
+  it on the calendar), a leftover from when "Добавить эксперимент"
+  sat next to it (removed in PROD-034). Same `href`, same behavior —
+  text only. Verified live: button reads "Карточка эксперимента" and
+  still navigates to `/experiments/[id]`.
+
 - [UI-036] Renamed Calendar's undated-experiment sidebar header from
   "Без дат" to "Эксперименты без даты" (`calendar/page.tsx`) — the
   short label wasn't obviously about experiments at a glance. Text

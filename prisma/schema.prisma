@@ -111,6 +111,24 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
+model ErrorEvent {
+  id            String   @id @default(cuid())
+  signature     String   @unique
+  errorName     String?
+  errorMessage  String?
+  route         String
+  event         String
+  count         Int      @default(1)
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  lastAlertedAt DateTime?
+  lastUserId    String?
+  lastMetadata  Json?
+
+  @@index([lastSeenAt])
+  @@index([route])
+}
+
 model Hypothesis {
   id            String            @id @default(cuid())
   name          String

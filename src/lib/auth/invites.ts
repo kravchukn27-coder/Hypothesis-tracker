@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { writeAuditLog } from "@/lib/audit-log";
 
 const INVITE_TOKEN_BYTES = 32;
 export const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -56,9 +57,7 @@ export async function issueInvite(issuerUserId: string, name: string, email: str
         expiresAt,
       },
     });
-    await tx.auditLog.create({
-      data: { event: "INVITE_ISSUED", userId: issuerUserId, metadata: { invitedUserId: invitedUser.id, email: normalizedEmail } },
-    });
+    await writeAuditLog({ event: "INVITE_ISSUED", userId: issuerUserId, metadata: { invitedUserId: invitedUser.id, email: normalizedEmail } }, tx);
   });
 
   return rawToken;
@@ -100,7 +99,7 @@ export async function consumeInvite(rawToken: string, passwordHash: string): Pro
       where: { id: token.id },
       data: { usedAt: now, invalidatedAt: null },
     });
-    await tx.auditLog.create({ data: { event: "PASSWORD_SET", userId: token.user.id } });
+    await writeAuditLog({ event: "PASSWORD_SET", userId: token.user.id }, tx);
 
     return { ok: true as const };
   });

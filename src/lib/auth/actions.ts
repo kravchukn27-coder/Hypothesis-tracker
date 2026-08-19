@@ -8,6 +8,7 @@ import { clearLoginFailures, getLoginClientIp, isLoginRateLimited, normalizeLogi
 import { verifyPassword } from "./password";
 import { getCurrentUser } from "./session";
 import { signSessionToken } from "./token";
+import { writeAuditLog } from "@/lib/audit-log";
 
 function redirectToLogin(error: "credentials" | "ratelimit"): never {
   redirect(`/login?error=${error}`);
@@ -17,10 +18,6 @@ function safeReturnPath(value: string): string {
   return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/";
 }
 
-async function writeAuditLog(event: "LOGIN_SUCCESS" | "LOGIN_FAILURE" | "LOGOUT", userId: string | null, metadata?: object) {
-  await prisma.auditLog.create({ data: { event, userId, metadata } });
-}
-
 export async function loginAsUser(formData: FormData): Promise<void> {
   const email = normalizeLoginEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
@@ -28,7 +25,7 @@ export async function loginAsUser(formData: FormData): Promise<void> {
   const ip = await getLoginClientIp();
 
   if (await isLoginRateLimited(ip, email)) {
-    await writeAuditLog("LOGIN_FAILURE", null, { reason: "rate_limited", email, ip });
+    await writeAuditLog({ event: "LOGIN_FAILURE", userId: null, metadata: { reason: "rate_limited", email, ip } });
     redirectToLogin("ratelimit");
   }
 
@@ -41,7 +38,7 @@ export async function loginAsUser(formData: FormData): Promise<void> {
 
   if (!user || !user.isActive || !user.passwordHash || !password || !verifyPassword(password, user.passwordHash)) {
     const rateLimited = await recordLoginFailure(ip, email);
-    await writeAuditLog("LOGIN_FAILURE", user?.id ?? null, { reason: "invalid_credentials", email, ip });
+    await writeAuditLog({ event: "LOGIN_FAILURE", userId: user?.id ?? null, metadata: { reason: "invalid_credentials", email, ip } });
     redirectToLogin(rateLimited ? "ratelimit" : "credentials");
   }
 
@@ -60,13 +57,13 @@ export async function loginAsUser(formData: FormData): Promise<void> {
     path: "/",
     maxAge: SESSION_MAX_AGE_SEC,
   });
-  await writeAuditLog("LOGIN_SUCCESS", user.id, { ip });
+  await writeAuditLog({ event: "LOGIN_SUCCESS", userId: user.id, metadata: { ip } });
   redirect(from);
 }
 
 export async function logout(): Promise<void> {
   const user = await getCurrentUser();
-  if (user) await writeAuditLog("LOGOUT", user.id);
+  if (user) await writeAuditLog({ event: "LOGOUT", userId: user.id });
 
   (await cookies()).set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,

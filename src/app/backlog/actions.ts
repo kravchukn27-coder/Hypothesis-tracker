@@ -7,6 +7,13 @@ import { z } from "zod";
 import { shouldPromptArchiveHypothesis } from "@/lib/hypothesis";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions";
+import { getCurrentUser } from "@/lib/auth/session";
+import { safeWriteAuditLog } from "@/lib/audit-log";
+
+async function auditBacklogEvent(event: string, metadata: Record<string, unknown>) {
+  const user = await getCurrentUser();
+  await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: "src/app/backlog/actions.ts" });
+}
 
 const hypothesisFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно"),
@@ -65,6 +72,8 @@ export async function createHypothesis(
     },
   });
 
+  await auditBacklogEvent("HYPOTHESIS_CREATED", { hypothesisId: created.id });
+
   revalidatePath("/backlog");
   redirect(`/backlog?saved=1&hypothesisId=${created.id}`);
 }
@@ -104,6 +113,7 @@ export async function updateHypothesis(
       taskUrl: data.taskUrl || null,
     },
   });
+  await auditBacklogEvent("HYPOTHESIS_UPDATED", { hypothesisId: id });
   // PROD-033: Funnel Level isn't independently editable on an
   // experiment — keep every experiment under this hypothesis in sync
   // whenever the hypothesis's own Funnel Level changes.
@@ -131,10 +141,12 @@ export async function updateHypothesisStatus(id: string, status: string) {
   const parsed = statusSchema.safeParse(status);
   if (!parsed.success) return;
 
+  const before = await prisma.hypothesis.findUnique({ where: { id }, select: { status: true } });
   await prisma.hypothesis.update({
     where: { id },
     data: { status: parsed.data },
   });
+  await auditBacklogEvent("HYPOTHESIS_STATUS_CHANGED", { hypothesisId: id, before: before?.status ?? null, after: parsed.data });
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
@@ -176,6 +188,7 @@ export async function deleteHypothesis(id: string): Promise<{ error?: string }> 
   }
 
   await prisma.hypothesis.delete({ where: { id } });
+  await auditBacklogEvent("HYPOTHESIS_DELETED", { hypothesisId: id });
   revalidatePath("/backlog");
   redirect("/backlog");
 }
@@ -185,6 +198,7 @@ export async function archiveHypothesis(id: string) {
     where: { id },
     data: { archived: true, archivedAt: new Date() },
   });
+  await auditBacklogEvent("HYPOTHESIS_ARCHIVED", { hypothesisId: id });
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
 }
@@ -194,6 +208,7 @@ export async function unarchiveHypothesis(id: string) {
     where: { id },
     data: { archived: false, archivedAt: null },
   });
+  await auditBacklogEvent("HYPOTHESIS_UNARCHIVED", { hypothesisId: id });
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
 }

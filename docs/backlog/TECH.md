@@ -2,7 +2,7 @@
 
 ## TECH-015 — Extend AuditLog to general domain actions, plus a log viewer
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Observability
 - **Type:** Feature
@@ -24,7 +24,7 @@
 
 ## TECH-014 — Wire captureServerError into existing server actions
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Observability
 - **Type:** Chore
@@ -39,7 +39,7 @@
 
 ## TECH-013 — Structured server-side error logging core (ErrorEvent)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Observability
 - **Type:** Feature

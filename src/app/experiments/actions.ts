@@ -6,6 +6,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
+import { getCurrentUser } from "@/lib/auth/session";
+import { safeWriteAuditLog } from "@/lib/audit-log";
+
+async function auditExperimentEvent(event: string, metadata: Record<string, unknown>) {
+  const user = await getCurrentUser();
+  await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: "src/app/experiments/actions.ts" });
+}
 
 // TECH-005: "no status" (the Status field's "—" option) submits the
 // "NONE" sentinel from StageField — normalized to `undefined` here so
@@ -273,6 +280,7 @@ export async function createExperiment(
   }
 
   await syncHypothesisStatusForExperiment(experiment.id);
+  await auditExperimentEvent("EXPERIMENT_CREATED", { experimentId: experiment.id, hypothesisId: data.hypothesisId });
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${data.hypothesisId}`);
@@ -314,6 +322,7 @@ export async function updateExperiment(
       segments: { set: tagIds.segments.map((id) => ({ id })) },
     },
   });
+  await auditExperimentEvent("EXPERIMENT_UPDATED", { experimentId: id, hypothesisId: data.hypothesisId });
   await applyFunnelLevelFromExperimentForm(data.hypothesisId, data.funnelLevel);
   await syncHypothesisStatusForExperiment(id);
 
@@ -396,6 +405,7 @@ export async function updateExperimentStage(id: string, stage: string) {
     // the week is the way to do that (Calendar/detail card).
     if (hasWeeks) return;
     await prisma.experiment.update({ where: { id }, data: { stage: null } });
+    await auditExperimentEvent("EXPERIMENT_STAGE_CHANGED", { experimentId: id, after: null });
     revalidatePath(`/experiments/${id}`);
     revalidatePath("/calendar");
     await syncHypothesisStatusForExperiment(id);
@@ -421,6 +431,7 @@ export async function updateExperimentStage(id: string, stage: string) {
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
   await syncHypothesisStatusForExperiment(id);
+  await auditExperimentEvent("EXPERIMENT_STAGE_CHANGED", { experimentId: id, after: parsed.data });
 }
 
 export async function updateExperimentDates(
@@ -475,6 +486,7 @@ export async function setExperimentWeekStage(
   await recomputeExperimentDerivedFields(experimentId);
   await clearHiddenFlagIfNoLongerDone(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
+  await auditExperimentEvent("EXPERIMENT_WEEK_STAGE_CHANGED", { experimentId, weekStart: weekStart.toISOString(), after: parsedStage.data });
 
   const after = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { stage: true } });
   const becameDone = before?.stage !== "DONE" && after?.stage === "DONE";
@@ -766,6 +778,7 @@ export async function archiveExperiment(id: string) {
     where: { id },
     data: { archived: true, archivedAt: new Date() },
   });
+  await auditExperimentEvent("EXPERIMENT_ARCHIVED", { experimentId: id });
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
 }
@@ -775,6 +788,7 @@ export async function unarchiveExperiment(id: string) {
     where: { id },
     data: { archived: false, archivedAt: null },
   });
+  await auditExperimentEvent("EXPERIMENT_UNARCHIVED", { experimentId: id });
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
 }

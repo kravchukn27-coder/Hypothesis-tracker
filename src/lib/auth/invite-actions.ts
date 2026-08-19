@@ -3,6 +3,7 @@
 import { getCurrentUser } from "./session";
 import { hashPassword } from "./password";
 import { consumeInvite, issueInvite } from "./invites";
+import { captureServerError } from "@/lib/log";
 
 export type InviteActionState = { error?: string; link?: string };
 export type SetPasswordActionState = { error?: string; success?: boolean };
@@ -15,6 +16,13 @@ export async function createInvite(_previousState: InviteActionState, formData: 
     const token = await issueInvite(issuer.id, String(formData.get("name") ?? ""), String(formData.get("email") ?? ""));
     return { link: `/invite/${token}` };
   } catch (error) {
+    await captureServerError({
+      event: "auth.invite.create.failed",
+      route: "src/lib/auth/invite-actions.ts#createInvite",
+      error,
+      userId: issuer.id,
+      metadata: { email: String(formData.get("email") ?? "") },
+    });
     return { error: error instanceof Error ? error.message : "Не удалось создать приглашение." };
   }
 }

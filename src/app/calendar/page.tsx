@@ -190,13 +190,6 @@ export default async function CalendarPage({
         <div className="flex items-start gap-4">
           <div>
             <h1 className="text-xl font-semibold text-zinc-900">Calendar</h1>
-            {!showAll && (
-              <p className="mt-1 text-sm text-zinc-500">
-                {displayedExperiments.length === 0
-                  ? "Пока нет экспериментов"
-                  : `${rows.length} на таймлайне${undated.length ? `, ${undated.length} без дат` : ""}${outOfRange.length ? `, ${outOfRange.length} вне диапазона` : ""}`}
-              </p>
-            )}
           </div>
           <Link
             href={showAll ? calendarHref() : "/calendar?calendarView=all"}

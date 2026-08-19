@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- [UI-047] Removed the "N на таймлайне, N без дат, N вне диапазона"
+  summary line from under the Calendar heading. The dedicated empty-state
+  block further down ("Пока нет ни одного эксперимента. Добавить первый")
+  already covers the zero-experiments case, so nothing replaces the
+  removed line's "Пока нет экспериментов" branch. `rows`/`undated`/
+  `outOfRange` counts and the "Без дат"/"Вне диапазона" side panels are
+  unchanged — only this text line is gone.
+
 - [UI-050] The current week's column is noticeably brighter now, in
   both Calendar's header (`WeekHeaderCell.tsx`) and body cells
   (`ExperimentWeekRow.tsx`): `bg-blue-50/60` (barely visible, and the

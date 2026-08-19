@@ -101,7 +101,7 @@
 
 ## TECH-008 — Auth: login, logout, and global route protection
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Auth
 - **Type:** Feature

@@ -16,6 +16,9 @@ Source of truth for the original data model: a Google Sheet exported as
 - Tailwind CSS
 - Prisma + PostgreSQL
 
+Authentication uses local email/password accounts. Every app page is protected
+by the signed-session proxy; `/login` is the public entry point.
+
 ## Screens (build order)
 
 1. **Backlog** ✅ — list/create/edit hypotheses, auto-computed Score,

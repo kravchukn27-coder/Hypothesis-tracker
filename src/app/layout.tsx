@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavLinks } from "./NavLinks";
 import { ToastProvider } from "@/components/toast/ToastProvider";
+import { logout } from "@/lib/auth/actions";
+import { getCurrentUser } from "@/lib/auth/session";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,7 +21,8 @@ export const metadata: Metadata = {
   description: "Growth hypothesis backlog, experiments, and calendar",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getCurrentUser();
   return (
     <html
       lang="ru"
@@ -37,6 +40,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Hypothesis Tracker
               </span>
               <NavLinks />
+              {user ? (
+                <form action={logout} className="ml-auto flex items-center gap-3 text-sm">
+                  <span className="text-zinc-600">{user.name}</span>
+                  <button className="rounded-md px-3 py-1.5 text-zinc-600 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50" type="submit">
+                    Выйти
+                  </button>
+                </form>
+              ) : null}
             </div>
           </header>
           <div className="flex flex-1 flex-col">{children}</div>

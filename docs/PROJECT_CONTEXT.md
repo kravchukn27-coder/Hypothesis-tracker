@@ -373,6 +373,14 @@ to sync schema changes — no shadow DB involved, no migration files. A
 proper migration history can be baselined from the schema at that
 point with `prisma migrate diff` / `migrate resolve`.
 
+### Bootstrap authentication user
+
+After syncing the schema, create the first local account with `npm run db:seed`.
+The gitignored `.env` must define `BOOTSTRAP_NAME`, `BOOTSTRAP_EMAIL`, and
+`BOOTSTRAP_PASSWORD`. The seed hashes the password with scrypt and is safe to
+run repeatedly: it creates the user only when that email does not already
+exist.
+
 ## Documentation Map
 
 - `docs/PROJECT_CONTEXT.md` (this file) — project map, read first.

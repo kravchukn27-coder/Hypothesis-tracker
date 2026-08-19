@@ -145,7 +145,7 @@
 
 ## TECH-006 — Auth: data model and bootstrap seed
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Auth
 - **Type:** Data model

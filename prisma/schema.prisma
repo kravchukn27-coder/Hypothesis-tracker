@@ -61,6 +61,55 @@ model Segment {
   experiments Experiment[]
 }
 
+model User {
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  passwordHash        String?
+  sessionVersion      Int                  @default(0)
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  invitedBy           User?                @relation("Invites", fields: [invitedById], references: [id])
+  invitedById         String?
+  invitedUsers        User[]               @relation("Invites")
+  passwordSetupTokens PasswordSetupToken[] @relation("PasswordSetupTokens")
+  issuedTokens        PasswordSetupToken[] @relation("IssuedBy")
+}
+
+model PasswordSetupToken {
+  id             String    @id @default(cuid())
+  tokenHash      String    @unique
+  userId         String
+  issuedByUserId String
+  user           User      @relation("PasswordSetupTokens", fields: [userId], references: [id], onDelete: Cascade)
+  issuedBy       User      @relation("IssuedBy", fields: [issuedByUserId], references: [id])
+  expiresAt      DateTime
+  usedAt         DateTime?
+  invalidatedAt  DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model LoginRateLimitBucket {
+  id            String    @id @default(cuid())
+  scope         String
+  scopeKey      String
+  failuresAt    Json      @default("[]")
+  cooldownUntil DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([scope, scopeKey])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  event     String
+  userId    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
 model Hypothesis {
   id            String            @id @default(cuid())
   name          String

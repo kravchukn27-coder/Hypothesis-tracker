@@ -21,6 +21,7 @@ import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, currentStageOf, stageLabel } from "@/lib/experiment";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
+import { HideFromCalendarButton } from "../HideFromCalendarButton";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -132,14 +133,19 @@ export default async function ExperimentDetailPage({
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-600">
           <p>Гипотеза: {experiment.hypothesis.name}</p>
-          {calendarHref && !isHiddenFromCalendar && (
-            <Link
-              href={calendarHref}
-              className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-            >
-              Показать на календаре
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {currentStage === "DONE" && !isHiddenFromCalendar && (
+              <HideFromCalendarButton experimentId={experiment.id} experimentName={experiment.name} />
+            )}
+            {calendarHref && !isHiddenFromCalendar && (
+              <Link
+                href={calendarHref}
+                className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
+                Показать на календаре
+              </Link>
+            )}
+          </div>
         </div>
       </section>
 
@@ -150,6 +156,7 @@ export default async function ExperimentDetailPage({
       <ExperimentForm
         action={action}
         experimentId={experiment.id}
+        archived={experiment.archived}
         hypothesis={{
           id: experiment.hypothesisId,
           name: experiment.hypothesis.name,

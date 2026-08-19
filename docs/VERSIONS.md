@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- [BUG-014] The experiment detail card's own "Status" field
+  (`ExperimentForm.tsx`, under "Основное") is editable now for
+  week-tracked experiments instead of showing a locked/disabled pill —
+  it swaps in `StageCell` (the same pill-select the Experiments list
+  already uses) once week entries exist, writing to the current week
+  the same way `updateExperimentStage` always did; legacy (non-week-
+  tracked) experiments keep the plain form-bound select they already
+  had. First pass added a second, duplicate status control at the top
+  of the card instead — reverted after user feedback that one editable
+  control is enough; the top summary stays a plain read-only `<Badge>`
+  as before. `StageCell` gained an `onDoneModal?: "archive" | "hide"`
+  prop (default `"archive"`, unchanged for its existing
+  `AllExperimentsTable` caller) so the detail card's cell opts into
+  showing `HideFromCalendarModal` — the same "Убрать задачу из
+  календаря?" prompt Calendar and `ExperimentWeekStagesEditor` already
+  show — instead of the list's archive prompt, on reaching Done.
+
+  That prompt only fires at the moment of a live transition to Done,
+  so an experiment already sitting at Done (dismissed the prompt once,
+  or predates this feature) had no way to hide it from the card
+  afterward — added a persistent `HideFromCalendarButton` next to
+  "Показать на календаре", shown whenever the current stage is Done
+  and it isn't hidden yet, calling the same `hideExperimentFromCalendar`
+  action directly (no confirm dialog — reversible, matching "Показать
+  на календаре"'s plain-button treatment). `ExperimentWeekStagesEditor`,
+  Calendar, Backlog, and `AllExperimentsTable` are unchanged.
+
 - [BUG-013] Backlog now mounts the existing `ScrollToHighlighted`
   client component whenever `?hypothesisId=` is present. After a
   creation redirect or a linked return to Backlog, the highlighted row

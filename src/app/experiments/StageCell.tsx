@@ -14,6 +14,7 @@ import {
   shouldPromptArchiveExperiment,
 } from "@/lib/experiment";
 import { IconSelect } from "@/components/IconSelect";
+import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 // TECH-005: same "—" sentinel as ExperimentForm's StageField — an
@@ -32,16 +33,24 @@ export function StageCell({
   experimentName,
   stage,
   archived,
+  onDoneModal = "archive",
 }: {
   experimentId: string;
   experimentName: string;
   stage: ExperimentStage | null;
   archived: boolean;
+  /** BUG-014: the detail card wants the same "убрать из календаря?"
+   * prompt Calendar/`ExperimentWeekStagesEditor` show on reaching
+   * Done, not the list's archive prompt — everything else about the
+   * cell (writing the current week, the "just became Done" trigger)
+   * stays identical between the two variants. */
+  onDoneModal?: "archive" | "hide";
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState<StageCellOption>(stage ?? "NONE");
   const [pending, startTransition] = useTransition();
   const [showArchivePrompt, setShowArchivePrompt] = useState(false);
+  const [showHidePrompt, setShowHidePrompt] = useState(false);
 
   function handleChange(next: StageCellOption) {
     const previous = current;
@@ -50,7 +59,8 @@ export function StageCell({
       await updateExperimentStage(experimentId, next);
       router.refresh();
       if (next !== previous && next !== "NONE" && shouldPromptArchiveExperiment(next, archived)) {
-        setShowArchivePrompt(true);
+        if (onDoneModal === "hide") setShowHidePrompt(true);
+        else setShowArchivePrompt(true);
       }
     });
   }
@@ -72,6 +82,14 @@ export function StageCell({
           experimentId={experimentId}
           experimentName={experimentName}
           onDismiss={() => setShowArchivePrompt(false)}
+        />
+      )}
+
+      {showHidePrompt && (
+        <HideFromCalendarModal
+          experimentId={experimentId}
+          experimentName={experimentName}
+          onDismiss={() => setShowHidePrompt(false)}
         />
       )}
     </span>

@@ -20,6 +20,7 @@ import { StickyFormSubmit } from "@/components/StickyFormSubmit";
 import { TagMultiSelect } from "@/components/TagMultiSelect";
 import { useToast } from "@/components/toast/ToastProvider";
 import { ExperimentWeekStagesEditor } from "./ExperimentWeekStagesEditor";
+import { StageCell } from "./StageCell";
 import type { ExperimentFormState } from "./actions";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -54,6 +55,7 @@ const emptyInitial: Initial = {
 export function ExperimentForm({
   action,
   experimentId,
+  archived = false,
   hypothesis,
   authors,
   funnelLevels,
@@ -65,6 +67,8 @@ export function ExperimentForm({
   action: (state: ExperimentFormState, formData: FormData) => Promise<ExperimentFormState>;
   /** Only present when editing an existing experiment (needed for the per-week editor). */
   experimentId?: string;
+  /** Needed by the week-tracked Status cell (BUG-014) to gate its Done prompt. */
+  archived?: boolean;
   hypothesis: Hypothesis;
   authors: string[];
   funnelLevels: Tag[];
@@ -125,8 +129,18 @@ export function ExperimentForm({
         <input type="hidden" name="hypothesisId" value={hypothesis.id} />
 
         <div className="grid gap-6 sm:grid-cols-3">
-          <Field label="Status" htmlFor="stage">
-            <StageField defaultValue={values.stage} locked={weekLocked} />
+          <Field label="Status" htmlFor={weekLocked ? undefined : "stage"}>
+            {weekLocked && experimentId ? (
+              <StageCell
+                experimentId={experimentId}
+                experimentName={values.name}
+                stage={values.stage}
+                archived={archived}
+                onDoneModal="hide"
+              />
+            ) : (
+              <StageField defaultValue={values.stage} locked={false} />
+            )}
           </Field>
           <Field label="Автор">
             <AuthorField authors={authors} defaultValue={values.author} />

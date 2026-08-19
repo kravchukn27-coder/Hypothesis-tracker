@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- [UI-046] Backlog no longer repeats the linked experiment's stage
+  beneath a hypothesis name. A new rightmost action column holds an
+  icon-only link to that experiment's focused Calendar view. The green
+  "Взять в работу" action appears there only for Accepted hypotheses
+  that do not yet have an experiment.
+  Hypotheses whose only linked experiments are archived show an archive
+  indicator; rows without an experiment stay empty — the requested
+  "Создать эксперимент" control is intentionally not rendered in the
+  table. Hypothesis names can use two lines, and the Backlog surface
+  and its header/search rows expand to make room for the new column
+  without changing the Calendar table.
+
 - [BUG-014] The experiment detail card's own "Status" field
   (`ExperimentForm.tsx`, under "Основное") is editable now for
   week-tracked experiments instead of showing a locked/disabled pill —

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Archive, ArrowUpRight, Clock } from "lucide-react";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { computeScore, STATUS_BORDER_CLASSES, STATUS_LABELS, STATUS_ORDER } from "@/lib/hypothesis";
-import { currentStageOf, stageLabel } from "@/lib/experiment";
 import { toDateParam } from "@/lib/calendar";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { StatusCell } from "./StatusCell";
@@ -22,7 +21,6 @@ import {
   NAME_COL,
   STATUS_COL,
   TABLE_CONTENT_WIDTH,
-  TABLE_SURFACE_WIDTH,
 } from "@/components/tableWidths";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
@@ -34,6 +32,8 @@ import type { HypothesisStatus } from "@/generated/prisma/enums";
 // its own, much narrower column here without touching META_COL's
 // other usage.
 const SCORE_COL = "w-20";
+const EXPERIMENT_ACTION_COL = "w-36";
+const BACKLOG_SURFACE_WIDTH = "mx-auto w-full min-w-0 max-w-[1160px]";
 
 export default async function BacklogPage({
   searchParams,
@@ -109,14 +109,13 @@ export default async function BacklogPage({
   }
 
   const isFiltered = Boolean(funnelLevelsFilter.length || statuses.length || q);
-  const now = new Date();
 
-  // Page container matches TABLE_SURFACE_WIDTH (1014px) so the header,
+  // Page container matches the Backlog table so the header,
   // search box, and "+ Новая гипотеза" button share the table's exact
   // left/right edges instead of spanning a wider outer column the table
   // sits centered inside of.
   return (
-    <div className="mx-auto flex w-full max-w-[1014px] flex-1 flex-col gap-4 px-6 py-8">
+    <div className="mx-auto flex w-full max-w-[1160px] flex-1 flex-col gap-4 px-6 py-8">
       <Suspense fallback={null}>
         <SavedToastGate />
       </Suspense>
@@ -157,7 +156,7 @@ export default async function BacklogPage({
         />
 
       {rows.length === 0 ? (
-        <div className={`flex ${TABLE_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
+        <div className={`flex ${BACKLOG_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
           <p className="text-sm text-zinc-500">
             {q
               ? "По этому запросу ничего не найдено. Попробуйте изменить или сбросить поиск."
@@ -182,7 +181,7 @@ export default async function BacklogPage({
           )}
         </div>
       ) : (
-        <div className={`${TABLE_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
+        <div className={`${BACKLOG_SURFACE_WIDTH} overflow-x-hidden rounded-xl border border-zinc-200`}>
           <table className={`${TABLE_CONTENT_WIDTH} table-fixed text-left text-sm max-[640px]:[&_th]:!w-auto max-[640px]:[&_td]:!w-auto max-[640px]:[&_th]:px-2 max-[640px]:[&_td]:px-2`}>
             <thead className="bg-zinc-50 text-xs font-medium text-zinc-500">
               <tr>
@@ -243,6 +242,9 @@ export default async function BacklogPage({
                     reading — centering would fight that truncation
                     pattern and read worse, not better. */}
                 <th className={`${COMMENT_COL} px-4 py-2`}>Comment</th>
+                <th className={`${EXPERIMENT_ACTION_COL} px-4 py-2`}>
+                  <span className="sr-only">Действия с экспериментом</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -263,12 +265,6 @@ export default async function BacklogPage({
                 const experimentHref = activeExperiment
                   ? `/calendar?experimentId=${activeExperiment.id}${calendarStart ? `&start=${toDateParam(calendarStart)}` : ""}`
                   : null;
-                const experimentLabel = activeExperiment
-                  ? stageLabel(currentStageOf(activeExperiment, now))
-                  : h.experiments.length > 0
-                    ? "Связанные эксперименты в архиве"
-                    : null;
-
                 const isHighlighted = h.id === hypothesisId;
                 return (
                   <tr
@@ -283,28 +279,10 @@ export default async function BacklogPage({
                     <Link
                       href={`/backlog/${h.id}`}
                       title={h.name}
-                      className="block truncate font-medium text-zinc-900 hover:underline"
+                      className="line-clamp-2 font-medium text-zinc-900 hover:underline"
                     >
                       {h.name}
                     </Link>
-                    {experimentLabel && (
-                      experimentHref ? (
-                        <Link
-                          href={experimentHref}
-                          title={experimentLabel}
-                          className="mt-1 block truncate text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
-                        >
-                          {experimentLabel}
-                        </Link>
-                      ) : (
-                        <span
-                          title={experimentLabel}
-                          className="mt-1 block truncate text-xs text-zinc-500"
-                        >
-                          {experimentLabel}
-                        </span>
-                      )
-                    )}
                   </td>
                   <td className={`${STATUS_COL} px-4 py-2 text-center`}>
                     <StatusCell
@@ -313,7 +291,6 @@ export default async function BacklogPage({
                       status={h.status}
                       archived={h.archived}
                     />
-                    {h.status === "ACCEPTED" && <div className="mt-2"><TakeInWorkButton hypothesisId={h.id} /></div>}
                   </td>
                   <td className={`${FUNNEL_LEVEL_COL} min-w-0 px-4 py-2 text-center`}>
                     {h.funnelLevel ? (
@@ -341,6 +318,31 @@ export default async function BacklogPage({
                     ) : (
                       <span className="text-zinc-500">—</span>
                     )}
+                  </td>
+                <td className={`${EXPERIMENT_ACTION_COL} px-4 py-2`}>
+                  <div className="flex flex-col items-center gap-2">
+                      {experimentHref ? (
+                        <Link
+                          href={experimentHref}
+                          aria-label="Показать эксперимент на Calendar"
+                          title="Показать эксперимент на Calendar"
+                          className="inline-flex size-9 items-center justify-center rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                        >
+                          <ArrowUpRight className="size-4" aria-hidden />
+                        </Link>
+                      ) : h.experiments.length > 0 ? (
+                        <span
+                          aria-label="Все связанные эксперименты в архиве"
+                          title="Все связанные эксперименты в архиве"
+                          className="inline-flex size-9 items-center justify-center text-zinc-400"
+                        >
+                          <Archive className="size-4" aria-hidden />
+                        </span>
+                      ) : null}
+                      {h.status === "ACCEPTED" && h.experiments.length === 0 && (
+                        <TakeInWorkButton hypothesisId={h.id} />
+                      )}
+                    </div>
                   </td>
                   </tr>
                 );

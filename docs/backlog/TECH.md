@@ -1,5 +1,92 @@
 # Tech Backlog
 
+## TECH-024 — deleteHypotheses: wrap findMany+deleteMany in try/catch
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** `deleteHypotheses` (`src/app/backlog/actions.ts`) runs a `findMany` filter pass then a `deleteMany`, with no try/catch around either call — a DB error between them throws unhandled instead of reporting a partial-result error like the function's own docstring implies it should.
+- **Description:**
+  Found during a resilience audit (2026-08-20), see TECH-019 through TECH-023 for the related findings. Low risk in practice (delete-only, no dependent side effects to roll back), but inconsistent with the "skip blocked ones, report the skip count instead of failing the batch" resilience `deleteHypotheses` already implements for the *business* case (hypotheses with linked experiments) — a DB failure gets none of that same care.
+- **Acceptance Criteria:**
+  - The `findMany`/`deleteMany` pair is wrapped in try/catch.
+  - On a DB failure, the action returns an `{ error }` state consistent with the existing "blocked" error message shape, not an unhandled throw.
+  - Existing partial-success behavior (delete what's deletable, report the blocked count) is unchanged.
+
+## TECH-023 — No connection/statement timeout on the Prisma/pg adapter
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** `src/lib/prisma.ts` constructs `PrismaPg({ connectionString: process.env.DATABASE_URL })` with no explicit connection or statement timeout, and no retry/backoff exists anywhere in the codebase for transient connection errors.
+- **Description:**
+  Found during a resilience audit (2026-08-20). A degraded (slow but responsive) DB can hang requests indefinitely rather than failing fast, since nothing bounds how long a query waits — combined with TECH-020/021's missing error handling, a slow DB currently looks like a hung app rather than a clear, recoverable error. Retry/backoff is deliberately out of scope here — this app's usage pattern (small trusted team, human-driven mutations, low request volume) benefits more from fail-fast-with-a-clear-error than from automatic retry.
+- **Acceptance Criteria:**
+  - The pg pool passed to `PrismaPg` sets an explicit `connectionTimeoutMillis` (and a statement timeout if the driver/DB supports one cleanly).
+  - A deliberately unreachable/blackholed DB connection fails within the configured timeout instead of hanging indefinitely.
+  - No behavior change for the normal (DB healthy) path.
+
+## TECH-022 — setExperimentWeekStage: wrap its 4-step write sequence in a transaction
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** `setExperimentWeekStage` (`src/app/experiments/actions.ts`) performs 4+ sequential, non-transactional writes (upsert week stage → recompute derived fields → clear hidden flag → sync hypothesis status) — a DB failure partway through leaves `Experiment.stage`/`startDate`/`endDate` inconsistent with its `ExperimentWeekStage` rows, with no rollback.
+- **Description:**
+  Found during a resilience audit (2026-08-20). `reorderCalendarExperiments` in the same file already does this correctly with `prisma.$transaction` (`src/app/experiments/actions.ts:482`) — this card brings `setExperimentWeekStage` in line with that existing pattern. Depends on TECH-020 for the try/catch wrapper being added at the same time (a transaction that still throws unhandled only fixes the atomicity half of the problem, not the crash).
+- **Acceptance Criteria:**
+  - The upsert → recompute → clear-hidden-flag → sync-hypothesis-status sequence runs inside `prisma.$transaction`.
+  - A simulated failure at any step leaves the DB in its pre-call state (no partial update), verified by checking `Experiment.stage`/`startDate`/`endDate` and `ExperimentWeekStage` rows after a forced error.
+  - Existing return value (`{ becameDone }`) and calendar/detail-page behavior on success are unchanged.
+
+## TECH-021 — Root error.tsx / global-error.tsx for unhandled route failures
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** Only `/calendar` (`src/app/calendar/error.tsx`) has a route-level error boundary — `/backlog`, `/experiments`, `/users`, `/activity`, and every other route fall through to Next.js's default error page on any unhandled failure, and that failure is never captured by TECH-013's logging/alerting pipeline.
+- **Description:**
+  Found during a resilience audit (2026-08-20). A DB failure on any unprotected route currently shows a generic/stack-leaking dev error or a bare 500 in prod, with no retry UI and no `captureServerError` call — so outages on those routes are both unhandled *and* unnoticed by the Telegram alerting TECH-013/014 already built. Add a root `src/app/error.tsx` mirroring the calendar one (retry button, no stack trace shown to the user) and a `global-error.tsx` for failures in the root layout itself, which a route-level `error.tsx` can't catch.
+- **Acceptance Criteria:**
+  - `src/app/error.tsx` exists, calls `captureServerError` (or equivalent logging) on mount, and shows a generic retry UI matching the calendar error page's style.
+  - `src/app/global-error.tsx` exists to catch root-layout-level failures.
+  - A deliberately-thrown error on an unprotected route (e.g. `/users`) now shows the new boundary instead of Next's default error page, and produces one `ErrorEvent` row.
+  - `/calendar`'s existing `error.tsx` is untouched.
+
+## TECH-020 — Wrap Prisma calls in mutation server actions with try/catch + captureServerError
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Resilience
+- **Type:** Chore
+- **Summary:** Every mutating server action in `src/app/experiments/actions.ts` and `src/app/backlog/actions.ts` (create/update/archive/delete for both hypotheses and experiments, week-stage changes, reordering, etc.) and `src/app/backlog/[id]/comments-actions.ts` calls Prisma directly with no try/catch — compare to `createInvite` (`src/lib/auth/invite-actions.ts:15-27`), which already does this correctly.
+- **Description:**
+  Found during a resilience audit (2026-08-20). TECH-014 wired `captureServerError` into "existing server actions" but this class of action — the core hypothesis/experiment CRUD, the highest-traffic mutation surface in the app — was apparently missed or added after that pass; grepping for `captureServerError`/`logError` today turns up only `safeWriteAuditLog` and `createInvite`. A transient DB error during any of these currently throws raw: the user sees an unhandled crash instead of the `{ error: "..." }` state shape these actions already return for validation failures, and the failure never reaches the Telegram alerting pipeline built specifically to catch this.
+- **Acceptance Criteria:**
+  - Every exported mutation in `experiments/actions.ts`, `backlog/actions.ts`, and `backlog/[id]/comments-actions.ts` wraps its Prisma call(s) in try/catch.
+  - On failure, each calls `captureServerError` with a distinct `event` name (matching the `<domain>.<action>.failed` convention from TECH-014) and returns a user-facing `{ error: "..." }` state instead of throwing, using the same message style already used for that action's validation errors.
+  - Existing successful-path behavior, redirects, and `revalidatePath` calls are unchanged.
+  - A deliberately-triggered DB failure on one of these actions produces exactly one `ErrorEvent` row and a clean user-facing error, not an unhandled crash.
+
+## TECH-019 — getCurrentUser: catch DB errors instead of letting them propagate
+
+- **Status:** TODO
+- **Priority:** Critical
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** `getCurrentUser()` (`src/lib/auth/session.ts`) only wraps `getSessionSecret()` in try/catch — the `prisma.user.findFirst` call on line 20 is unguarded and throws unhandled on any DB failure.
+- **Description:**
+  Found during a resilience audit (2026-08-20). `getCurrentUser` runs on nearly every page and server action (root layout, `requireUserPage()`, `auditBacklogEvent`/`auditExperimentEvent`) — TECH-016 already identified it as the single most frequently executed query path in the app. A DB blip (dropped connection, brief pool exhaustion) currently turns into an unhandled exception on every request touching session state, i.e. the whole app goes down with the DB, with no "you're logged out, try again" fallback. This is the highest-severity finding from the audit precisely because of how central this function is.
+- **Acceptance Criteria:**
+  - The `prisma.user.findFirst` call is wrapped in try/catch.
+  - On a DB failure, `getCurrentUser` returns `null` (safe default — treated as "no session") rather than throwing.
+  - The failure is logged via `captureServerError` (or equivalent) rather than silently swallowed.
+  - Existing session-revocation behavior (mismatched `sessionVersion`, expired/tampered token, inactive user) is unchanged for the DB-healthy path.
+
 ## TECH-018 — Add indexes to AuditLog for /activity's filter/sort columns
 
 - **Status:** TODO

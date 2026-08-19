@@ -1,5 +1,67 @@
 # Tech Backlog
 
+## TECH-015 — Extend AuditLog to general domain actions, plus a log viewer
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Observability
+- **Type:** Feature
+- **Summary:** `AuditLog` (already in `prisma/schema.prisma`) is only ever written from `src/lib/auth/actions.ts` for 4 auth events (`LOGIN_SUCCESS`/`LOGIN_FAILURE`/`LOGOUT`, plus invite events in `auth/invites.ts`) — extend it to general domain mutations (create/archive hypothesis, change experiment stage, etc.) and add a read-only viewer.
+- **Description:**
+  Ported principle from `battery-pricing-app`'s `src/lib/audit-log.ts` (`writeAuditLog`/`safeWriteAuditLog`), **not** its exact schema — this app's `AuditLog` model is already simpler (`event`, `userId`, `metadata`, `createdAt`; no `action`/`entityType`/`entityId`/`result` columns like the source), and that's a deliberate existing choice worth keeping rather than reshaping the table to match the source app. Identify the mutated entity via `event` string naming (e.g. `HYPOTHESIS_CREATED`, `HYPOTHESIS_ARCHIVED`, `EXPERIMENT_STAGE_CHANGED`) plus `metadata` (entity id, before/after values) instead of dedicated columns.
+
+  Work:
+  1. Extract the local `writeAuditLog` helper out of `src/lib/auth/actions.ts` into a shared `src/lib/audit-log.ts`, generalized to accept any `event` string (not just the auth-only union type it currently has) and reusing TECH-013's `redactSensitiveAuditMetadata` for the `metadata` field. `auth/actions.ts`/`auth/invites.ts` switch to importing the shared helper instead of keeping their own copy.
+  2. Call the shared helper from domain mutation actions after they succeed — `backlog/actions.ts` (create/update/archive/delete hypothesis, status change), `experiments/actions.ts` (create/archive experiment, week-stage changes). Scope of exactly which mutations get logged is a call to make at implementation time — start with the ones that already write `AuditLog` for auth as the density reference, not every single field edit.
+  3. A read-only viewer page (e.g. under `/users` — the closest existing admin-ish surface — or a new route) listing both `AuditLog` and TECH-013's `ErrorEvent` rows, filterable by user/event/date, matching source app's `/settings/audit-log`+`/settings/error-log` viewers in spirit but as one simpler screen (this app doesn't need two, given expected volume).
+- **Acceptance Criteria:**
+  - `writeAuditLog` lives in one shared `src/lib/audit-log.ts`, not duplicated between auth and domain call sites.
+  - At least hypothesis create/archive and experiment stage changes write an `AuditLog` row with the acting user's id.
+  - Sensitive-looking metadata keys (password/token/secret/cookie/authorization/session) are redacted before being persisted, reusing TECH-013's redaction helper.
+  - A logged-in user can view a filterable list of audit entries and error events without needing direct DB access.
+  - Existing auth audit events (`LOGIN_SUCCESS`/`LOGIN_FAILURE`/`LOGOUT`/invite events) keep working unchanged through the now-shared helper.
+  - No `AuditLog` schema change (columns stay `event`/`userId`/`metadata`/`createdAt`) unless a real need for structured `entityType`/`entityId` filtering surfaces during implementation — flag it back to the user before adding columns, don't just port the source schema wholesale.
+
+## TECH-014 — Wire captureServerError into existing server actions
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Observability
+- **Type:** Chore
+- **Summary:** Wrap the `catch` blocks of this app's server actions (`backlog/actions.ts`, `experiments/actions.ts`, `auth/actions.ts`, etc.) with TECH-013's `captureServerError`, so failures actually get logged/tracked instead of just surfacing a generic toast to the user.
+- **Description:**
+  Depends on TECH-013 (needs `captureServerError` to exist first). Mechanical pass ported from `battery-pricing-app`'s convention (74 call sites there) — after a mutation's `try` block fails, call `captureServerError({ event: "<domain>.<action>.failed", route: "<file/function>", error, userId, metadata })` before returning the existing user-facing error (toast message stays as-is, this is additive, not a UX change).
+- **Acceptance Criteria:**
+  - Every server action in `backlog/actions.ts` and `experiments/actions.ts` that currently has a bare `catch` (no logging) now also calls `captureServerError` with a distinct `event` name per failure site.
+  - Existing user-facing error behavior (toast messages, return values) is unchanged — this only adds logging alongside it.
+  - A deliberately-triggered failure (e.g. a bad Prisma call in dev) produces exactly one `ErrorEvent` row, not a duplicate per retry within the same signature window.
+  - No change to successful-path behavior anywhere touched.
+
+## TECH-013 — Structured server-side error logging core (ErrorEvent)
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Observability
+- **Type:** Feature
+- **Summary:** Port `battery-pricing-app`'s structured error-logging core — `logInfo`/`logWarn`/`logError`/`captureServerError`, a deduplicated `ErrorEvent` table, and a shared metadata-redaction helper. No auth dependency (`userId` is optional here) — can ship independently of the auth/comment-feed work already in flight.
+- **Description:**
+  Source: user asked (2026-08-19) to study `battery-pricing-app`'s error/action-logging setup and port the same principle. This card ports the error-logging half; TECH-015 covers the action-logging half (`AuditLog`), which does need a real user, unlike this one.
+
+  Ported as-is from `battery-pricing-app`:
+  - `prisma/schema.prisma` — new `ErrorEvent` model (`signature @unique`, `errorName`, `errorMessage`, `route`, `event`, `count`, `firstSeenAt`, `lastSeenAt`, `lastAlertedAt`, `lastUserId`, `lastMetadata`), same shape as source's `prisma/schema.prisma:598-614`.
+  - `src/lib/log.ts` — `logInfo`/`logWarn`/`logError` write structured JSON to console (level, event, ISO timestamp, redacted metadata, normalized error name/message/stack); `logError` also calls `recordErrorEvent`. `captureServerError({ event, route, error, userId?, metadata? })` is the one function call sites actually use.
+  - `src/lib/error-events.ts` — `recordErrorEvent`: computes a signature (`sha1(errorName|route|normalizedMessage)`, digits/hex-ids stripped from the message so distinct instances of the same failure collapse into one row), creates or increments the matching `ErrorEvent` row, and decides whether a rate-alert should fire (≥10 occurrences in a 5-minute rolling window, 30-minute cooldown between alerts for the same signature). Never throws — a failure in error-tracking itself must not break the caller's actual error handling.
+  - `src/lib/audit-metadata-redaction.ts` — shared `redactSensitiveAuditMetadata`, regex on object keys (`password|token|secret|cookie|authorization|session`, case-insensitive) replacing the whole value with `"[REDACTED]"`. Shared with TECH-015's audit-log metadata, not duplicated.
+  - Telegram alerting (`sendTelegramAlert`) — optional, ported as-is: reads `MONITOR_TELEGRAM_BOT_TOKEN`/`MONITOR_TELEGRAM_CHAT_ID` from env, silently no-ops if unset. Decide at implementation time whether this app wants it wired up at all, or whether the ported function should just exist unused until someone sets the env vars — either is fine, it costs nothing when unconfigured.
+- **Acceptance Criteria:**
+  - `npx prisma db push` applies the new `ErrorEvent` model cleanly.
+  - Calling `captureServerError` with the same underlying error twice in quick succession increments one `ErrorEvent` row's `count` rather than creating two rows.
+  - A genuinely new error signature creates a new `ErrorEvent` row with `count: 1`.
+  - Metadata containing a key matching the redaction regex is stored as `"[REDACTED]"`, not the real value.
+  - `captureServerError` never throws, even if the DB write inside it fails.
+  - No new npm dependency (matches source: Node's built-in `crypto` for the signature hash, native `fetch` for the optional Telegram call).
+  - This card ships no UI and no call-site wiring (that's TECH-014) — it's the library layer only.
+
 ## TECH-012 — Backlog table: latest-comment preview from the feed
 
 - **Status:** DONE

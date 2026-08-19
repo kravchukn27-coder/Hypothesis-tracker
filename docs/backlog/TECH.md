@@ -1,5 +1,110 @@
 # Tech Backlog
 
+## TECH-050 — No catalog of the Server Action surface or its side effects
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** There is no README or index describing what Server Action mutations exist across `backlog/actions.ts`, `experiments/actions.ts`, `backlog/[id]/comments-actions.ts`, `lib/auth/actions.ts`, and `lib/auth/invite-actions.ts` — including their `revalidatePath` side effects or auth expectations.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). `experiments/actions.ts` alone is ~850 lines with heavily interdependent derived-state syncing (`recomputeExperimentDerivedFields`, `syncHypothesisStatusForExperiment`, `applyFunnelLevelFromExperimentForm` call each other across several actions). Individual JSDoc comments are good, but there's no single place mapping "call this action → these are the side effects that fire," which slows onboarding given the coupling.
+- **Acceptance Criteria:**
+  - A short doc (or a table at the top of each actions file) lists action → purpose → side effects (revalidated paths, cross-entity syncs triggered).
+  - No behavior change to any action.
+
+## TECH-049 — Dead REST-style auth scaffolding (`unauthorized()`/`requireUser()`) never wired up
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `src/lib/auth/guards.ts` exports `unauthorized()` (`NextResponse.json({error}, {status:401})`) and `requireUser()`, but neither is imported anywhere in the app — there are no `app/api` route handlers for them to guard.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). This scaffolding implies an intended JSON-API error convention that was never built and isn't used by anything, which can mislead a future maintainer skimming the auth module for "how do I protect an endpoint."
+- **Acceptance Criteria:**
+  - Either delete `guards.ts`'s unused exports, or leave a one-line comment noting they're reserved for a future `app/api` route layer.
+  - No behavior change to any current page or action.
+
+## TECH-048 — No local existence/ownership check before mutating by id in several actions — relies on Prisma's uncaught throw
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Fix
+- **Summary:** `updateExperimentRollout`, `updateExperimentAuthor`, `archiveHypothesis`, `unarchiveHypothesis`, `hideExperimentFromCalendar`, `showExperimentOnCalendarWhenDone`, and similar single-id field actions pass `id` straight into `prisma.*.update({ where: { id } })` with no existence check first.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). Compare to `deleteHypothesis` ([src/app/backlog/actions.ts](../../src/app/backlog/actions.ts)), which explicitly does `if (!hypothesis) return {}` before mutating. The unvalidated group instead lets Prisma throw `P2025` (record not found) uncaught on a bad/stale id, which surfaces as a Next.js error boundary instead of a handled "not found" result — inconsistent with the not-found handling already established elsewhere in the same files.
+- **Acceptance Criteria:**
+  - Each listed action checks the record exists (or catches `P2025`) and returns a handled result instead of throwing uncaught.
+  - No behavior change for the valid-id path.
+
+## TECH-047 — Silent no-op on invalid input in `updateHypothesisStatus` / `updateExperimentStage`
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Architecture
+- **Type:** Fix
+- **Summary:** `updateHypothesisStatus` ([src/app/backlog/actions.ts:140](../../src/app/backlog/actions.ts)) and `updateExperimentStage` ([src/app/experiments/actions.ts:391](../../src/app/experiments/actions.ts)) return with no value at all when `safeParse` fails on the incoming status/stage — the caller gets no signal that anything went wrong.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). This is inconsistent with `createHypothesis`/`updateHypothesis` (return `fieldErrors`) and `createExperiment`/`updateExperiment` (return a single `error` string) on the same kind of failure. A bad status/stage value — a stale client, a race, a manipulated request — currently fails completely silently: the UI has no way to detect or report it, so it just looks like the save didn't happen, which is hard to debug from a bug report.
+- **Acceptance Criteria:**
+  - Both actions return a result (even a simple boolean) the caller can use to show an error toast on invalid input.
+  - No behavior change on valid input.
+
+## TECH-046 — Server Action return-value contract has no shared shape
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** Across `backlog/actions.ts` and `experiments/actions.ts`, mutations return wildly different shapes for success/failure: `void` via `redirect()`, `{error?: string}`, `{error?: string, fieldErrors?}`, `{error?: string, success?: boolean}`, `{becameDone: boolean}`, or nothing at all (success assumed unless Prisma throws).
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). No generic "call action, show error, show success" handler can be built against this surface — every caller has to know its specific action's contract. `setExperimentWeekStage` makes this worse: it returns `{becameDone: false}` both when the week correctly stayed not-done *and* when the input failed validation, so the two cases are indistinguishable to the caller.
+- **Acceptance Criteria:**
+  - A shared result type (e.g. `ActionResult<T>`) is defined and adopted for the fire-and-forget actions that currently return nothing.
+  - `setExperimentWeekStage` distinguishes "input invalid" from "correctly stayed not-done" in its return value.
+  - No behavior change to redirect-on-success actions (`createHypothesis`, `createExperiment`, etc.) — those keep their existing form-state contract.
+
+## TECH-045 — Duplicate `getFunnelLevels()` defined in two files
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Fix
+- **Summary:** `getFunnelLevels()` is defined identically in both `src/app/backlog/actions.ts:133` and `src/app/experiments/actions.ts:746`.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). Two copies of the same query is a drift risk — a future change (e.g. a filter, a field rename) is likely to be applied to only one copy, silently desyncing behavior between the backlog and experiment forms.
+- **Acceptance Criteria:**
+  - `getFunnelLevels()` lives in one shared module (e.g. `src/lib/funnelLevel.ts`, already imported by both files) and both call sites import it from there.
+  - No behavior change.
+
+## TECH-044 — Validation approach inconsistent across mutations (zod vs. none)
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `createHypothesis`/`updateHypothesis`/`createExperiment`/`updateExperiment`/`reorderCalendarExperiments` validate every field with zod; `updateExperimentRollout`, `updateExperimentAuthor`, `archiveHypothesis`, `deleteHypothesis`, `hideExperimentFromCalendar`, and others take raw strings/ids straight into Prisma calls with no schema.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). Related to TECH-048 (existence checks) but broader — there's no stated rule for when an action needs a zod schema versus when raw-typed params are acceptable, so it currently reads as inconsistent rather than a deliberate distinction (e.g. "form submissions get full schemas, single-field/id actions get lightweight inline checks").
+- **Acceptance Criteria:**
+  - Document (here or in `docs/PROJECT_CONTEXT.md`) the intended rule for when an action needs a zod schema vs. lightweight inline validation.
+  - No code change required to close this card if the answer is "current split is intentional" — documenting the reasoning is sufficient, matching TECH-042's precedent.
+
+## TECH-043 — Authorization checks present in only a few Server Actions, no stated rule for which need it
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `getCurrentUser()` is called explicitly inside only a handful of actions (`reorderCalendarExperiments`, `createHypothesisComment`/`deleteHypothesisComment`, invite/login actions) — every other destructive mutation (`deleteHypothesis`, `deleteExperiment`, `archiveExperiment`, the field-scoped `update*` actions) has no such check in the action itself, relying entirely on `src/proxy.ts` middleware having already gated the page.
+- **Description:**
+  Found during an API design/consistency audit (2026-08-20). Not a vulnerability today — `proxy.ts`'s matcher covers all non-`/api`, non-`/login`, non-`/invite` routes — but it means "does this action check auth" isn't answerable by reading the action's own code, and any future entry point that bypasses the normal page flow (a route handler, a script, a test) has no second line of defense. The asymmetry (why do only ~4 of ~35 actions check identity) currently reads as accidental rather than intentional.
+- **Acceptance Criteria:**
+  - Document the intended rule (e.g. "actions rely on proxy middleware for gatekeeping; `getCurrentUser()` is only called when the action needs the *identity*, not just permission — audit log attribution, comment ownership") in `docs/PROJECT_CONTEXT.md` or `docs/CANONICAL_RULES.md`.
+  - No code change required to close this card if the current split matches that rule once stated.
+
 ## TECH-042 — typescript/@types/node/eslint pinned several majors behind latest
 
 - **Status:** TODO

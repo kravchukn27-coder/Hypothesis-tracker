@@ -4,7 +4,7 @@
 
 ## BUG-064: Password-reset link origin trusts client-controlled Host header
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Summary:** `getRequestOrigin()` (`src/lib/auth/base-url.ts`) builds the
   absolute URL for `resetUserPassword`'s link (`src/app/users/actions.ts`,

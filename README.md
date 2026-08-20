@@ -39,6 +39,13 @@ invariants. Active work lives in [`docs/backlog/`](docs/backlog/).
    BOOTSTRAP_PASSWORD=...
    ```
 
+   In production, also configure the canonical public app origin. Invite and
+   password-reset links always use this value rather than request headers:
+
+   ```
+   APP_BASE_URL=https://tracker.example.com
+   ```
+
    Optional, enables Telegram alerts on new/spiking server errors (see
    Logging below):
 

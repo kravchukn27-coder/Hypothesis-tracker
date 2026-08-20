@@ -14,8 +14,8 @@ export async function createInvite(_previousState: InviteActionState, formData: 
   if (!issuer) return { error: "Сессия истекла. Войдите снова." };
 
   try {
+    const origin = getRequestOrigin();
     const token = await issueInvite(issuer.id, String(formData.get("email") ?? ""));
-    const origin = await getRequestOrigin();
     return { link: `${origin}/invite/${token}` };
   } catch (error) {
     await captureServerError({

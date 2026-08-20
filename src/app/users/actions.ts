@@ -41,13 +41,14 @@ export async function resetUserPassword(id: string): Promise<ActionResult<{ link
   return runWithOperationCorrelation(async () => {
     const actor = await requireAuthenticatedUser();
     let rawToken: string;
+    let origin: string;
     try {
+      origin = getRequestOrigin();
       rawToken = await issuePasswordReset(actor.id, id);
     } catch (error) {
       await captureServerError({ event: "users.reset_password.failed", route: "src/app/users/actions.ts", error, userId: actor.id });
       return actionFailure("Не удалось выпустить ссылку для сброса пароля. Попробуйте ещё раз.");
     }
-    const origin = await getRequestOrigin();
     return actionSuccess({ link: `${origin}/invite/${rawToken}` });
   });
 }

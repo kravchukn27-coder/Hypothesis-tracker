@@ -59,6 +59,7 @@ export function StatusCell({
         icon={STATUS_ICONS[current]}
         colorClasses={STATUS_BADGE_CLASSES[current]}
         disabled={pending}
+        pending={pending}
         onChange={handleChange}
       />
 

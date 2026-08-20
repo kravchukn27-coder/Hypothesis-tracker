@@ -81,6 +81,7 @@ export function StageCell({
         icon={STAGE_CELL_ICONS[current]}
         colorClasses={STAGE_CELL_COLORS[current]}
         disabled={pending}
+        pending={pending}
         onChange={handleChange}
       />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
@@ -17,14 +17,32 @@ export function StageOptionsMenu({
   onClose: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const dismissTimer = useRef<number | null>(null);
+  const closingRef = useRef(false);
+  const [closing, setClosing] = useState(false);
+
+  const close = useCallback((afterClose?: () => void) => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    const finish = () => {
+      afterClose?.();
+      onClose();
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finish();
+      return;
+    }
+    setClosing(true);
+    dismissTimer.current = window.setTimeout(finish, 120);
+  }, [onClose]);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) onClose();
+      if (!menuRef.current?.contains(event.target as Node)) close();
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") close();
     }
 
     document.addEventListener("click", handleClick);
@@ -32,20 +50,23 @@ export function StageOptionsMenu({
     return () => {
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeyDown);
+      if (dismissTimer.current !== null) window.clearTimeout(dismissTimer.current);
     };
-  }, [onClose]);
+  }, [close]);
 
   return (
     <div
       ref={menuRef}
-      onMouseLeave={onClose}
-      className="absolute left-0 top-full z-20 mt-1 w-36 rounded-md border border-zinc-200 bg-white p-1 shadow-lg"
+      onMouseLeave={() => close()}
+      className={`motion-popover-enter absolute left-0 top-full z-20 mt-1 w-36 rounded-md border border-white/70 bg-white/92 p-1 shadow-lg backdrop-blur-md ${
+        closing ? "motion-popover-exit" : ""
+      }`}
     >
       {STAGE_ORDER.map((s) => (
         <button
           key={s}
           type="button"
-          onClick={() => onSelect(s)}
+          onClick={() => close(() => onSelect(s))}
           className="block w-full rounded px-2 py-1 text-left text-xs text-zinc-700 hover:bg-zinc-100"
         >
           {STAGE_LABELS[s]}

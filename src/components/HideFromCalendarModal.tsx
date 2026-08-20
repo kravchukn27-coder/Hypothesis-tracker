@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { hideExperimentFromCalendar, showExperimentOnCalendarWhenDone } from "@/app/experiments/actions";
+import { MotionDialog } from "@/components/MotionDialog";
 
 /**
  * PROD-023: shown when a week's stage newly makes an experiment's
@@ -23,46 +24,42 @@ export function HideFromCalendarModal({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  function handleAnswer(hide: boolean) {
+  function handleAnswer(hide: boolean, dismiss: (force?: boolean) => void) {
     startTransition(async () => {
       if (hide) await hideExperimentFromCalendar(experimentId);
       else await showExperimentOnCalendarWhenDone(experimentId);
       router.refresh();
-      onDismiss();
+      dismiss(true);
     });
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={() => !pending && onDismiss()}
-    >
-      <div
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-semibold text-zinc-900">Убрать задачу из календаря?</h2>
-        <p className="mt-2 text-sm text-zinc-600">
+    <MotionDialog onDismiss={onDismiss} pending={pending} labelledBy="hide-from-calendar-title" describedBy="hide-from-calendar-description">
+      {({ dismiss }) => (
+        <>
+        <h2 id="hide-from-calendar-title" className="text-lg font-semibold text-zinc-900">Убрать задачу из календаря?</h2>
+        <p id="hide-from-calendar-description" className="mt-2 text-sm text-zinc-600">
           «{experimentName}» теперь в статусе «Done». Можно убрать её с Calendar, или оставить
           видимой со статусом Done.
         </p>
         <div className="mt-5 flex justify-end gap-3">
           <button
-            onClick={() => handleAnswer(false)}
+            onClick={() => handleAnswer(false, dismiss)}
             disabled={pending}
             className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
           >
             Нет
           </button>
           <button
-            onClick={() => handleAnswer(true)}
+            onClick={() => handleAnswer(true, dismiss)}
             disabled={pending}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
           >
             {pending ? "Убираем..." : "Да, убрать"}
           </button>
         </div>
-      </div>
-    </div>
+        </>
+      )}
+    </MotionDialog>
   );
 }

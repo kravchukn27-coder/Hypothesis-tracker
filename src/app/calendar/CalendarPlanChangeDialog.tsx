@@ -1,5 +1,7 @@
 "use client";
 
+import { MotionDialog } from "@/components/MotionDialog";
+
 export function CalendarPlanChangeDialog({
   mode,
   experimentName,
@@ -20,19 +22,14 @@ export function CalendarPlanChangeDialog({
   const isMove = mode === "move";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={() => !pending && onCancel()}
-      role="presentation"
+    <MotionDialog
+      onDismiss={onCancel}
+      pending={pending}
+      labelledBy="calendar-plan-change-title"
+      describedBy="calendar-plan-change-description"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="calendar-plan-change-title"
-        aria-describedby="calendar-plan-change-description"
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+      {({ dismiss }) => (
+        <>
         <h2 id="calendar-plan-change-title" className="text-lg font-semibold text-zinc-900">
           {isMove ? "Перенести этап?" : "Изменить длительность этапа?"}
         </h2>
@@ -42,7 +39,7 @@ export function CalendarPlanChangeDialog({
         <div className="mt-5 flex justify-end gap-3">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => dismiss()}
             disabled={pending}
             className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
           >
@@ -57,7 +54,8 @@ export function CalendarPlanChangeDialog({
             {pending ? "Сохраняем..." : "Подтвердить"}
           </button>
         </div>
-      </div>
-    </div>
+        </>
+      )}
+    </MotionDialog>
   );
 }

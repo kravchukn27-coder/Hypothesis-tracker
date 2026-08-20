@@ -39,7 +39,7 @@
 
 ## UI-058 — Единая система motion-feedback для статусов, меню, модальных окон и toast
 
-- **Status:** IN PROGRESS
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Shared components, Backlog, Experiment card, Calendar
 - **Type:** Enhancement

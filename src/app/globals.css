@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --motion-feedback: 140ms;
+  --motion-default: 220ms;
+  --motion-overlay: 240ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
@@ -23,4 +27,52 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.motion-status-control {
+  transition:
+    color var(--motion-feedback) var(--motion-ease),
+    background-color var(--motion-feedback) var(--motion-ease),
+    box-shadow var(--motion-feedback) var(--motion-ease),
+    opacity var(--motion-feedback) var(--motion-ease),
+    filter var(--motion-feedback) var(--motion-ease),
+    transform var(--motion-feedback) var(--motion-ease);
+}
+
+.motion-status-pending {
+  opacity: 0.72;
+  filter: saturate(0.82);
+}
+
+.motion-popover-enter { animation: motion-popover-in var(--motion-feedback) var(--motion-ease) both; }
+.motion-popover-exit { animation: motion-popover-out 100ms ease-in both; }
+.motion-dialog-backdrop-enter { animation: motion-overlay-in var(--motion-overlay) var(--motion-ease) both; }
+.motion-dialog-backdrop-exit { animation: motion-overlay-out 160ms ease-in both; }
+.motion-dialog-panel-enter { animation: motion-dialog-in var(--motion-overlay) var(--motion-ease) both; }
+.motion-dialog-panel-exit { animation: motion-dialog-out 160ms ease-in both; }
+.motion-toast-enter { animation: motion-toast-in var(--motion-default) var(--motion-ease) both; }
+.motion-toast-exit { animation: motion-toast-out 160ms ease-in both; }
+
+@keyframes motion-popover-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes motion-popover-out { to { opacity: 0; transform: translateY(-2px) scale(0.99); filter: blur(2px); } }
+@keyframes motion-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-overlay-out { to { opacity: 0; } }
+@keyframes motion-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes motion-dialog-out { to { opacity: 0; transform: translateY(4px) scale(0.99); filter: blur(2px); } }
+@keyframes motion-toast-in {
+  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes motion-toast-out { to { opacity: 0; transform: translateY(6px); filter: blur(2px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-status-control { transition-duration: 1ms; }
+  .motion-popover-enter, .motion-popover-exit, .motion-dialog-backdrop-enter, .motion-dialog-backdrop-exit,
+  .motion-dialog-panel-enter, .motion-dialog-panel-exit, .motion-toast-enter, .motion-toast-exit { animation-duration: 1ms; }
 }

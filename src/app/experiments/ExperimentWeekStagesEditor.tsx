@@ -155,6 +155,7 @@ export function ExperimentWeekStagesEditor({
                 icon={STAGE_ICONS[w.stage]}
                 colorClasses={STAGE_BADGE_CLASSES[w.stage]}
                 disabled={pending}
+                pending={pending}
                 onChange={(next) => handleChange(w.weekStartISO, next)}
               />
               <ConfirmDeleteButton

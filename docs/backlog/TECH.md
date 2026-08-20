@@ -428,7 +428,7 @@
 
 ## TECH-019 — getCurrentUser: catch DB errors instead of letting them propagate
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Critical
 - **Area:** Resilience
 - **Type:** Fix

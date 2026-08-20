@@ -4,6 +4,7 @@ import { getSessionSecret, SESSION_COOKIE_NAME } from "./config";
 import { hasCurrentSessionVersion } from "./session-version";
 import { verifySessionToken } from "./token";
 import type { SessionUser } from "./types";
+import { captureServerError } from "@/lib/log";
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
   let secret: string;
@@ -17,10 +18,20 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const payload = await verifySessionToken(token, secret);
   if (!payload) return null;
 
-  const user = await prisma.user.findFirst({
-    where: { id: payload.sub, isActive: true },
-    select: { id: true, name: true, sessionVersion: true },
-  });
+  let user: { id: string; name: string; sessionVersion: number } | null;
+  try {
+    user = await prisma.user.findFirst({
+      where: { id: payload.sub, isActive: true },
+      select: { id: true, name: true, sessionVersion: true },
+    });
+  } catch (error) {
+    await captureServerError({
+      event: "auth.get_current_user.failed",
+      route: "src/lib/auth/session.ts#getCurrentUser",
+      error,
+    });
+    return null;
+  }
   if (!user || !hasCurrentSessionVersion(payload, user.sessionVersion)) return null;
 
   return { id: user.id, name: user.name };

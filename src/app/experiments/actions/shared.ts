@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth/session";
-import { safeWriteAuditLog } from "@/lib/audit-log";
+import { auditEvent } from "@/lib/audit-log";
 import { captureServerError } from "@/lib/log";
 import { actionFailure, type ActionResult } from "@/lib/action-result";
 import { redirect } from "next/navigation";
@@ -21,9 +21,6 @@ export async function experimentMutationFailure<T extends object = Record<string
   return actionFailure<T>("Не удалось сохранить изменения. Попробуйте ещё раз.");
 }
 
-export async function auditExperimentEvent(event: string, metadata: Record<string, unknown>) {
-  const user = await getCurrentUser();
-  await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: ACTION_ROUTE });
-}
+export const auditExperimentEvent = auditEvent(ACTION_ROUTE);
 
 export { ACTION_ROUTE };

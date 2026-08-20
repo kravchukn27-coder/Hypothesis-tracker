@@ -8,7 +8,6 @@ import { shouldPromptArchiveExperiment } from "@/lib/experiment";
 import { compareByManualOrder, MS_PER_DAY, startOfWeek } from "@/lib/calendar";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { getCurrentUser } from "@/lib/auth/session";
-import { safeWriteAuditLog } from "@/lib/audit-log";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 import { runWithOperationCorrelation } from "@/lib/log";
 import { auditExperimentEvent, experimentMutationFailure, requireExperimentActionUser } from "./actions/shared";
@@ -461,12 +460,7 @@ export async function reorderCalendarExperiments(orderedExperimentIds: string[])
   await prisma.$transaction(
     merged.map((e, manualOrder) => prisma.experiment.update({ where: { id: e.id }, data: { manualOrder } })),
   );
-  await safeWriteAuditLog({
-    event: "CALENDAR_EXPERIMENTS_REORDERED",
-    userId: user.id,
-    metadata: { experimentIds: parsed.data },
-    route: "src/app/experiments/actions.ts",
-  });
+  await auditExperimentEvent("CALENDAR_EXPERIMENTS_REORDERED", { experimentIds: parsed.data });
   return actionSuccess();
   } catch (error) { return mutationFailure("experiments.calendar.reorder.failed", error, user.id); }
   });

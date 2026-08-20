@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { redactSensitiveAuditMetadata } from "@/lib/audit-metadata-redaction";
+import { getCurrentUser } from "@/lib/auth/session";
 import { captureServerError, getCurrentOperationCorrelationId, withOperationCorrelation } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
 
@@ -36,4 +37,11 @@ export async function safeWriteAuditLog(input: AuditLogInput & { route: string }
       metadata: { auditEvent: input.event },
     });
   }
+}
+
+export function auditEvent(route: string) {
+  return async (event: string, metadata: Record<string, unknown>): Promise<void> => {
+    const user = await getCurrentUser();
+    await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route });
+  };
 }

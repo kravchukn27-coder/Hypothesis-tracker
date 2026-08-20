@@ -8,14 +8,11 @@ import { shouldPromptArchiveHypothesis } from "@/lib/hypothesis";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions";
 import { getCurrentUser } from "@/lib/auth/session";
-import { safeWriteAuditLog } from "@/lib/audit-log";
+import { auditEvent } from "@/lib/audit-log";
 import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 
-async function auditBacklogEvent(event: string, metadata: Record<string, unknown>) {
-  const user = await getCurrentUser();
-  await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: "src/app/backlog/actions.ts" });
-}
+const auditBacklogEvent = auditEvent("src/app/backlog/actions.ts");
 
 async function requireAuthenticatedUser() {
   const user = await getCurrentUser();

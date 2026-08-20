@@ -218,7 +218,7 @@
 
 ## TECH-036 — Near-identical audit-log wrapper functions copy-pasted per action file
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Architecture
 - **Type:** Chore

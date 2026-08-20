@@ -141,7 +141,7 @@
 
 ## TECH-052 — Clear npm audit advisories in build tooling (nanoid, deepmerge-ts)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Dependencies
 - **Type:** Chore
@@ -164,6 +164,25 @@
     explicitly justified and pinned with a documented reason.
   - `npm run build` and `prisma generate`/`migrate` still work after the
     version bump(s).
+- **Resolution note (2026-08-20):** `npm audit fix` cleared `nanoid`
+  (3.3.17 → 3.3.18+ via the `postcss` chain, no code/config change
+  needed). `deepmerge-ts` stays pinned below 8.0.0 and unfixed:
+  checked `@prisma/config`'s dependency across every currently
+  published version on the v7 line, including prereleases
+  (`7.10.0-dev.58`, the newest resolvable at audit time) — all of them
+  pin `deepmerge-ts@7.1.5` exactly, so there is no forward upgrade on
+  v7 that resolves it yet. The only advisory-clearing path today is
+  `npm audit fix --force`'s proposed downgrade to `prisma@6.12.0`,
+  which would revert this project's already-completed Prisma 7
+  migration (driver adapters, `prisma.config.ts`) — a real regression,
+  not a hygiene fix. Accepting the advisory as justified/pinned per
+  this card's OR clause: `@prisma/config` (and its `deepmerge-ts` dep)
+  is CLI/build-time tooling only, never imported by the running app
+  (`src/lib/prisma.ts` uses `@prisma/client` + `@prisma/adapter-pg`
+  directly), so there's no runtime request-handling exploit path.
+  Revisit once upstream Prisma ships a v7/v8 release with
+  `deepmerge-ts@8+`. `npm run build` and `npx prisma generate` both
+  verified working after the `nanoid` bump.
 
 ## TECH-051 — Calendar drag-reorder rewrites manualOrder for every active experiment, not just the moved ones
 

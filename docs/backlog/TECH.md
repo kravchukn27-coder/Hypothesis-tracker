@@ -1,5 +1,32 @@
 # Tech Backlog
 
+## TECH-056 — PasswordSetupToken.userId unindexed, filtered on every invite/reset issuance
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Data model
+- **Type:** Fix
+- **Summary:** `PasswordSetupToken.userId` (a required FK) has no index, but is filtered directly in `updateMany({ where: { userId, usedAt: null, invalidatedAt: null } })` — run on every invite issuance and every password reset issuance.
+- **Description:**
+  Found during a follow-up data/schema audit (2026-08-20), after TECH-026–031 closed. Postgres doesn't auto-index FK columns. The table only grows (old tokens are invalidated, never deleted) and both the invite flow and PROD-062's password-reset flow are active in production now, so this predicate runs on real, recurring traffic rather than a dormant path.
+- **Acceptance Criteria:**
+  - Add `@@index([userId])` (or `@@index([userId, usedAt, invalidatedAt])` if a composite better matches the actual filter).
+  - `npx prisma db push` applied cleanly against the local dev DB.
+
+## TECH-055 — Cover calendar.ts and login-rate-limit.ts with unit tests
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Testing
+- **Type:** Chore
+- **Summary:** `src/lib/calendar.ts` (week-bucketing, ISO week numbering, manual-order comparator — 243 lines, 10+ exported functions) and `src/lib/auth/login-rate-limit.ts` (login lockout/bucket-expiry logic) remain untested even though both were named explicitly in TECH-025's own description as priority areas — TECH-025 shipped the runner and covered `computeScore` plus the auth token/password boundary cases, but not these two.
+- **Description:**
+  Found during a follow-up test-coverage audit (2026-08-20), after TECH-025 closed. `calendar.ts` drives the calendar page's week grouping and row ordering — a regression in `compareByManualOrder`, `getISOWeekNumber`, or `startOfWeek` (e.g. on a DST boundary or year rollover) would silently misorder or misplace rows with no automated check. `login-rate-limit.ts` is the brute-force lockout boundary; a regression there could silently disable lockout or over-lock legitimate users. Scope is deliberately limited to these two files — the broader server-action layer (`experiments/actions.ts`, `backlog/actions.ts`) and `experiment.ts`'s derived-stage functions are separate, larger follow-ups.
+- **Acceptance Criteria:**
+  - `calendar.ts` has unit tests for `startOfWeek`, `getISOWeekNumber`, and `compareByManualOrder`, including at least one boundary case each (e.g. a date at a week/year edge, a tie in manual order).
+  - `login-rate-limit.ts` has unit tests for: attempt count under the lockout threshold (allowed), at/over the threshold (locked out), and bucket expiry (lockout clears after the window).
+  - `npm test` runs green locally.
+
 ## TECH-054 — getInvite: no try/catch around the public invite-token lookup
 
 - **Status:** TODO

@@ -15,7 +15,7 @@
 
 ## TECH-049 — Dead REST-style auth scaffolding (`unauthorized()`/`requireUser()`) never wired up
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Architecture
 - **Type:** Chore
@@ -314,7 +314,7 @@
 
 ## TECH-028 — AuditLog has no indexes despite being filtered/sorted on every Activity page load
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Data model
 - **Type:** Fix
@@ -326,6 +326,10 @@
   - `npx prisma db push` applied cleanly against the local dev DB.
   - `/activity` still filters/sorts/paginates identically — no behavior change, only the query plan improves.
   - (Retention/pruning policy is a separate concern, not required for this card.)
+- **Resolution note:** Added `createdAt` and `[userId, createdAt]` indexes to
+  `AuditLog`. The latter matches the Activity page's optional user filter and
+  descending time order; event substring search remains intentionally
+  unindexed. Applied successfully with `prisma db push` to the local database.
 
 ## TECH-027 — Experiment: missing indexes on hypothesisId, archived, startDate
 

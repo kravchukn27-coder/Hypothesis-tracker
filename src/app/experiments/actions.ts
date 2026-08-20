@@ -4,29 +4,37 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
+import { shouldPromptArchiveExperiment } from "@/lib/experiment";
 import { compareByManualOrder, MS_PER_DAY, startOfWeek } from "@/lib/calendar";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
-import { resolveCustomTagId } from "@/lib/tags";
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
-import { captureServerError } from "@/lib/log";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
-
-async function auditExperimentEvent(event: string, metadata: Record<string, unknown>) {
-  const user = await getCurrentUser();
-  await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: "src/app/experiments/actions.ts" });
-}
+import { auditExperimentEvent, experimentMutationFailure, requireExperimentActionUser } from "./actions/shared";
+import { resolveExperimentTagIds } from "./actions/tags";
+import {
+  clearHiddenFlagIfNoLongerDone,
+  hasWeekStages,
+  recomputeExperimentDerivedFields,
+  syncHypothesisStatusForExperiment,
+} from "./actions/week-stages";
+import {
+  archiveExperimentAction,
+  archiveExperimentsAction,
+  deleteExperimentAction,
+  deleteExperimentsAction,
+  getAuthorsAction,
+  getProductsAction,
+  getSegmentsAction,
+  unarchiveExperimentAction,
+} from "./actions/crud";
 
 async function requireAuthenticatedUser() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
+  return requireExperimentActionUser();
 }
 
 async function mutationFailure<T extends object = Record<string, never>>(event: string, error: unknown, userId: string): Promise<ActionResult<T>> {
-  await captureServerError({ event, route: "src/app/experiments/actions.ts", error, userId });
-  return actionFailure<T>("Не удалось сохранить изменения. Попробуйте ещё раз.");
+  return experimentMutationFailure<T>(event, error, userId);
 }
 
 // TECH-005: "no status" (the Status field's "—" option) submits the
@@ -90,95 +98,6 @@ function toDate(value: string | undefined) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/**
- * PROD-019: recomputes Experiment.stage/startDate/endDate from its
- * ExperimentWeekStage rows (latest week's stage; earliest/latest week
- * as the date span) — the denormalized cache that keeps every
- * existing query/filter/sort/badge across the app working unchanged.
- * With no week entries, restores the experiment's undated baseline —
- * TECH-005: that baseline is "no status" (`null`), not a fake
- * `DISCOVERY` default; the user can still hand-pick a real stage via
- * the Status field while it's unlocked.
- */
-async function recomputeExperimentDerivedFields(experimentId: string) {
-  const weeks = await prisma.experimentWeekStage.findMany({
-    where: { experimentId },
-    orderBy: { weekStart: "asc" },
-  });
-  if (weeks.length === 0) {
-    await prisma.experiment.update({
-      where: { id: experimentId },
-      data: { stage: null, startDate: null, endDate: null, calendarHiddenOnDone: null },
-    });
-    return;
-  }
-
-  const first = weeks[0];
-  const last = weeks[weeks.length - 1];
-  await prisma.experiment.update({
-    where: { id: experimentId },
-    data: {
-      stage: last.stage,
-      startDate: first.weekStart,
-      endDate: new Date(last.weekStart.getTime() + 6 * MS_PER_DAY),
-    },
-  });
-}
-
-async function syncHypothesisStatusForExperiment(experimentId: string) {
-  const experiment = await prisma.experiment.findUnique({ where: { id: experimentId }, select: { hypothesisId: true } });
-  if (!experiment) return;
-  const experiments = await prisma.experiment.findMany({
-    where: { hypothesisId: experiment.hypothesisId },
-    select: { stage: true, weekStages: { select: { weekStart: true, stage: true } } },
-  });
-  if (experiments.length === 0) return;
-  const hasActive = experiments.some((item) =>
-    (item.weekStages.length > 0 ? getCurrentWeekStage(item.weekStages) : item.stage) !== "DONE",
-  );
-  await prisma.hypothesis.update({
-    where: { id: experiment.hypothesisId },
-    data: { status: hasActive ? "IN_PROGRESS" : "DONE" },
-  });
-  revalidatePath("/backlog");
-  revalidatePath(`/backlog/${experiment.hypothesisId}`);
-}
-
-function splitCsv(value: string | undefined): string[] {
-  return (value ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-/**
- * TECH-003: resolves a tag category's submitted ids + new names into
- * the full set of ids to connect, upserting the new names first
- * (isCustom: true, matching FunnelLevel's existing convention).
- */
-async function resolveTagIds(
-  delegate: Parameters<typeof resolveCustomTagId>[0],
-  idsCsv: string | undefined,
-  namesCsv: string | undefined,
-): Promise<string[]> {
-  const ids = splitCsv(idsCsv);
-  const newNames = splitCsv(namesCsv);
-  const createdIds = await Promise.all(newNames.map((name) => resolveCustomTagId(delegate, name)));
-  return [...ids, ...createdIds];
-}
-
-async function resolveExperimentTagIds(data: {
-  productIds?: string;
-  productNew?: string;
-  segmentIds?: string;
-  segmentNew?: string;
-}) {
-  const [products, segments] = await Promise.all([
-    resolveTagIds(prisma.product, data.productIds, data.productNew),
-    resolveTagIds(prisma.segment, data.segmentIds, data.segmentNew),
-  ]);
-  return { products, segments };
-}
 
 /**
  * PROD-033: Funnel Level is one shared value between a hypothesis and
@@ -368,11 +287,6 @@ const stageSchema = z.enum([
  * hides the manual controls in that case; this is the server-side
  * backstop).
  */
-async function hasWeekStages(experimentId: string): Promise<boolean> {
-  const count = await prisma.experimentWeekStage.count({ where: { experimentId } });
-  return count > 0;
-}
-
 /**
  * BUG-005 follow-up #3: PROD-023's `calendarHiddenOnDone` answer only
  * makes sense while the experiment currently *is* Done — once its
@@ -382,20 +296,6 @@ async function hasWeekStages(experimentId: string): Promise<boolean> {
  * and skip re-prompting the next time it actually becomes Done again.
  * No-op if there's nothing to reset.
  */
-async function clearHiddenFlagIfNoLongerDone(experimentId: string) {
-  const weeks = await prisma.experimentWeekStage.findMany({
-    where: { experimentId },
-    select: { weekStart: true, stage: true },
-  });
-  if (weeks.length === 0) return;
-  if (getCurrentWeekStage(weeks) === "DONE") return;
-
-  await prisma.experiment.updateMany({
-    where: { id: experimentId, calendarHiddenOnDone: true },
-    data: { calendarHiddenOnDone: null },
-  });
-}
-
 // TECH-005: "—" (no status) is only a valid pick for an experiment
 // with no weeks yet — a specific week entry always needs a concrete
 // stage, so this sentinel is accepted here but not by `stageSchema`
@@ -837,114 +737,33 @@ export async function resizeExperimentWeeks(
 }
 
 export async function getProducts() {
-  return prisma.product.findMany({ orderBy: { name: "asc" } });
+  return getProductsAction();
 }
 
 export async function getSegments() {
-  return prisma.segment.findMany({ orderBy: { name: "asc" } });
+  return getSegmentsAction();
 }
 
 export async function getAuthors(): Promise<string[]> {
-  const rows = await prisma.experiment.findMany({
-    where: { author: { not: null } },
-    select: { author: true },
-    distinct: ["author"],
-    orderBy: { author: "asc" },
-  });
-  return rows.map((r) => r.author).filter((a): a is string => Boolean(a));
-}
-
-/**
- * PROD-029: creating an experiment moves its hypothesis to In progress;
- * after deletion, return only hypotheses with no remaining experiments
- * to their base New state. Shared by the detail and bulk delete paths.
- */
-async function resetEmptyHypotheses(hypothesisIds: string[]) {
-  const ids = [...new Set(hypothesisIds)];
-  if (ids.length === 0) return;
-
-  const hypotheses = await prisma.hypothesis.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, _count: { select: { experiments: true } } },
-  });
-  const emptyIds = hypotheses.filter((hypothesis) => hypothesis._count.experiments === 0).map((hypothesis) => hypothesis.id);
-  if (emptyIds.length === 0) return;
-
-  await prisma.hypothesis.updateMany({
-    where: { id: { in: emptyIds } },
-    data: { status: "NEW" },
-  });
+  return getAuthorsAction();
 }
 
 export async function deleteExperiment(id: string): Promise<{ error?: string }> {
-  const user = await requireAuthenticatedUser();
-  try {
-    const experiment = await prisma.experiment.findUnique({
-    where: { id },
-    select: { hypothesisId: true },
-    });
-    if (!experiment) return {};
-    await prisma.experiment.delete({ where: { id } });
-    await resetEmptyHypotheses([experiment.hypothesisId]);
-    revalidatePath("/backlog");
-    revalidatePath(`/backlog/${experiment.hypothesisId}`);
-  } catch (error) { return mutationFailure("experiments.experiment.delete.failed", error, user.id); }
-
-  revalidatePath("/calendar");
-  redirect("/calendar");
+  return deleteExperimentAction(id);
 }
 
 export async function archiveExperiment(id: string): Promise<ActionResult> {
-  const user = await requireAuthenticatedUser();
-  try { await prisma.experiment.update({
-    where: { id },
-    data: { archived: true, archivedAt: new Date() },
-  }); await auditExperimentEvent("EXPERIMENT_ARCHIVED", { experimentId: id }); }
-  catch (error) { return mutationFailure("experiments.experiment.archive.failed", error, user.id); }
-  revalidatePath(`/experiments/${id}`);
-  revalidatePath("/calendar");
-  return actionSuccess();
+  return archiveExperimentAction(id);
 }
 
 export async function unarchiveExperiment(id: string): Promise<ActionResult> {
-  const user = await requireAuthenticatedUser();
-  try { await prisma.experiment.update({
-    where: { id },
-    data: { archived: false, archivedAt: null },
-  }); await auditExperimentEvent("EXPERIMENT_UNARCHIVED", { experimentId: id }); }
-  catch (error) { return mutationFailure("experiments.experiment.unarchive.failed", error, user.id); }
-  revalidatePath(`/experiments/${id}`);
-  revalidatePath("/calendar");
-  return actionSuccess();
+  return unarchiveExperimentAction(id);
 }
 
 export async function archiveExperiments(ids: string[]): Promise<ActionResult> {
-  const user = await requireAuthenticatedUser();
-  if (ids.length === 0) return actionSuccess();
-  try { await prisma.experiment.updateMany({
-    where: { id: { in: ids } },
-    data: { archived: true, archivedAt: new Date() },
-  }); } catch (error) { return mutationFailure("experiments.experiments.archive.failed", error, user.id); }
-  revalidatePath("/calendar");
-  return actionSuccess();
+  return archiveExperimentsAction(ids);
 }
 
 export async function deleteExperiments(ids: string[]): Promise<ActionResult> {
-  const user = await requireAuthenticatedUser();
-  if (ids.length === 0) return actionSuccess();
-  try {
-  const experiments = await prisma.experiment.findMany({
-    where: { id: { in: ids } },
-    select: { hypothesisId: true },
-  });
-  await prisma.experiment.deleteMany({ where: { id: { in: ids } } });
-  const hypothesisIds = experiments.map((experiment) => experiment.hypothesisId);
-  await resetEmptyHypotheses(hypothesisIds);
-  revalidatePath("/backlog");
-  revalidatePath("/calendar");
-  for (const hypothesisId of new Set(hypothesisIds)) {
-    revalidatePath(`/backlog/${hypothesisId}`);
-  }
-  } catch (error) { return mutationFailure("experiments.experiments.delete.failed", error, user.id); }
-  return actionSuccess();
+  return deleteExperimentsAction(ids);
 }

@@ -182,7 +182,7 @@
 
 ## TECH-037 — experiments/actions.ts is an 849-line god-module mixing five unrelated concerns
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Chore
@@ -192,6 +192,10 @@
 - **Acceptance Criteria:**
   - The file is split into cohesive modules reflecting its actual concerns (e.g. `experiments/actions/weekStages.ts`, `experiments/actions/tags.ts`, `experiments/actions/crud.ts`), re-exported so existing imports elsewhere in the app don't need to change.
   - No behavior change to any exported action.
+- **Resolution note:** Internal modules now own shared Server Action handling,
+  tag resolution, week-stage invariants, and CRUD/query operations. The
+  original `actions.ts` remains the compatible async Server Action facade, so
+  existing UI imports remain unchanged.
 
 ## TECH-036 — Near-identical audit-log wrapper functions copy-pasted per action file
 

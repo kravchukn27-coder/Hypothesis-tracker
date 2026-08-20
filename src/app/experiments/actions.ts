@@ -18,24 +18,6 @@ import {
   recomputeExperimentDerivedFields,
   syncHypothesisStatusForExperiment,
 } from "./actions/week-stages";
-import {
-  archiveExperimentAction,
-  archiveExperimentsAction,
-  deleteExperimentAction,
-  deleteExperimentsAction,
-  getAuthorsAction,
-  getProductsAction,
-  getSegmentsAction,
-  unarchiveExperimentAction,
-} from "./actions/crud";
-
-async function requireAuthenticatedUser() {
-  return requireExperimentActionUser();
-}
-
-async function mutationFailure<T extends object = Record<string, never>>(event: string, error: unknown, userId: string): Promise<ActionResult<T>> {
-  return experimentMutationFailure<T>(event, error, userId);
-}
 
 // TECH-005: "no status" (the Status field's "—" option) submits the
 // "NONE" sentinel from StageField — normalized to `undefined` here so
@@ -110,7 +92,7 @@ function toDate(value: string | undefined) {
  */
 export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try {
   const [hypothesis, experiments] = await Promise.all([
     prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { funnelLevelId: true } }),
@@ -128,7 +110,7 @@ export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: stri
   revalidatePath("/backlog");
   experiments.forEach((experiment) => revalidatePath(`/experiments/${experiment.id}`));
   return actionSuccess();
-  } catch (error) { return mutationFailure("experiments.funnel_levels.sync.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.funnel_levels.sync.failed", error, user.id); }
   });
 }
 
@@ -159,7 +141,7 @@ export async function createExperiment(
   formData: FormData,
 ): Promise<ExperimentFormState> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   const raw = Object.fromEntries(formData.entries());
   const parsed = createExperimentSchema.safeParse(raw);
   if (!parsed.success) {
@@ -216,7 +198,7 @@ export async function createExperiment(
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${data.hypothesisId}`);
   revalidatePath("/calendar");
-  } catch (error) { return mutationFailure("experiments.experiment.create.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.experiment.create.failed", error, user.id); }
   redirect(`/experiments/${experiment.id}?saved=1`);
   });
 }
@@ -227,7 +209,7 @@ export async function updateExperiment(
   formData: FormData,
 ): Promise<ExperimentFormState> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   const raw = Object.fromEntries(formData.entries());
   const parsed = updateExperimentSchema.safeParse(raw);
   if (!parsed.success) {
@@ -270,7 +252,7 @@ export async function updateExperiment(
   shouldPromptArchive =
     stageChanged && before !== null && shouldPromptArchiveExperiment(normalizedStage, before.archived);
 
-  } catch (error) { return mutationFailure("experiments.experiment.update.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.experiment.update.failed", error, user.id); }
   if (shouldPromptArchive) redirect(`/experiments/${id}?promptArchive=1&saved=1`);
   redirect(`/experiments/${id}?saved=1`);
   });
@@ -310,7 +292,7 @@ const stageOrNoneSchema = z.union([stageSchema, z.literal("NONE")]);
 
 export async function updateExperimentStage(id: string, stage: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   const parsed = stageOrNoneSchema.safeParse(stage);
   if (!parsed.success) return actionFailure("Некорректный этап эксперимента.");
   try {
@@ -356,7 +338,7 @@ export async function updateExperimentStage(id: string, stage: string): Promise<
   await syncHypothesisStatusForExperiment(id);
   await auditExperimentEvent("EXPERIMENT_STAGE_CHANGED", { experimentId: id, after: parsed.data });
   return actionSuccess();
-  } catch (error) { return mutationFailure("experiments.stage.update.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.stage.update.failed", error, user.id); }
   });
 }
 
@@ -366,14 +348,14 @@ export async function updateExperimentDates(
   endDate: string | null,
 ): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try {
     if (await hasWeekStages(id)) return actionSuccess();
     await prisma.experiment.update({
     where: { id },
     data: { startDate: toDate(startDate ?? undefined), endDate: toDate(endDate ?? undefined) },
     });
-  } catch (error) { return mutationFailure("experiments.dates.update.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.dates.update.failed", error, user.id); }
 
   revalidatePath(`/experiments/${id}`);
   return actionSuccess();
@@ -382,9 +364,9 @@ export async function updateExperimentDates(
 
 export async function updateExperimentRollout(id: string, rollout: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try { await prisma.experiment.update({ where: { id }, data: { rollout: rollout.trim() || null } }); }
-  catch (error) { return mutationFailure("experiments.rollout.update.failed", error, user.id); }
+  catch (error) { return experimentMutationFailure("experiments.rollout.update.failed", error, user.id); }
   revalidatePath("/calendar");
   revalidatePath(`/experiments/${id}`);
   return actionSuccess();
@@ -393,9 +375,9 @@ export async function updateExperimentRollout(id: string, rollout: string): Prom
 
 export async function updateExperimentAuthor(id: string, author: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try { await prisma.experiment.update({ where: { id }, data: { author: author.trim() || null } }); }
-  catch (error) { return mutationFailure("experiments.author.update.failed", error, user.id); }
+  catch (error) { return experimentMutationFailure("experiments.author.update.failed", error, user.id); }
   revalidatePath("/calendar");
   revalidatePath(`/experiments/${id}`);
   return actionSuccess();
@@ -465,7 +447,7 @@ export async function reorderCalendarExperiments(orderedExperimentIds: string[])
   if (updates.length) await prisma.$transaction(updates);
   await auditExperimentEvent("CALENDAR_EXPERIMENTS_REORDERED", { experimentIds: parsed.data });
   return actionSuccess();
-  } catch (error) { return mutationFailure("experiments.calendar.reorder.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.calendar.reorder.failed", error, user.id); }
   });
 }
 
@@ -482,7 +464,7 @@ export async function setExperimentWeekStage(
   moveToCalendarTop = false,
 ): Promise<ActionResult<{ becameDone: boolean }>> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   const parsedStage = stageSchema.safeParse(stage);
   if (!parsedStage.success) return actionFailure("Некорректный этап эксперимента.");
   try {
@@ -520,7 +502,7 @@ export async function setExperimentWeekStage(
 
     return actionSuccess({ becameDone });
   } catch (error) {
-    const result = await mutationFailure("experiments.week_stage.set.failed", error, user.id);
+    const result = await experimentMutationFailure("experiments.week_stage.set.failed", error, user.id);
     return actionFailure<{ becameDone: boolean }>(result.error!);
   }
   });
@@ -529,12 +511,12 @@ export async function setExperimentWeekStage(
 /** PROD-025: completes only the dangling weekly stage from the Calendar reminder. */
 export async function completeExperimentWeek(experimentId: string, weekStartISO: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
   try { await prisma.experimentWeekStage.updateMany({
     where: { experimentId, weekStart },
     data: { completed: true },
-  }); } catch (error) { return mutationFailure("experiments.week.complete.failed", error, user.id); }
+  }); } catch (error) { return experimentMutationFailure("experiments.week.complete.failed", error, user.id); }
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
@@ -553,7 +535,7 @@ export async function completeExperimentWeek(experimentId: string, weekStartISO:
  */
 export async function deleteExperimentWeek(experimentId: string, weekStartISO: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
   try {
     await prisma.experimentWeekStage.deleteMany({
@@ -562,7 +544,7 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
     await recomputeExperimentDerivedFields(experimentId);
     await clearHiddenFlagIfNoLongerDone(experimentId);
     await syncHypothesisStatusForExperiment(experimentId);
-  } catch (error) { return mutationFailure("experiments.week.delete.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.week.delete.failed", error, user.id); }
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
@@ -577,9 +559,9 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
  */
 export async function hideExperimentFromCalendar(experimentId: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try { await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: true } }); }
-  catch (error) { return mutationFailure("experiments.calendar.hide.failed", error, user.id); }
+  catch (error) { return experimentMutationFailure("experiments.calendar.hide.failed", error, user.id); }
   revalidatePath("/calendar");
   return actionSuccess();
   });
@@ -587,9 +569,9 @@ export async function hideExperimentFromCalendar(experimentId: string): Promise<
 
 export async function showExperimentOnCalendarWhenDone(experimentId: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try { await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: false } }); }
-  catch (error) { return mutationFailure("experiments.calendar.show.failed", error, user.id); }
+  catch (error) { return experimentMutationFailure("experiments.calendar.show.failed", error, user.id); }
   revalidatePath("/calendar");
   return actionSuccess();
   });
@@ -602,7 +584,7 @@ export async function showExperimentOnCalendarWhenDone(experimentId: string): Pr
  */
 export async function addNextExperimentWeek(experimentId: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   try {
     const last = await prisma.experimentWeekStage.findFirst({
     where: { experimentId },
@@ -620,7 +602,7 @@ export async function addNextExperimentWeek(experimentId: string): Promise<Actio
     });
     await recomputeExperimentDerivedFields(experimentId);
     await syncHypothesisStatusForExperiment(experimentId);
-  } catch (error) { return mutationFailure("experiments.week.add.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure("experiments.week.add.failed", error, user.id); }
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
@@ -678,7 +660,7 @@ export async function shiftExperimentWeeks(
   deltaWeeks: number,
 ) : Promise<ActionResult<{ changed: boolean }>> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return actionSuccess({ changed: false });
   try {
 
@@ -721,7 +703,7 @@ export async function shiftExperimentWeeks(
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
   return actionSuccess({ changed: true });
-  } catch (error) { return mutationFailure<{ changed: boolean }>("experiments.weeks.shift.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure<{ changed: boolean }>("experiments.weeks.shift.failed", error, user.id); }
   });
 }
 
@@ -740,7 +722,7 @@ export async function resizeExperimentWeeks(
   deltaWeeks: number,
 ) : Promise<ActionResult<{ changed: boolean }>> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireExperimentActionUser();
   if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return actionSuccess({ changed: false });
   try {
 
@@ -775,38 +757,6 @@ export async function resizeExperimentWeeks(
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
   return actionSuccess({ changed: true });
-  } catch (error) { return mutationFailure<{ changed: boolean }>("experiments.weeks.resize.failed", error, user.id); }
+  } catch (error) { return experimentMutationFailure<{ changed: boolean }>("experiments.weeks.resize.failed", error, user.id); }
   });
-}
-
-export async function getProducts() {
-  return getProductsAction();
-}
-
-export async function getSegments() {
-  return getSegmentsAction();
-}
-
-export async function getAuthors(): Promise<string[]> {
-  return getAuthorsAction();
-}
-
-export async function deleteExperiment(id: string): Promise<{ error?: string }> {
-  return deleteExperimentAction(id);
-}
-
-export async function archiveExperiment(id: string): Promise<ActionResult> {
-  return archiveExperimentAction(id);
-}
-
-export async function unarchiveExperiment(id: string): Promise<ActionResult> {
-  return unarchiveExperimentAction(id);
-}
-
-export async function archiveExperiments(ids: string[]): Promise<ActionResult> {
-  return archiveExperimentsAction(ids);
-}
-
-export async function deleteExperiments(ids: string[]): Promise<ActionResult> {
-  return deleteExperimentsAction(ids);
 }

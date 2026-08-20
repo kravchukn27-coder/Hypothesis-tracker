@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import {
-  createExperiment,
-  getAuthors,
-  getProducts,
-  getSegments,
-} from "../actions";
+import { createExperiment } from "../actions";
+import { getAuthorsAction, getProductsAction, getSegmentsAction } from "../actions/crud";
 import { ExperimentForm } from "../ExperimentForm";
 import { requireUserPage } from "@/lib/auth/page-guards";
 import { getFunnelLevels } from "@/lib/funnelLevel";
@@ -29,10 +25,10 @@ export default async function NewExperimentPage({
     // who reaches this page for a hypothesis that already has one
     // straight to its card instead of letting a second get created.
     prisma.experiment.findFirst({ where: { hypothesisId }, select: { id: true } }),
-    getAuthors(),
+    getAuthorsAction(),
     getFunnelLevels(),
-    getProducts(),
-    getSegments(),
+    getProductsAction(),
+    getSegmentsAction(),
   ]);
   if (!hypothesis) redirect("/backlog");
   if (existingExperiment) redirect(`/experiments/${existingExperiment.id}`);

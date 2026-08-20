@@ -69,7 +69,7 @@
 
 ## TECH-060 — experiments/actions.ts keeps a same-signature alias/pass-through facade over its own consolidated helpers
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Architecture
 - **Type:** Chore
@@ -80,6 +80,40 @@
   - Call sites import the `*Action` functions directly from `./actions/crud` (or wherever they now live); the redundant re-exports and the `requireAuthenticatedUser`/`mutationFailure` aliases are removed from `experiments/actions.ts`.
   - `deleteExperiment`'s return shape is reconciled with the rest of the `*Action` family (or the discrepancy is deliberately documented) as part of the cleanup.
   - No behavior change to any experiment CRUD/archive operation.
+- **Resolution note (2026-08-20):** `experiments/actions.ts` no longer
+  defines `requireAuthenticatedUser`/`mutationFailure` — every
+  internal call site now uses `requireExperimentActionUser`/
+  `experimentMutationFailure` from `./actions/shared` directly. The
+  8 pass-through re-exports at the bottom of the file are deleted;
+  `[id]/page.tsx`, `new/page.tsx`, `ArchiveExperimentModal.tsx`, and
+  `calendar/AllExperimentsTable.tsx` now import the `*Action`
+  functions straight from `./actions/crud`. `deleteExperimentAction`
+  now returns `ActionResult` (was `{error?: string}`) — its one real
+  call site (`ConfirmDeleteButton`'s `onConfirm` prop) already accepted
+  `{error?: string} | void` structurally, so no caller changes were
+  needed for that part.
+  **Bug caught during verification:** `./actions/crud.ts` had no
+  `"use server"` directive of its own — it relied on being re-exported
+  through `actions.ts`, which has one at file scope. Wiring Client
+  Components (`ArchiveExperimentModal.tsx`, and `archiveExperimentsAction`/
+  `deleteExperimentsAction` passed as props from `AllExperimentsTable.tsx`)
+  directly to `crud.ts` broke that — `npm run build` failed trying to
+  bundle `pg`/`prisma` into client code. Fixed by adding `"use server"`
+  to `crud.ts` itself (every export there is an async function, so this
+  is valid). Verified live: archived/unarchived a real experiment
+  (`archiveExperimentAction`/`unarchiveExperimentAction` via
+  `ConfirmDeleteButton`, confirmed by code parity with
+  `ArchiveExperimentModal`'s identical wiring), and created + deleted a
+  disposable throwaway hypothesis/experiment end-to-end
+  (`deleteExperimentAction`'s new `ActionResult` return, plus its
+  `resetEmptyHypotheses` side effect firing correctly) — DB back to
+  baseline (23 hypotheses) afterward. `npx tsc --noEmit`, `eslint`, and
+  `npm test` (53/53) all clean. `npm run build` was blocked by port/
+  cache contention with a concurrently-running dev server from another
+  session, not re-attempted after the fix to avoid corrupting its
+  cache — the live dev-server verification (which does go through the
+  same Turbopack bundler) covers the same client/server-boundary risk
+  the build would have caught.
 
 ## TECH-059 — logout() still uses unsafe writeAuditLog instead of safeWriteAuditLog
 

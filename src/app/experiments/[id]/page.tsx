@@ -2,15 +2,15 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
+import { updateExperiment } from "../actions";
 import {
-  archiveExperiment,
-  deleteExperiment,
-  getAuthors,
-  getProducts,
-  getSegments,
-  unarchiveExperiment,
-  updateExperiment,
-} from "../actions";
+  archiveExperimentAction,
+  deleteExperimentAction,
+  getAuthorsAction,
+  getProductsAction,
+  getSegmentsAction,
+  unarchiveExperimentAction,
+} from "../actions/crud";
 import { ExperimentForm } from "../ExperimentForm";
 import { ArchivePromptGate } from "../ArchivePromptGate";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
@@ -46,10 +46,10 @@ export default async function ExperimentDetailPage({
         weekStages: { orderBy: { weekStart: "asc" } },
       },
     }),
-    getAuthors(),
+    getAuthorsAction(),
     getFunnelLevels(),
-    getProducts(),
-    getSegments(),
+    getProductsAction(),
+    getSegmentsAction(),
   ]);
 
   if (!experiment) notFound();
@@ -100,7 +100,7 @@ export default async function ExperimentDetailPage({
           </Link>
           {experiment.archived ? (
             <ConfirmDeleteButton
-              onConfirm={unarchiveExperiment.bind(null, experiment.id)}
+              onConfirm={unarchiveExperimentAction.bind(null, experiment.id)}
               confirmTitle="Разархивировать эксперимент?"
               confirmMessage={`«${experiment.name}» снова появится в основном списке.`}
               triggerLabel="Разархивировать"
@@ -110,7 +110,7 @@ export default async function ExperimentDetailPage({
             />
           ) : (
             <ConfirmDeleteButton
-              onConfirm={archiveExperiment.bind(null, experiment.id)}
+              onConfirm={archiveExperimentAction.bind(null, experiment.id)}
               confirmTitle="Архивировать эксперимент?"
               confirmMessage={`«${experiment.name}» будет скрыт из основного списка. Это можно отменить.`}
               triggerLabel="Архивировать"
@@ -120,7 +120,7 @@ export default async function ExperimentDetailPage({
             />
           )}
           <ConfirmDeleteButton
-            onConfirm={deleteExperiment.bind(null, experiment.id)}
+            onConfirm={deleteExperimentAction.bind(null, experiment.id)}
             confirmTitle="Удалить эксперимент?"
             confirmMessage={`«${experiment.name}» будет удалён без возможности восстановления.`}
             triggerLabel="Удалить"

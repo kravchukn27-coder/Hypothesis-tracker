@@ -11,7 +11,7 @@ import {
 } from "@/lib/experiment";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
-import { archiveExperiments, deleteExperiments } from "../experiments/actions";
+import { archiveExperimentsAction, deleteExperimentsAction } from "../experiments/actions/crud";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { RowCheckbox, SelectAllCheckbox, SelectionProvider, SelectModeToggle } from "@/components/BulkSelection";
 import { FilterBar } from "@/components/FilterBar";
@@ -240,8 +240,8 @@ export async function AllExperimentsTable({
         <BulkActionBar
           itemLabelOne="эксперимент"
           itemLabelMany="экспериментов"
-          onArchive={archiveExperiments}
-          onDelete={deleteExperiments}
+          onArchive={archiveExperimentsAction}
+          onDelete={deleteExperimentsAction}
         />
 
         {experiments.length === 0 ? (

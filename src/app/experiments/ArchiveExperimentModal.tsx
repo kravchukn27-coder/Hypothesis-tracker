@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { archiveExperiment } from "./actions";
+import { archiveExperimentAction } from "./actions/crud";
 import { MotionDialog } from "@/components/MotionDialog";
 
 export function ArchiveExperimentModal({
@@ -19,7 +19,7 @@ export function ArchiveExperimentModal({
 
   function handleArchive(dismiss: (force?: boolean) => void) {
     startTransition(async () => {
-      await archiveExperiment(experimentId);
+      await archiveExperimentAction(experimentId);
       router.refresh();
       dismiss(true);
     });

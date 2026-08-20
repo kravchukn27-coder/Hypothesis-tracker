@@ -1,3 +1,5 @@
+"use server";
+
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -35,12 +37,12 @@ async function resetEmptyHypotheses(hypothesisIds: string[]) {
   await prisma.hypothesis.updateMany({ where: { id: { in: emptyIds } }, data: { status: "NEW" } });
 }
 
-export async function deleteExperimentAction(id: string): Promise<{ error?: string }> {
+export async function deleteExperimentAction(id: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
   const user = await requireExperimentActionUser();
   try {
     const experiment = await prisma.experiment.findUnique({ where: { id }, select: { hypothesisId: true } });
-    if (!experiment) return {};
+    if (!experiment) return actionSuccess();
     await prisma.experiment.delete({ where: { id } });
     await resetEmptyHypotheses([experiment.hypothesisId]);
     revalidatePath("/backlog");

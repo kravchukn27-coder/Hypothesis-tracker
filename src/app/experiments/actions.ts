@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
-import { compareByManualOrder } from "@/lib/calendar";
+import { compareByManualOrder, MS_PER_DAY, startOfWeek } from "@/lib/calendar";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
@@ -87,17 +87,6 @@ function toDate(value: string | undefined) {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
-}
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-/** Monday 00:00 of the week containing `date`, in local time. */
-function startOfWeek(date: Date): Date {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const day = d.getDay(); // 0 = Sunday
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diffToMonday);
-  return d;
 }
 
 /**

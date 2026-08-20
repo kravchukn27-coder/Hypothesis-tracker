@@ -146,7 +146,7 @@
 
 ## TECH-039 — Duplicated startOfWeek()/MS_PER_DAY instead of importing the canonical lib/calendar.ts versions
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Architecture
 - **Type:** Fix

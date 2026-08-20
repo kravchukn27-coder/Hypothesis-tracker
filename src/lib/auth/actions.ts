@@ -9,8 +9,11 @@ import { verifyPassword } from "./password";
 import { getCurrentUser } from "./session";
 import { signSessionToken } from "./token";
 import { safeWriteAuditLog, writeAuditLog } from "@/lib/audit-log";
+import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 
-function redirectToLogin(error: "credentials" | "ratelimit"): never {
+type LoginError = "credentials" | "ratelimit" | "unavailable";
+
+function redirectToLogin(error: LoginError): never {
   redirect(`/login?error=${error}`);
 }
 
@@ -22,43 +25,63 @@ export async function loginAsUser(formData: FormData): Promise<void> {
   const email = normalizeLoginEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   const from = safeReturnPath(String(formData.get("from") ?? "/"));
-  const ip = await getLoginClientIp();
 
-  if (await isLoginRateLimited(ip, email)) {
-    await safeWriteAuditLog({ event: "LOGIN_FAILURE", userId: null, metadata: { reason: "rate_limited", email, ip }, route: "src/lib/auth/actions.ts" });
-    redirectToLogin("ratelimit");
-  }
+  const destination = await runWithOperationCorrelation(async () => {
+    try {
+      const ip = await getLoginClientIp();
 
-  const user = email
-    ? await prisma.user.findFirst({
-        where: { email: { equals: email, mode: "insensitive" } },
-        select: { id: true, passwordHash: true, sessionVersion: true, isActive: true },
-      })
-    : null;
+      if (await isLoginRateLimited(ip, email)) {
+        await safeWriteAuditLog({ event: "LOGIN_FAILURE", userId: null, metadata: { reason: "rate_limited", email, ip }, route: "src/lib/auth/actions.ts" });
+        return "/login?error=ratelimit";
+      }
 
-  if (!user || !user.isActive || !user.passwordHash || !password || !verifyPassword(password, user.passwordHash)) {
-    const rateLimited = await recordLoginFailure(ip, email);
-    await safeWriteAuditLog({ event: "LOGIN_FAILURE", userId: user?.id ?? null, metadata: { reason: "invalid_credentials", email, ip }, route: "src/lib/auth/actions.ts" });
-    redirectToLogin(rateLimited ? "ratelimit" : "credentials");
-  }
+      const user = email
+        ? await prisma.user.findFirst({
+            where: { email: { equals: email, mode: "insensitive" } },
+            select: { id: true, passwordHash: true, sessionVersion: true, isActive: true },
+          })
+        : null;
 
-  await clearLoginFailures(ip, email);
-  const token = await signSessionToken(
-    user.id,
-    user.sessionVersion,
-    crypto.randomUUID(),
-    getSessionSecret(),
-    SESSION_MAX_AGE_SEC,
-  );
-  (await cookies()).set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SEC,
+      if (!user || !user.isActive || !user.passwordHash || !password || !verifyPassword(password, user.passwordHash)) {
+        const rateLimited = await recordLoginFailure(ip, email);
+        await safeWriteAuditLog({ event: "LOGIN_FAILURE", userId: user?.id ?? null, metadata: { reason: "invalid_credentials", email, ip }, route: "src/lib/auth/actions.ts" });
+        return rateLimited ? "/login?error=ratelimit" : "/login?error=credentials";
+      }
+
+      await clearLoginFailures(ip, email);
+      const token = await signSessionToken(
+        user.id,
+        user.sessionVersion,
+        crypto.randomUUID(),
+        getSessionSecret(),
+        SESSION_MAX_AGE_SEC,
+      );
+      (await cookies()).set(SESSION_COOKIE_NAME, token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: SESSION_MAX_AGE_SEC,
+      });
+      await safeWriteAuditLog({ event: "LOGIN_SUCCESS", userId: user.id, metadata: { ip }, route: "src/lib/auth/actions.ts" });
+      return from;
+    } catch (error) {
+      await captureServerError({
+        event: "auth.login.failed",
+        route: "src/lib/auth/actions.ts#loginAsUser",
+        error,
+        metadata: { email },
+      });
+      return "/login?error=unavailable";
+    }
   });
-  await safeWriteAuditLog({ event: "LOGIN_SUCCESS", userId: user.id, metadata: { ip }, route: "src/lib/auth/actions.ts" });
-  redirect(from);
+
+  // `redirect` throws a Next.js control-flow error, so it must remain outside
+  // the guarded login core above.
+  if (destination === "/login?error=credentials") redirectToLogin("credentials");
+  if (destination === "/login?error=ratelimit") redirectToLogin("ratelimit");
+  if (destination === "/login?error=unavailable") redirectToLogin("unavailable");
+  redirect(destination);
 }
 
 export async function logout(): Promise<void> {

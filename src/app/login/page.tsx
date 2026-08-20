@@ -3,6 +3,7 @@ import { loginAsUser } from "@/lib/auth/actions";
 const errors: Record<string, string> = {
   credentials: "Неверный email или пароль.",
   ratelimit: "Слишком много попыток входа. Подождите 15 минут и попробуйте снова.",
+  unavailable: "Не удалось выполнить вход. Попробуйте ещё раз через несколько минут.",
 };
 
 export default async function LoginPage({

@@ -126,7 +126,7 @@
 
 ## TECH-053 — loginAsUser: no try/catch around the login flow's DB calls
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Resilience
 - **Type:** Fix

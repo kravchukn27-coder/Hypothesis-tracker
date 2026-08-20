@@ -2,6 +2,122 @@
 
 ---
 
+## BUG-066: Calendar author filter — no "filtered to empty" state, and "Сбросить фильтр" doesn't activate
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Summary:** Filtering the Calendar by an author with no current
+  experiments shows the generic "Пока нет ни одного эксперимента /
+  Добавить первый" empty state instead of a filtered-empty state with a
+  way to clear the filter. Separately, applying the author filter alone
+  (no week-stage filter) never enables "Сбросить фильтр" — it stays
+  disabled/greyed out the way it does with no filters at all. Reported
+  with screenshots 2026-08-20.
+- **Description:** Two related gaps in `src/app/calendar/page.tsx`:
+  1. **Wrong empty state.** `experiments` (line 106-111) already
+     applies `authorsFilter` before `displayedExperiments` (line 120) is
+     built from it. The empty-state branch (line 257:
+     `displayedExperiments.length === 0 ? …`) can't distinguish "there
+     are truly zero experiments in the system" from "the author filter
+     matched zero" — both render the same dashed box with "Пока нет ни
+     одного эксперимента." + an "Добавить первый" link to
+     `/experiments/new`. When it's the filter's fault, that message is
+     misleading (experiments exist, they're just filtered out) and gives
+     no way to clear the filter, matching the "просто пустой экран"
+     the user described.
+  2. **"Сбросить фильтр" ignores the author filter.** Its enabled state
+     is `hasWeekStageFilters` only (`weekStageFilters.size > 0`, line
+     188/216) — `authorsFilter` isn't part of that check, so the button
+     stays `aria-disabled` when only an author filter is active. Even if
+     it were enabled, `resetWeekStageHref` (line 181,
+     `calendarHref({ start: windowStart, clearWeekStage: true })`)
+     wouldn't actually clear it either: `calendarHref` (line 155-172)
+     always re-appends every `authorsFilter` value regardless of the
+     `clearWeekStage` flag (line 168), so today it's a week-stage-only
+     reset, not a full "clear all filters" reset — the button's label
+     promises more than it does once an author filter is involved.
+- **Acceptance Criteria:**
+  - Selecting an author with zero matching experiments renders a
+    filtered-empty state (distinct copy from the "no experiments at
+    all" state) with a visible way to clear the filter, not the generic
+    "Добавить первый" empty state.
+  - "Сбросить фильтр" becomes active (not `aria-disabled`) whenever
+    *either* a week-stage filter or an author filter is active — same
+    activation rule the week-stage-only case already has today.
+  - Clicking "Сбросить фильтр" while an author filter is active clears
+    the author filter too, not just week-stage filters.
+  - The true "zero experiments in the whole system" empty state (line
+    257-266, `/experiments/new` "Добавить первый" link) still renders
+    correctly when no filters are active and the calendar genuinely has
+    nothing in it.
+  - Verified in the browser: filter by an author with no current tasks
+    (empty state + working reset), and confirm the existing week-stage
+    filter behavior is unaffected.
+- **Files:** `src/app/calendar/page.tsx:106-111` (`experiments`
+  filtering), `:120` (`displayedExperiments`), `:155-172`
+  (`calendarHref`), `:181` (`resetWeekStageHref`), `:188`
+  (`hasWeekStageFilters`), `:212-222` ("Сбросить фильтр" button),
+  `:257-266` (empty state branch).
+
+---
+
+## BUG-065: Backlog status flips to "In progress" too early — must wait until the experiment is actually placed on the Calendar
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Summary:** Confirmed-correct flow today: `ACCEPTED` row → "Взять в
+  работу" button → click creates an experiment that lands in the
+  Experiments table **without a date**. What's wrong: the hypothesis's
+  Backlog status should only flip to `IN_PROGRESS` once that experiment
+  is actually placed on the Calendar (given a date/week), not at the
+  "Взять в работу" click itself. User confirmed this twice (2026-08-20).
+- **Description:** Two places write `Hypothesis.status = IN_PROGRESS`
+  earlier than they should:
+  1. `takeHypothesisIntoWork` (`src/app/backlog/actions.ts:177-204`)
+     sets it directly at line 200, synchronously on button click —
+     before the new experiment has any date.
+  2. `syncHypothesisStatusForExperiment`
+     (`src/app/experiments/actions/week-stages.ts:34-53`) is also
+     called from `createExperiment` right after creation
+     (`src/app/experiments/actions.ts:195`), and its `hasActive` check
+     (line 42-44) treats an experiment with no week stages and a
+     `null` `stage` as "active" (`null !== "DONE"` is `true`), so even
+     without the direct write in (1), creating an undated experiment
+     would still push the hypothesis to `IN_PROGRESS` immediately.
+  The correct trigger is scheduling: the same function
+  (`syncHypothesisStatusForExperiment`) is already called from
+  `setExperimentWeekStage` (`src/app/experiments/actions.ts:491`),
+  which is what runs when an undated experiment is dragged from
+  "Без дат" onto a Calendar week (per `docs/PROJECT_CONTEXT.md`
+  Calendar section) — that call site is already correct and should stay
+  the single source of truth for this transition.
+- **Acceptance Criteria:**
+  - Clicking "Взять в работу" on an `ACCEPTED` row creates/reuses the
+    experiment and lands it undated in Experiments, but leaves the
+    hypothesis status at `ACCEPTED` (not `IN_PROGRESS`).
+  - `takeHypothesisIntoWork` no longer writes `Hypothesis.status`
+    directly.
+  - `hasActive` in `syncHypothesisStatusForExperiment` does not count an
+    experiment with zero week stages as active — an undated experiment
+    must not push the hypothesis to `IN_PROGRESS`.
+  - Once that experiment gets its first week entry on the Calendar
+    (via `setExperimentWeekStage`), the hypothesis's Backlog status
+    updates to `IN_PROGRESS`.
+  - Existing DONE-transition behavior of `syncHypothesisStatusForExperiment`
+    (all of a hypothesis's experiments Done → hypothesis `DONE`) is
+    unchanged.
+  - Verified in the browser: full flow from `ACCEPTED` → "Взять в
+    работу" (status stays `ACCEPTED`, experiment appears undated) →
+    schedule the experiment on `/calendar` (status becomes
+    `IN_PROGRESS`).
+- **Files:** `src/app/backlog/actions.ts:177-204`
+  (`takeHypothesisIntoWork`), `src/app/experiments/actions/week-stages.ts:34-53`
+  (`syncHypothesisStatusForExperiment`), `src/app/experiments/actions.ts:195`
+  (`createExperiment`'s call into it).
+- **Related:** UI-061 (status table ordering).
+
+---
+
 ## BUG-064: Password-reset link origin trusts client-controlled Host header
 
 - **Status:** DONE

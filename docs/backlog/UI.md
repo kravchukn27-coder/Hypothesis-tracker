@@ -1,5 +1,184 @@
 # UI Backlog
 
+## UI-064 — Collapse the Calendar "Требуют внимания" banner into a bell icon with a count badge
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** UI / Calendar
+- **Type:** Enhancement
+- **Summary:** Replace the full-width "Требуют внимания" banner
+  (`OverdueExperimentReminder.tsx`) with a small bell icon showing a red
+  numeric badge (count of overdue experiments); clicking it opens a
+  compact popover with the same per-experiment content and actions the
+  banner has today. The red ring highlight on the overdue week cell
+  itself (`ExperimentWeekRow.tsx:296`, `ring-2 ring-red-500`) is
+  unrelated and stays exactly as-is. Requested 2026-08-20.
+- **Description:** Today `OverdueExperimentReminder`
+  (`src/app/calendar/OverdueExperimentReminder.tsx`) always renders as a
+  full-width amber `<section>` when there are overdue reminders
+  (`page.tsx:269`), listing every overdue experiment stacked
+  vertically. The user wants this collapsed into a small trigger — a
+  bell icon with a small red badge showing the count (e.g. "1", "2") —
+  that expands into a popover on click. The popover keeps the exact same
+  per-row content and behavior as today's `ReminderRow`: experiment
+  name, the "Этап за неделю … ещё не завершён" text, and the two
+  actions ("Завершить этап" / "Запланировать следующий этап", including
+  the inline stage+date scheduling form that appears under
+  "Запланировать") — nothing about `ReminderRow`'s logic changes, only
+  its outer container shrinks from a full banner section to a smaller
+  popover panel anchored to the bell.
+- **Acceptance Criteria:**
+  - When there are 0 overdue experiments, nothing renders (same as
+    today — no bell, no badge).
+  - When there are 1+ overdue experiments, a bell icon renders (in the
+    Calendar header area, replacing the banner's position) with a small
+    red badge showing the exact count, matching the current "Требуют
+    внимания: N" count.
+  - Clicking the bell opens a popover, noticeably smaller than today's
+    full-width banner, containing the same list of overdue experiments
+    with unchanged content and the same two actions per row
+    (`ReminderRow`'s `complete()`/`schedule()` logic is reused, not
+    rewritten).
+  - Completing or scheduling a reminder from inside the popover behaves
+    as it does today (row updates/disappears, toast, `router.refresh()`).
+  - The badge count updates correctly as reminders are resolved (an
+    experiment leaving the overdue list decrements or removes the
+    badge).
+  - The red ring highlight on the overdue week cell in the grid
+    (`ExperimentWeekRow.tsx`) is unchanged by this task.
+  - Verified in the browser with 1 and with 2+ overdue experiments.
+- **Files:** `src/app/calendar/OverdueExperimentReminder.tsx` (banner →
+  bell + popover, `ReminderRow` content/logic reused), `src/app/calendar/page.tsx:269`
+  (render site). Not in scope: `ExperimentWeekRow.tsx`'s red ring
+  highlight.
+
+## UI-063 — Open "Новая гипотеза" as an overlay modal instead of a separate page
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** UI / Backlog
+- **Type:** Enhancement
+- **Summary:** The "+ Новая гипотеза" button currently navigates to
+  `/backlog/new`, a full separate page. User wants the exact same form —
+  same fields, same submit behavior, no functional changes — to instead
+  open as a modal/overlay floating over the Backlog table, so the user
+  never leaves the list view. Requested 2026-08-20.
+- **Description:** Today `/backlog/page.tsx` renders "+ Новая гипотеза"
+  as a `Link` to `/backlog/new` (`src/app/backlog/page.tsx:158-163`),
+  and `src/app/backlog/new/page.tsx` is a standalone page that renders
+  `HypothesisForm` with `action={createHypothesis}`. This task swaps the
+  navigation for an in-place overlay using the app's existing modal
+  pattern — see `MotionDialog` (`src/components/MotionDialog.tsx`),
+  already used by `ArchiveHypothesisModal.tsx` and
+  `ConvertToExperimentModal.tsx` for the same "float over the current
+  list" interaction — rather than introducing a new modal primitive.
+  `HypothesisForm` itself, its fields, and the `createHypothesis` Server
+  Action are explicitly **not** to change; only how the form is
+  presented changes. Per `docs/PROJECT_CONTEXT.md`, creating a
+  hypothesis today redirects back to the `/backlog` list (not to the new
+  hypothesis's detail page) — that end state (closing back to an updated
+  Backlog list, ideally scrolled/highlighted to the new row like other
+  "arrive at a row" flows, e.g. `ScrollToHighlighted`) should be
+  preserved when closing the modal after a successful create.
+- **Acceptance Criteria:**
+  - Clicking "+ Новая гипотеза" on `/backlog` opens the hypothesis
+    creation form as an overlay above the Backlog table, without a full
+    page navigation — the table stays visible/dimmed behind it, matching
+    the existing modal pattern used elsewhere in Backlog.
+  - The form itself (all fields, layout, validation, submit label) is
+    unchanged from the current `/backlog/new` page — this task only
+    changes the container it's presented in.
+  - Submitting successfully closes the overlay and lands back on
+    `/backlog` reflecting the new hypothesis, consistent with today's
+    "redirect to the list" behavior.
+  - Canceling/dismissing the overlay (backdrop click, Escape, explicit
+    close) discards the in-progress form and returns to the plain
+    Backlog view with no navigation.
+  - Direct navigation to `/backlog/new` (e.g. a bookmarked/shared link)
+    still works in some reasonable way — decide at implementation
+    whether it keeps working as today's standalone page or redirects
+    into `/backlog` with the modal open; either way it must not 404.
+  - Verified in the browser: opening, filling out, submitting, and
+    canceling the modal all work as described.
+- **Files:** `src/app/backlog/page.tsx:158-163` (trigger button),
+  `src/app/backlog/new/page.tsx` (current standalone page),
+  `src/app/backlog/HypothesisForm.tsx` (form, unchanged),
+  `src/components/MotionDialog.tsx` (modal pattern to reuse).
+
+## UI-062 — Backlog Status pill truncates "In progress" — widen STATUS_COL without changing the table's total width
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** UI / Backlog
+- **Type:** Bug (visual)
+- **Summary:** The Status column's `IconSelect` pill clips the
+  `IN_PROGRESS` label to "In progr…" — `STATUS_COL` (`w-36`, 144px in
+  `src/components/tableWidths.ts:29`) is too narrow for the longest
+  status label plus the pill's leading icon and chevron. User wants the
+  column widened just enough to show it in full (screenshot attached,
+  2026-08-20), **without changing the Backlog table's overall rendered
+  width** — shift width from a neighboring column instead of growing
+  the total.
+- **Description:** `StatusCell.tsx` renders `IconSelect` in `"pill"`
+  variant (`src/components/IconSelect.tsx`), whose `<select>` has
+  `max-w-full truncate` — it clips to whatever width its `<td>` (sized
+  by `STATUS_COL`) allows. Per the BUG-004 invariant documented at the
+  top of `tableWidths.ts`, both Backlog and Experiments must keep a
+  fixed total table width with no horizontal scroll — so this is a
+  reallocation, not a pure widen: increase `STATUS_COL` by however many
+  px are needed for "In progress" (icon + text + chevron, no truncation,
+  some breathing room) and remove the same amount from a column with
+  slack to spare (candidates already flagged in `tableWidths.ts`'s own
+  comments as sized for their content rather than tight: `FUNNEL_LEVEL_COL`
+  has ~5px of margin per its comment so it's not a donor; `COMMENT_COL`
+  (`w-72`, 288px) is the most likely donor since it's explicitly the one
+  column given "spare room" in past passes).
+- **Acceptance Criteria:**
+  - The `IN_PROGRESS` status pill (longest label, "In progress") renders
+    fully in the Backlog list — icon, full text, and chevron all
+    visible, no `truncate` ellipsis.
+  - Every other status pill (`New`, `Planned`, `Accepted`, `Hold`,
+    `Done`) still renders correctly at the new width.
+  - Backlog's total table width (`TABLE_CONTENT_WIDTH`/column sum) is
+    unchanged — the extra width given to `STATUS_COL` is taken from
+    another column, not added on top.
+  - The donor column's own content (e.g. Comment text) still reads
+    fine and doesn't itself start truncating content that fit before.
+  - `StatusCell`'s `IconSelect` usage on `/backlog/[id]` (`variant="field"`,
+    not `"pill"`) is unaffected — this task is list-view only.
+  - Verified in the browser at the table's normal (desktop) width.
+- **Files:** `src/components/tableWidths.ts:29` (`STATUS_COL`),
+  `src/app/backlog/page.tsx` (column usage), `src/components/IconSelect.tsx`
+  (pill rendering).
+
+## UI-061 — Swap "Accepted" and "In progress" order in the hypothesis status list
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** UI / Backlog
+- **Type:** Enhancement
+- **Summary:** In the hypothesis status table/legend, `ACCEPTED` should
+  come before `IN_PROGRESS`, not after. Requested by the user
+  (2026-08-20).
+- **Description:** `STATUS_ORDER` in `src/lib/hypothesis.ts:31-38`
+  currently lists `NEW, PLANNED, IN_PROGRESS, ACCEPTED, HOLD, DONE`.
+  This order drives every place statuses are rendered in sequence
+  (status dropdown/legend, any status-sorted list). The user wants
+  `ACCEPTED` to appear before `IN_PROGRESS`, matching the intended
+  Backlog → Calendar flow (accept, then take into work — see BUG-065),
+  so the visual order reads: `NEW, PLANNED, ACCEPTED, IN_PROGRESS, HOLD, DONE`.
+- **Acceptance Criteria:**
+  - `STATUS_ORDER` reorders to `NEW, PLANNED, ACCEPTED, IN_PROGRESS, HOLD, DONE`.
+  - Every UI surface that renders statuses in `STATUS_ORDER` sequence
+    (status dropdown/legend on Backlog, and anywhere else it's reused)
+    reflects the new order.
+  - `HypothesisStatus`'s underlying enum values/labels/colors/icons are
+    unchanged — this is a display-order-only change, not a rename or
+    data-model change.
+  - Verified in the browser.
+- **Files:** `src/lib/hypothesis.ts:31-38` (`STATUS_ORDER`).
+- **Related:** BUG-065 (status transition on scheduling).
+
 ## UI-060 — Контекстные анимации прибытия и навигации между Backlog и Calendar
 
 - **Status:** DONE

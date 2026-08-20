@@ -2,7 +2,7 @@
 
 ## UI-060 — Контекстные анимации прибытия и навигации между Backlog и Calendar
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Backlog, Calendar
 - **Type:** Enhancement

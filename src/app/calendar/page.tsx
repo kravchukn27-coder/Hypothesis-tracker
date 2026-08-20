@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarOff, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
+import { ViewTransition } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   addWeeks,
@@ -176,6 +177,7 @@ export default async function CalendarPage({
   const nextHref = calendarHref({ start: addWeeks(windowStart, PAGE_STEP_WEEKS) });
   const todayHref = calendarHref();
   const isToday = windowStart.getTime() === parseWindowStart(undefined).getTime();
+  const todayTransition = windowStart < parseWindowStart(undefined) ? "calendar-forward" : "calendar-back";
   const resetWeekStageHref = calendarHref({ start: windowStart, clearWeekStage: true });
 
   function cellMatchesFilter(cellStage: string | null, weekStartISO: string): boolean {
@@ -220,6 +222,7 @@ export default async function CalendarPage({
               </Link>
               <Link
                 href={todayHref}
+                transitionTypes={[todayTransition]}
                 aria-disabled={isToday}
                 className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
                   isToday ? "pointer-events-none text-zinc-300" : "text-zinc-700 hover:bg-zinc-50"
@@ -229,6 +232,7 @@ export default async function CalendarPage({
               </Link>
               <Link
                 href={prevHref}
+                transitionTypes={["calendar-back"]}
                 aria-label={`Назад на ${PAGE_STEP_WEEKS} нед.`}
                 className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
               >
@@ -236,6 +240,7 @@ export default async function CalendarPage({
               </Link>
               <Link
                 href={nextHref}
+                transitionTypes={["calendar-forward"]}
                 aria-label={`Вперёд на ${PAGE_STEP_WEEKS} нед.`}
                 className="rounded-md border border-zinc-200 p-1.5 text-zinc-600 hover:bg-zinc-50"
               >
@@ -263,6 +268,11 @@ export default async function CalendarPage({
         <>
           <OverdueExperimentReminder reminders={overdueReminders} />
 
+          <ViewTransition
+            enter={{ "calendar-forward": "calendar-forward", "calendar-back": "calendar-back", default: "none" }}
+            exit={{ "calendar-forward": "calendar-forward", "calendar-back": "calendar-back", default: "none" }}
+            default="none"
+          >
           <div className={`${CALENDAR_SURFACE_WIDTH} flex items-start gap-4`}>
             {(undated.length > 0 || outOfRange.length > 0) && (
               <div className="flex w-56 shrink-0 flex-col gap-4">
@@ -402,6 +412,7 @@ export default async function CalendarPage({
             </div>
             </div>
           </div>
+          </ViewTransition>
         </>
       ))}
     </div>

@@ -91,6 +91,7 @@ body {
 
 .highlight-table-row[data-highlighted="true"] {
   background-color: var(--color-amber-50);
+  box-shadow: inset 0 0 0 1px rgb(245 158 11 / 18%);
 }
 
 .highlight-calendar-row[data-highlighted="true"] {
@@ -110,6 +111,12 @@ body {
   background-color: var(--color-amber-200);
   color: var(--color-amber-950);
   box-shadow: 0 0 0 2px var(--color-amber-500), 0 0 0 4px white;
+}
+
+.highlight-table-row[data-highlight-arrival="true"],
+.highlight-calendar-row[data-highlight-arrival="true"],
+.highlight-calendar-card[data-highlight-arrival="true"] {
+  animation: motion-context-arrive 620ms var(--motion-ease) both;
 }
 
 @keyframes motion-popover-in {
@@ -138,10 +145,30 @@ body {
   40% { box-shadow: 0 0 0 4px rgb(24 24 27 / 8%); }
   100% { box-shadow: 0 0 0 0 rgb(24 24 27 / 0%); }
 }
+@keyframes motion-context-arrive {
+  0% { opacity: 0.72; transform: translateY(6px); filter: saturate(0.82); }
+  58% { opacity: 1; transform: translateY(0); filter: saturate(1.06); }
+  100% { opacity: 1; transform: translateY(0); filter: saturate(1); }
+}
+
+::view-transition { pointer-events: none; }
+::view-transition-old(.calendar-forward) { animation: calendar-window-out-left 180ms ease-in both; }
+::view-transition-new(.calendar-forward) { animation: calendar-window-in-right 260ms var(--motion-ease) both; }
+::view-transition-old(.calendar-back) { animation: calendar-window-out-right 180ms ease-in both; }
+::view-transition-new(.calendar-back) { animation: calendar-window-in-left 260ms var(--motion-ease) both; }
+@keyframes calendar-window-out-left { to { opacity: 0; transform: translateX(-22px); } }
+@keyframes calendar-window-in-right { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes calendar-window-out-right { to { opacity: 0; transform: translateX(22px); } }
+@keyframes calendar-window-in-left { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: translateX(0); } }
 
 @media (prefers-reduced-motion: reduce) {
   .motion-status-control { transition-duration: 1ms; }
   .motion-popover-enter, .motion-popover-exit, .motion-dialog-backdrop-enter, .motion-dialog-backdrop-exit,
   .motion-dialog-panel-enter, .motion-dialog-panel-exit, .motion-toast-enter, .motion-toast-exit,
-  .motion-plan-preview, .motion-plan-settled { animation-duration: 1ms; }
+  .motion-plan-preview, .motion-plan-settled, .highlight-table-row[data-highlight-arrival="true"],
+  .highlight-calendar-row[data-highlight-arrival="true"], .highlight-calendar-card[data-highlight-arrival="true"] { animation-duration: 1ms; }
+  ::view-transition-old(*), ::view-transition-new(*), ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }

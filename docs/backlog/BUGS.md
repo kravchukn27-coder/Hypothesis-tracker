@@ -2,6 +2,39 @@
 
 ---
 
+## BUG-064: Password-reset link origin trusts client-controlled Host header
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Summary:** `getRequestOrigin()` (`src/lib/auth/base-url.ts`) builds the
+  absolute URL for `resetUserPassword`'s link (`src/app/users/actions.ts`,
+  shown to the admin via `ResetPasswordButton.tsx`) from the
+  `X-Forwarded-Host`/`Host` request headers, which are client-supplied
+  unless a reverse proxy strictly overrides them. Found during a
+  security audit (2026-08-20).
+- **Description:** If the deployment's proxy doesn't pin the forwarded
+  host, a request carrying a spoofed `X-Forwarded-Host` could make the
+  generated reset link point at an attacker-controlled domain; an admin
+  copying that link to a user would be handing out a token redeemable
+  on a phishing site. `createInvite` (`src/lib/auth/invite-actions.ts`)
+  avoids this today by returning a bare relative path — `getRequestOrigin`
+  is only used for the password-reset link (BUG-061 intentionally
+  introduced the header-based approach for invites too; see that card's
+  notes on the alternative). Fix: build the origin from a configured
+  `APP_BASE_URL`/`ORIGIN` env var instead of trusting request headers,
+  or confirm and document that the hosting platform's proxy overwrites
+  these headers before they reach the app (in which case downgrade/close
+  this with that justification).
+- **Acceptance Criteria:**
+  - The link returned by `resetUserPassword` no longer derives its
+    domain from client-controllable request headers, OR the deployment
+    is confirmed (and documented) to strip/override
+    `X-Forwarded-Host`/`Host` upstream, closing this as not applicable.
+  - Verified: a request with a spoofed `X-Forwarded-Host` does not
+    change the domain in the generated reset link.
+
+---
+
 ## BUG-063: Calendar/backlog highlight-on-navigate never fades
 
 - **Status:** DONE

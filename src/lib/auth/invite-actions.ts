@@ -3,6 +3,7 @@
 import { getCurrentUser } from "./session";
 import { hashPassword } from "./password";
 import { consumeInvite, issueInvite } from "./invites";
+import { getRequestOrigin } from "./base-url";
 import { captureServerError } from "@/lib/log";
 
 export type InviteActionState = { error?: string; link?: string };
@@ -14,7 +15,8 @@ export async function createInvite(_previousState: InviteActionState, formData: 
 
   try {
     const token = await issueInvite(issuer.id, String(formData.get("name") ?? ""), String(formData.get("email") ?? ""));
-    return { link: `/invite/${token}` };
+    const origin = await getRequestOrigin();
+    return { link: `${origin}/invite/${token}` };
   } catch (error) {
     await captureServerError({
       event: "auth.invite.create.failed",

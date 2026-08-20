@@ -4,7 +4,7 @@
 
 ## BUG-061: Invite/reset link is a relative path — breaks outside localhost
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Summary:** `createInvite` (`src/lib/auth/invite-actions.ts`) returns
   `link: \`/invite/${token}\`` — a relative path with no domain — which

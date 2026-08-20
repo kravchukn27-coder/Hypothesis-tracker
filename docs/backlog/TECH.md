@@ -41,7 +41,7 @@
 
 ## TECH-047 — Silent no-op on invalid input in `updateHypothesisStatus` / `updateExperimentStage`
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Architecture
 - **Type:** Fix

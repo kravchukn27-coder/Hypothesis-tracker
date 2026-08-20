@@ -12,6 +12,7 @@ import {
   shouldPromptArchiveHypothesis,
 } from "@/lib/hypothesis";
 import { IconSelect } from "@/components/IconSelect";
+import { useToast } from "@/components/toast/ToastProvider";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
 
 export function StatusCell({
@@ -29,12 +30,18 @@ export function StatusCell({
   const [current, setCurrent] = useState(status);
   const [pending, startTransition] = useTransition();
   const [showArchivePrompt, setShowArchivePrompt] = useState(false);
+  const { showToast } = useToast();
 
   function handleChange(next: HypothesisStatus) {
     const previous = current;
     setCurrent(next);
     startTransition(async () => {
-      await updateHypothesisStatus(hypothesisId, next);
+      const result = await updateHypothesisStatus(hypothesisId, next);
+      if (result?.error) {
+        setCurrent(previous);
+        showToast(result.error, "error");
+        return;
+      }
       router.refresh();
       if (next === previous) return;
       if (shouldPromptArchiveHypothesis(next, archived)) {

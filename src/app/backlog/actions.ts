@@ -161,7 +161,7 @@ const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 export async function updateHypothesisStatus(id: string, status: string) {
   const user = await requireAuthenticatedUser();
   const parsed = statusSchema.safeParse(status);
-  if (!parsed.success) return;
+  if (!parsed.success) return { error: "Некорректный статус гипотезы." };
 
   try {
     const before = await prisma.hypothesis.findUnique({ where: { id }, select: { status: true } });

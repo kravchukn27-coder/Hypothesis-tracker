@@ -15,6 +15,7 @@ import {
 } from "@/lib/experiment";
 import { IconSelect } from "@/components/IconSelect";
 import { HideFromCalendarModal } from "@/components/HideFromCalendarModal";
+import { useToast } from "@/components/toast/ToastProvider";
 import type { ExperimentStage } from "@/generated/prisma/enums";
 
 // TECH-005: same "—" sentinel as ExperimentForm's StageField — an
@@ -51,12 +52,18 @@ export function StageCell({
   const [pending, startTransition] = useTransition();
   const [showArchivePrompt, setShowArchivePrompt] = useState(false);
   const [showHidePrompt, setShowHidePrompt] = useState(false);
+  const { showToast } = useToast();
 
   function handleChange(next: StageCellOption) {
     const previous = current;
     setCurrent(next);
     startTransition(async () => {
-      await updateExperimentStage(experimentId, next);
+      const result = await updateExperimentStage(experimentId, next);
+      if (result?.error) {
+        setCurrent(previous);
+        showToast(result.error, "error");
+        return;
+      }
       router.refresh();
       if (next !== previous && next !== "NONE" && shouldPromptArchiveExperiment(next, archived)) {
         if (onDoneModal === "hide") setShowHidePrompt(true);

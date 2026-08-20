@@ -415,7 +415,7 @@ const stageOrNoneSchema = z.union([stageSchema, z.literal("NONE")]);
 export async function updateExperimentStage(id: string, stage: string) {
   const user = await requireAuthenticatedUser();
   const parsed = stageOrNoneSchema.safeParse(stage);
-  if (!parsed.success) return;
+  if (!parsed.success) return { error: "Некорректный этап эксперимента." };
   try {
 
   // BUG-005 follow-up #2: confirmed with the user — the list's Status

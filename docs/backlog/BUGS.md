@@ -4,7 +4,7 @@
 
 ## BUG-066: Calendar author filter — no "filtered to empty" state, and "Сбросить фильтр" doesn't activate
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Summary:** Filtering the Calendar by an author with no current
   experiments shows the generic "Пока нет ни одного эксперимента /

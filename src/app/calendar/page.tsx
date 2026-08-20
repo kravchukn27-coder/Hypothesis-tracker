@@ -103,12 +103,16 @@ export default async function CalendarPage({
   // experiment's *current week* stage instead (`getCurrentWeekStage`,
   // same helper the Experiments list uses), so it's exactly whether
   // it looks Done *right now* that decides visibility.
-  const experiments = allExperiments.filter((e) => {
+  // BUG-066: kept separate from `experiments` (which also applies the
+  // author filter) so the empty state below can tell "author filter
+  // matched zero" apart from "there are truly zero experiments."
+  const visibleForCalendar = allExperiments.filter((e) => {
     const currentStage = currentStageOf(e, now);
-    if (currentStage === "DONE" && e.calendarHiddenOnDone === true) return false;
-    if (authorsFilter.length && (!e.author || !authorsFilter.includes(e.author))) return false;
-    return true;
+    return !(currentStage === "DONE" && e.calendarHiddenOnDone === true);
   });
+  const experiments = authorsFilter.length
+    ? visibleForCalendar.filter((e) => e.author && authorsFilter.includes(e.author))
+    : visibleForCalendar;
   const authorNames = [...new Set(["Саша", "Дима", "Артем", ...allExperiments.map((item) => item.author).filter((author): author is string => Boolean(author))])];
   const authorOptions = authorNames.map((author) => ({ value: author, label: author }));
 
@@ -156,16 +160,19 @@ export default async function CalendarPage({
     start: nextStart,
     focused = Boolean(focusedExperiment),
     clearWeekStage = false,
+    clearAuthors = false,
   }: {
     start?: Date;
     focused?: boolean;
     /** UI-052: drop the per-week status filters while keeping every other param. */
     clearWeekStage?: boolean;
+    /** BUG-066: drop the author filter while keeping every other param. */
+    clearAuthors?: boolean;
   } = {}): string {
     const params = new URLSearchParams();
     if (nextStart) params.set("start", toDateParam(nextStart));
     if (!clearWeekStage) weekStageEntries.forEach((entry) => params.append("weekStage", entry));
-    authorsFilter.forEach((value) => params.append("calendarAuthor", value));
+    if (!clearAuthors) authorsFilter.forEach((value) => params.append("calendarAuthor", value));
     if (focused && focusedExperiment) params.set("experimentId", focusedExperiment.id);
     const query = params.toString();
     return query ? `/calendar?${query}` : "/calendar";
@@ -178,7 +185,11 @@ export default async function CalendarPage({
   const todayHref = calendarHref();
   const isToday = windowStart.getTime() === parseWindowStart(undefined).getTime();
   const todayTransition = windowStart < parseWindowStart(undefined) ? "calendar-forward" : "calendar-back";
-  const resetWeekStageHref = calendarHref({ start: windowStart, clearWeekStage: true });
+  // BUG-066: resets both week-stage and author filters — previously
+  // only cleared week-stage while silently re-appending every
+  // `calendarAuthor` value, so "Сбросить фильтр" didn't actually reset
+  // an active author filter.
+  const resetFiltersHref = calendarHref({ start: windowStart, clearWeekStage: true, clearAuthors: true });
 
   function cellMatchesFilter(cellStage: string | null, weekStartISO: string): boolean {
     const selectedStage = weekStageFilters.get(weekStartISO);
@@ -186,6 +197,8 @@ export default async function CalendarPage({
   }
 
   const hasWeekStageFilters = weekStageFilters.size > 0;
+  const hasAuthorFilters = authorsFilter.length > 0;
+  const hasActiveFilters = hasWeekStageFilters || hasAuthorFilters;
   const visibleRows = hasWeekStageFilters
     ? rows.filter((row) =>
         row.cells.some((cell) => {
@@ -212,10 +225,10 @@ export default async function CalendarPage({
         {!showAll && (
           <div className="flex items-center gap-2">
               <Link
-                href={resetWeekStageHref}
-                aria-disabled={!hasWeekStageFilters}
+                href={resetFiltersHref}
+                aria-disabled={!hasActiveFilters}
                 className={`rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium ${
-                  hasWeekStageFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
+                  hasActiveFilters ? "text-zinc-700 hover:bg-zinc-50" : "pointer-events-none text-zinc-300"
                 }`}
               >
                 Сбросить фильтр
@@ -256,13 +269,30 @@ export default async function CalendarPage({
 
       {!showAll && (displayedExperiments.length === 0 ? (
         <div className={`flex ${CALENDAR_SURFACE_WIDTH} h-[164px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 text-center`}>
-          <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
-          <Link
-            href="/experiments/new"
-            className="text-sm font-medium text-zinc-900 underline underline-offset-4"
-          >
-            Добавить первый
-          </Link>
+          {hasAuthorFilters && visibleForCalendar.length > 0 ? (
+            // BUG-066: the author filter matched zero experiments — distinct
+            // from "no experiments at all" below, so this offers a reset
+            // instead of the misleading "Добавить первый" link.
+            <>
+              <p className="text-sm text-zinc-500">По выбранному автору сейчас нет экспериментов.</p>
+              <Link
+                href={resetFiltersHref}
+                className="text-sm font-medium text-zinc-900 underline underline-offset-4"
+              >
+                Сбросить фильтр
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-500">Пока нет ни одного эксперимента.</p>
+              <Link
+                href="/experiments/new"
+                className="text-sm font-medium text-zinc-900 underline underline-offset-4"
+              >
+                Добавить первый
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         <>

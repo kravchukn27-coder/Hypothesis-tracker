@@ -241,7 +241,7 @@
 
 ## TECH-032 — Login brute-force protection disabled with no compensating alert
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Security / Observability
 - **Type:** Fix

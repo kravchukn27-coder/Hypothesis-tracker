@@ -457,9 +457,12 @@ export async function reorderCalendarExperiments(orderedExperimentIds: string[])
     ...remainder.slice(insertionIndex),
   ];
 
-  await prisma.$transaction(
-    merged.map((e, manualOrder) => prisma.experiment.update({ where: { id: e.id }, data: { manualOrder } })),
+  const updates = merged.flatMap((e, manualOrder) =>
+    e.manualOrder === manualOrder
+      ? []
+      : [prisma.experiment.update({ where: { id: e.id }, data: { manualOrder } })],
   );
+  if (updates.length) await prisma.$transaction(updates);
   await auditExperimentEvent("CALENDAR_EXPERIMENTS_REORDERED", { experimentIds: parsed.data });
   return actionSuccess();
   } catch (error) { return mutationFailure("experiments.calendar.reorder.failed", error, user.id); }

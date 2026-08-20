@@ -4,13 +4,22 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   audit: vi.fn(),
   failure: vi.fn(async () => ({ ok: false, error: "Не удалось сохранить изменения. Попробуйте ещё раз." })),
+  findMany: vi.fn(),
+  getCurrentUser: vi.fn(),
   transaction: vi.fn(),
   sync: vi.fn(),
+  update: vi.fn(),
 }));
 
-vi.mock("@/lib/prisma", () => ({ prisma: { $transaction: mocks.transaction } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    $transaction: mocks.transaction,
+    experiment: { findMany: mocks.findMany, update: mocks.update },
+  },
+}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/log", () => ({ runWithOperationCorrelation: <T>(fn: () => Promise<T>) => fn() }));
+vi.mock("@/lib/auth/session", () => ({ getCurrentUser: mocks.getCurrentUser }));
 vi.mock("./actions/shared", () => ({
   auditExperimentEvent: mocks.audit,
   experimentMutationFailure: mocks.failure,
@@ -25,7 +34,7 @@ vi.mock("./actions/week-stages", () => ({
 vi.mock("./actions/tags", () => ({ resolveExperimentTagIds: vi.fn() }));
 vi.mock("./actions/crud", () => ({}));
 
-import { setExperimentWeekStage } from "./actions";
+import { reorderCalendarExperiments, setExperimentWeekStage } from "./actions";
 
 describe("setExperimentWeekStage transaction", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -77,5 +86,31 @@ describe("setExperimentWeekStage transaction", () => {
 
     expect(result.ok).toBe(true);
     expect(update).toHaveBeenCalledWith({ where: { id: "experiment-1" }, data: { manualOrder: -5 } });
+  });
+
+  it("writes only the rows whose order changes while preserving the merged global order", async () => {
+    const experiments = ["a", "b", "c", "d", "e"].map((id, manualOrder) => ({
+      id,
+      manualOrder,
+      startDate: null,
+      createdAt: new Date(`2026-01-0${manualOrder + 1}T00:00:00Z`),
+    }));
+    mocks.getCurrentUser.mockResolvedValue({ id: "user-1" });
+    mocks.findMany.mockResolvedValue(experiments);
+    mocks.update.mockImplementation(({ where, data }) => {
+      const experiment = experiments.find((item) => item.id === where.id)!;
+      experiment.manualOrder = data.manualOrder;
+      return Promise.resolve(experiment);
+    });
+    mocks.transaction.mockImplementation(async (operations) => Promise.all(operations));
+
+    const result = await reorderCalendarExperiments(["d", "b", "c"]);
+
+    expect(result.ok).toBe(true);
+    expect(mocks.update).toHaveBeenCalledTimes(3);
+    expect(mocks.update).toHaveBeenNthCalledWith(1, { where: { id: "d" }, data: { manualOrder: 1 } });
+    expect(mocks.update).toHaveBeenNthCalledWith(2, { where: { id: "b" }, data: { manualOrder: 2 } });
+    expect(mocks.update).toHaveBeenNthCalledWith(3, { where: { id: "c" }, data: { manualOrder: 3 } });
+    expect(experiments.sort((a, b) => a.manualOrder - b.manualOrder).map((item) => item.id)).toEqual(["a", "d", "b", "c", "e"]);
   });
 });

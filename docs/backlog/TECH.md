@@ -167,7 +167,7 @@
 
 ## TECH-051 — Calendar drag-reorder rewrites manualOrder for every active experiment, not just the moved ones
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Performance
 - **Type:** Fix

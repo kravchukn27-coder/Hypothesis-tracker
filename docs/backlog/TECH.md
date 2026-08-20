@@ -139,7 +139,7 @@
 
 ## TECH-055 — Cover calendar.ts and login-rate-limit.ts with unit tests
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Testing
 - **Type:** Chore
@@ -150,6 +150,21 @@
   - `calendar.ts` has unit tests for `startOfWeek`, `getISOWeekNumber`, and `compareByManualOrder`, including at least one boundary case each (e.g. a date at a week/year edge, a tie in manual order).
   - `login-rate-limit.ts` has unit tests for: attempt count under the lockout threshold (allowed), at/over the threshold (locked out), and bucket expiry (lockout clears after the window).
   - `npm test` runs green locally.
+- **Resolution note (2026-08-20):** Added `src/lib/calendar.test.ts`
+  (`startOfWeek`: same-Monday, mid-week, Sunday-rollback boundary,
+  year-crossing case; `getISOWeekNumber`: week-1 baseline plus two
+  well-known year-boundary edge cases, 2021-01-01→week 53 of 2020 and
+  2018-12-31→week 1 of 2019; `compareByManualOrder`: ascending order,
+  a manualOrder tie, null-vs-set ordering both directions, startDate
+  fallback, createdAt tie-break) and
+  `src/lib/auth/login-rate-limit.test.ts` (mocks `@/lib/prisma` and
+  `next/headers` per the existing pattern in `invite-actions.test.ts`/
+  `actions.test.ts` — `isLoginRateLimited`: no bucket, active cooldown,
+  and expired-cooldown-clears boundary; `recordLoginFailure`: under
+  `LOGIN_RATE_LIMIT_MAX_FAILURES` stays allowed, reaching it locks
+  out). 17 new tests, all passing; `npm test` is green (51/51 across
+  the suite). No source files changed — test-only addition, so no
+  browser verification applicable.
 
 ## TECH-054 — getInvite: no try/catch around the public invite-token lookup
 

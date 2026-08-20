@@ -1,5 +1,51 @@
 # Tech Backlog
 
+## TECH-052 — Clear npm audit advisories in build tooling (nanoid, deepmerge-ts)
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Dependencies
+- **Type:** Chore
+- **Summary:** `npm audit` reports 4 high-severity advisories: `nanoid <3.3.18`
+  (indefinite loop with a zero-size generator) via `postcss` (pulled in
+  by Tailwind/Next's CSS build), and `deepmerge-ts <8.0.0` (stack
+  exhaustion on recursive merges) via `@prisma/config` (Prisma's CLI
+  config loader). Found during a security audit (2026-08-20).
+- **Description:** Neither package sits on the running app's
+  request-handling path — both are build/dev-time only (CSS processing,
+  Prisma CLI) — so there's no confirmed runtime exploit path through the
+  app itself. Still worth clearing for hygiene: `npm audit fix` covers
+  `nanoid`; the `deepmerge-ts` chain needs a Prisma major-version bump
+  (`npm audit fix --force` currently proposes downgrading to
+  `prisma@6.12.0`, a breaking change — evaluate against the v7 upgrade
+  path already in use before taking that).
+- **Acceptance Criteria:**
+  - `npm audit` (production and dev) reports no high/critical
+    advisories for `nanoid` or `deepmerge-ts`, or their presence is
+    explicitly justified and pinned with a documented reason.
+  - `npm run build` and `prisma generate`/`migrate` still work after the
+    version bump(s).
+
+## TECH-051 — Calendar drag-reorder rewrites manualOrder for every active experiment, not just the moved ones
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Performance
+- **Type:** Fix
+- **Summary:** `reorderCalendarExperiments` (`src/app/experiments/actions.ts`) fetches every active experiment, re-sorts them in JS, and then writes `manualOrder` for **all** of them inside a `$transaction` — one individual `UPDATE` per experiment — even when only a single row was dragged.
+- **Description:**
+  Found during a performance audit (2026-08-20), on the calendar drag-to-reorder feature built on top of `Experiment.manualOrder`. The action (`src/app/experiments/actions.ts:422-466`) does:
+  1. `prisma.experiment.findMany({ where: { archived: false } })` — full active set, no limit.
+  2. Sorts via `compareByManualOrder`, splices the dragged subset into its new position (`merged`).
+  3. `prisma.$transaction(merged.map((e, manualOrder) => prisma.experiment.update({ where: { id: e.id }, data: { manualOrder } })))` — reassigns a sequential `manualOrder` to **every** row in `merged`, i.e. every active experiment, not just the ones whose position actually changed.
+
+  Dragging one row with, say, 200 active experiments issues 200 individual `UPDATE ... WHERE id = ?` round-trips in one transaction, for a single-row move — and this runs on every drag interaction, scaling with total active-experiment count rather than with how many rows actually moved.
+- **Acceptance Criteria:**
+  - Only experiments whose `manualOrder` value actually changes are written — diff `merged` against each experiment's current `manualOrder` (from `allActive`) and update just that subset, not the full list.
+  - Dragging a single row to a new position still produces the correct resulting order for every other active experiment (as read via `compareByManualOrder`) — this is a write-amplification fix, not a behavior change to the resulting order.
+  - A drag that reorders a subset near the front/back of a large active-experiment set writes noticeably fewer rows than the total active count (verified by logging/counting `update` calls in dev, or via a quick manual check).
+  - No change to `reorderCalendarExperiments`'s public signature, validation, or audit-log call.
+
 ## TECH-050 — No catalog of the Server Action surface or its side effects
 
 - **Status:** DONE

@@ -433,7 +433,7 @@
 
 ## TECH-022 — setExperimentWeekStage: wrap its 4-step write sequence in a transaction
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Resilience
 - **Type:** Fix
@@ -444,6 +444,10 @@
   - The upsert → recompute → clear-hidden-flag → sync-hypothesis-status sequence runs inside `prisma.$transaction`.
   - A simulated failure at any step leaves the DB in its pre-call state (no partial update), verified by checking `Experiment.stage`/`startDate`/`endDate` and `ExperimentWeekStage` rows after a forced error.
   - Existing return value (`{ becameDone }`) and calendar/detail-page behavior on success are unchanged.
+- **Resolution note:** The full week-stage write sequence now runs in one
+  interactive transaction. A regression test forces the derived-state step to
+  fail and verifies that no week-stage or cached stage change is committed;
+  audit logging and revalidation remain post-commit only.
 
 ## TECH-021 — Root error.tsx / global-error.tsx for unhandled route failures
 

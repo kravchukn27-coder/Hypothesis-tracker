@@ -361,7 +361,7 @@
 
 ## TECH-024 — deleteHypotheses: wrap findMany+deleteMany in try/catch
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Resilience
 - **Type:** Fix

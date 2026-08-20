@@ -350,7 +350,7 @@ export async function AllExperimentsTable({
                     <tr
                       key={e.id}
                       data-highlighted={isHighlighted || undefined}
-                      className={`border-l-4 transition-colors hover:bg-zinc-50 ${stageBorderClass(currentStage)} ${isHighlighted ? "bg-amber-50" : ""}`}
+                      className={`highlight-table-row border-l-4 transition-colors hover:bg-zinc-50 ${stageBorderClass(currentStage)}`}
                     >
                       <td className={`${CHECKBOX_COL} px-4 py-2`}>
                         <RowCheckbox id={e.id} />

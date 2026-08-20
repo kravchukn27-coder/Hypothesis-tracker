@@ -2,6 +2,40 @@
 
 ---
 
+## BUG-063: Calendar/backlog highlight-on-navigate never fades
+
+- **Status:** DONE
+- **Priority:** Medium
+- **Summary:** Navigating to a task via a link that carries `experimentId`/
+  `hypothesisId` (e.g. from the catalog to Calendar, or from Calendar to
+  Backlog) scrolls to the row and highlights it (amber ring/background),
+  but the highlight is driven purely by the query param being present —
+  it never clears itself. It stays highlighted indefinitely (until the
+  user manually navigates away and the param drops), instead of fading
+  after a short, noticeable window.
+- **Description:** The highlight is computed as `highlighted={e.id ===
+  experimentId}` / `isHighlighted = h.id === hypothesisId` in
+  `src/app/calendar/page.tsx` (`ExperimentWeekRow`/`UndatedRow`/
+  `OutOfRangeRow` props), `src/app/calendar/AllExperimentsTable.tsx:346`,
+  and `src/app/backlog/page.tsx:288` (paired with
+  `src/components/ScrollToHighlighted.tsx` for the scroll). There's no
+  timeout — the visual state is tied 1:1 to the URL param for the
+  lifetime of the page view. Fix should auto-clear the highlighted
+  state ~30-40 seconds after the scroll/highlight fires (e.g. a
+  client-side timer that flips a local "still highlighted" flag off,
+  independent of the URL param), so the row returns to its normal
+  styling while the param itself can stay in the URL.
+- **Acceptance Criteria:**
+  - Navigating to Calendar (or Backlog) via a link with
+    `experimentId`/`hypothesisId` still scrolls to and highlights the
+    target row immediately, as today.
+  - The highlight (ring/background) automatically clears roughly 30-40
+    seconds after it first appears, without requiring navigation away
+    from the page.
+  - Verified in the browser: follow a highlight link, confirm the
+    highlight is visible immediately, then confirm it's gone after
+    waiting out the timeout without any further interaction.
+
 ## BUG-061: Invite/reset link is a relative path — breaks outside localhost
 
 - **Status:** DONE

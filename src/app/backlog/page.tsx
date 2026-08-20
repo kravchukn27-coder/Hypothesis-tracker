@@ -290,7 +290,7 @@ export default async function BacklogPage({
                   <tr
                   key={h.id}
                   data-highlighted={isHighlighted || undefined}
-                  className={`border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]} ${isHighlighted ? "bg-amber-50" : ""}`}
+                  className={`highlight-table-row border-l-4 transition-colors hover:bg-zinc-50 ${STATUS_BORDER_CLASSES[h.status]}`}
                 >
                   <td className={`${CHECKBOX_COL} px-4 py-2`}>
                     <RowCheckbox id={h.id} />

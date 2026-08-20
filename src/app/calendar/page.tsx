@@ -25,6 +25,7 @@ import { AuthorCell } from "./AuthorCell";
 import { AllExperimentsTable } from "./AllExperimentsTable";
 import { CalendarRowReorderHandle } from "./CalendarRowReorderHandle";
 import { requireUserPage } from "@/lib/auth/page-guards";
+import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 
 // UI-051: the default (no `?start=`) window anchors 2 weeks before the
 // current one, not on it — so "Сегодня" shows 2 past weeks, the current
@@ -64,7 +65,7 @@ export default async function CalendarPage({
 }) {
   await requireUserPage();
   const params = await searchParams;
-  const { start, weekStage, experimentId, calendarAuthor, calendarView } = params;
+  const { start, weekStage, experimentId, calendarAuthor, calendarView, hypothesisId } = params;
   const showAll = calendarView === "all";
   const asList = (value: string | string[] | undefined) => Array.isArray(value) ? value : value ? [value] : [];
   const authorsFilter = asList(calendarAuthor);
@@ -244,6 +245,8 @@ export default async function CalendarPage({
         )}
       </div>
 
+      {(experimentId || hypothesisId) && <ScrollToHighlighted />}
+
       {showAll && <AllExperimentsTable searchParams={params} />}
 
       {!showAll && (displayedExperiments.length === 0 ? (
@@ -350,9 +353,9 @@ export default async function CalendarPage({
                   data-calendar-reorder-row
                   data-experiment-id={e.id}
                   data-highlighted={isFocused || undefined}
-                  className={`flex border-b border-zinc-100 transition-[transform,box-shadow,background-color] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] last:border-b-0 hover:bg-zinc-50 ${isFocused ? "bg-amber-50/60" : ""}`}
+                  className="highlight-calendar-row flex border-b border-zinc-100 transition-[transform,box-shadow,background-color] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] last:border-b-0 hover:bg-zinc-50"
                 >
-                  <div className={`sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] ${isFocused ? "bg-amber-50" : "bg-white"}`}>
+                  <div className="highlight-calendar-sticky sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-white">
                     <div className="flex items-start justify-center pt-2"><CalendarRowReorderHandle experimentName={e.name} /></div>
                     <div className="min-w-0 py-2 pr-3 text-sm"><Link
                       href={`/experiments/${e.id}`}
@@ -370,7 +373,6 @@ export default async function CalendarPage({
                     experimentName={e.name}
                     overdue={overdue}
                     overdueWeekStartISO={overdueWeekStart ? toDateParam(overdueWeekStart) : null}
-                    highlighted={isFocused}
                     cells={cells.map((c) => ({
                       weekIndex: c.weekIndex,
                       weekStartISO: toDateParam(c.weekStart),

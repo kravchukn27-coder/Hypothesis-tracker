@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { resolveCustomTagId } from "./tags";
 
 export async function getFunnelLevels() {
   return prisma.funnelLevel.findMany({ orderBy: { name: "asc" } });
@@ -8,10 +9,5 @@ export async function getFunnelLevels() {
 export async function resolveFunnelLevelId(name: string | undefined) {
   const trimmed = name?.trim();
   if (!trimmed) return null;
-  const level = await prisma.funnelLevel.upsert({
-    where: { name: trimmed },
-    update: {},
-    create: { name: trimmed, isCustom: true },
-  });
-  return level.id;
+  return resolveCustomTagId(prisma.funnelLevel, trimmed);
 }

@@ -166,7 +166,7 @@
 
 ## TECH-038 — "Find-or-create tag by name" solved two different ways for the same kind of entity
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Chore
@@ -176,6 +176,9 @@
 - **Acceptance Criteria:**
   - One shared helper implements the upsert-by-name shape; `resolveFunnelLevelId` and `resolveTagIds` (or their replacement) both call it, ideally consolidated into one module (e.g. `lib/tags.ts`).
   - No behavior change to Funnel Level, Product, or Segment tag resolution.
+- **Resolution note:** `resolveCustomTagId` in `src/lib/tags.ts` now owns the
+  shared upsert-by-name operation. Funnel Level, Product, and Segment retain
+  their existing input normalization and all use that helper.
 
 ## TECH-037 — experiments/actions.ts is an 849-line god-module mixing five unrelated concerns
 

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getCurrentWeekStage, shouldPromptArchiveExperiment } from "@/lib/experiment";
 import { compareByManualOrder, MS_PER_DAY, startOfWeek } from "@/lib/calendar";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
+import { resolveCustomTagId } from "@/lib/tags";
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
 import { captureServerError } from "@/lib/log";
@@ -156,16 +157,14 @@ function splitCsv(value: string | undefined): string[] {
  * (isCustom: true, matching FunnelLevel's existing convention).
  */
 async function resolveTagIds(
-  delegate: { upsert: (args: { where: { name: string }; update: object; create: { name: string; isCustom: boolean } }) => Promise<{ id: string }> },
+  delegate: Parameters<typeof resolveCustomTagId>[0],
   idsCsv: string | undefined,
   namesCsv: string | undefined,
 ): Promise<string[]> {
   const ids = splitCsv(idsCsv);
   const newNames = splitCsv(namesCsv);
-  const created = await Promise.all(
-    newNames.map((name) => delegate.upsert({ where: { name }, update: {}, create: { name, isCustom: true } })),
-  );
-  return [...ids, ...created.map((c) => c.id)];
+  const createdIds = await Promise.all(newNames.map((name) => resolveCustomTagId(delegate, name)));
+  return [...ids, ...createdIds];
 }
 
 async function resolveExperimentTagIds(data: {

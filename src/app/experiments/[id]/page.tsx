@@ -6,7 +6,6 @@ import {
   archiveExperiment,
   deleteExperiment,
   getAuthors,
-  getFunnelLevels,
   getProducts,
   getSegments,
   unarchiveExperiment,
@@ -20,6 +19,7 @@ import { Badge } from "@/components/Badge";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, currentStageOf, stageLabel } from "@/lib/experiment";
+import { getFunnelLevels } from "@/lib/funnelLevel";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { HideFromCalendarButton } from "../HideFromCalendarButton";
 import { requireUserPage } from "@/lib/auth/page-guards";

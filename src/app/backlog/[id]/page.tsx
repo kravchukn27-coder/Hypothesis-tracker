@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import {
   archiveHypothesis,
   deleteHypothesis,
-  getFunnelLevels,
   unarchiveHypothesis,
   updateHypothesis,
 } from "../actions";
@@ -18,6 +17,7 @@ import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { Badge } from "@/components/Badge";
 import { computeScore, shouldPromptArchiveHypothesis, STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
 import { currentStageOf, stageLabel } from "@/lib/experiment";
+import { getFunnelLevels } from "@/lib/funnelLevel";
 import { requireUserPage } from "@/lib/auth/page-guards";
 import { CommentFeed } from "./CommentFeed";
 

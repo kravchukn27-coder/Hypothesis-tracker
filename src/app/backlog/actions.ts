@@ -152,8 +152,6 @@ export async function updateHypothesis(
   redirect("/backlog?saved=1");
 }
 
-export { getFunnelLevels } from "@/lib/funnelLevel";
-
 const HYPOTHESIS_STATUSES = ["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD", "DONE"] as const;
 const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 

@@ -4,12 +4,12 @@ import { prisma } from "@/lib/prisma";
 import {
   createExperiment,
   getAuthors,
-  getFunnelLevels,
   getProducts,
   getSegments,
 } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 import { requireUserPage } from "@/lib/auth/page-guards";
+import { getFunnelLevels } from "@/lib/funnelLevel";
 
 export default async function NewExperimentPage({
   searchParams,

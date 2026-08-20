@@ -259,19 +259,6 @@
   - Confirm whether `pg`/`@types/pg` are pinned deliberately (e.g. to control the connection-pool version independent of the adapter); if so, leave a comment explaining why.
   - Otherwise, remove both from `package.json` and confirm `npm install` + `npm run build` still succeed with `@prisma/adapter-pg` supplying its own `pg`.
 
-## TECH-040 — deepmerge-ts high-severity DoS advisory has no real fix yet
-
-- **Status:** TODO
-- **Priority:** Low
-- **Area:** Dependencies
-- **Type:** Chore
-- **Summary:** `npm audit` flags `deepmerge-ts@7.1.5` (transitive, via `@prisma/config` ← `prisma@7.9.1`) for a high-severity stack-exhaustion DoS ([GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx)) with no non-major fix currently available.
-- **Description:**
-  Found during a dependency audit (2026-08-20). Exposure is low in practice — it's used inside Prisma's own CLI/config tooling, not app runtime request handling. `npm audit fix` only offers `prisma@6.12.0`, a major *downgrade* from the already-newer installed 7.9.1, since the vulnerable range is open-ended and hasn't been patched upstream yet. No action is available today beyond tracking it.
-- **Acceptance Criteria:**
-  - Re-run `npm audit` after future `prisma`/`@prisma/config` releases; close this card once `deepmerge-ts` resolves to `>=8.0.0` with no downgrade required.
-  - No dependency changes needed to close this card immediately — it exists to track the advisory, not to force a premature downgrade.
-
 ## TECH-039 — Duplicated startOfWeek()/MS_PER_DAY instead of importing the canonical lib/calendar.ts versions
 
 - **Status:** DONE

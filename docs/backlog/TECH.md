@@ -1,5 +1,33 @@
 # Tech Backlog
 
+## TECH-061 — Session guard (getCurrentUser + redirect to /login) copy-pasted across four files
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** The same three-line "require an authenticated user, else redirect to /login" guard is duplicated identically in `src/app/backlog/actions.ts`, `src/app/users/actions.ts`, `src/app/experiments/actions/shared.ts` (as `requireExperimentActionUser`), and `src/lib/auth/page-guards.ts` (as `requireUserPage`, for pages rather than actions).
+- **Description:**
+  Found during a tech-debt/architecture audit re-run (2026-08-20). This is the same class of duplication the codebase already fixed once for audit-log wrappers — consolidated behind `lib/audit-log.ts`'s `auditEvent(route)` factory (TECH-036) — but the session-guard case wasn't caught by that pass. A future change to the redirect target (e.g. adding a `?from=` param, matching what `src/proxy.ts` already does for middleware-level redirects) or to how "no session" is detected requires updating 3-4 near-identical copies, and it's easy to update some but miss others.
+- **Acceptance Criteria:**
+  - One shared `requireActionUser()` (or equivalent) lives in `src/lib/auth/`, used by `backlog/actions.ts`, `users/actions.ts`, and `experiments/actions/shared.ts` instead of each defining its own copy.
+  - `requireUserPage()` either reuses the same underlying check or is left as-is with a comment noting it's the page-level counterpart — a deliberate decision either way, not an untouched fourth copy.
+  - No behavior change to any existing redirect/guard.
+
+## TECH-060 — experiments/actions.ts keeps a same-signature alias/pass-through facade over its own consolidated helpers
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `src/app/experiments/actions.ts` defines `requireAuthenticatedUser()`/`mutationFailure()` as pure renamed wrappers around `requireExperimentActionUser`/`experimentMutationFailure` (already exported from `./actions/shared`), and re-exports `getProducts`, `getSegments`, `getAuthors`, `deleteExperiment`, `archiveExperiment`, `unarchiveExperiment`, `archiveExperiments`, `deleteExperiments` as trivial one-line forwards to the `*Action` equivalents in `./actions/crud`.
+- **Description:**
+  Found during a tech-debt/architecture audit re-run (2026-08-20). The TECH-037 god-module split moved implementations out into `actions/{shared,tags,week-stages,crud}.ts`, but real call sites (`src/app/experiments/[id]/page.tsx:7-11`, `src/app/experiments/new/page.tsx:6-8`, `src/app/experiments/ArchiveExperimentModal.tsx:5`) still import the old un-suffixed names from `actions.ts` rather than the new `*Action` functions directly, so every one of these operations now has two live names to keep in sync. They've already started drifting: `deleteExperiment` returns the old `{error?: string}` shape while its sibling `*Action` functions return the newer `ActionResult`.
+- **Acceptance Criteria:**
+  - Call sites import the `*Action` functions directly from `./actions/crud` (or wherever they now live); the redundant re-exports and the `requireAuthenticatedUser`/`mutationFailure` aliases are removed from `experiments/actions.ts`.
+  - `deleteExperiment`'s return shape is reconciled with the rest of the `*Action` family (or the discrepancy is deliberately documented) as part of the cleanup.
+  - No behavior change to any experiment CRUD/archive operation.
+
 ## TECH-059 — logout() still uses unsafe writeAuditLog instead of safeWriteAuditLog
 
 - **Status:** TODO

@@ -458,7 +458,7 @@
 
 ## TECH-017 — Backlog/AllExperimentsTable: selection context re-renders every row checkbox on any toggle
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Performance
 - **Type:** Fix

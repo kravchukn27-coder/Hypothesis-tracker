@@ -1,58 +1,104 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+
+type Listener = () => void;
+
+/**
+ * TECH-017: selected-row membership lives outside React state, in a
+ * small external store. `toggleRow` used to live in a `useState<Set>`
+ * whose new reference flowed through Context on every toggle — Context
+ * re-renders *every* consumer on a new value regardless of which field
+ * it actually reads, so one checkbox click re-rendered every row.
+ * `RowCheckbox` now subscribes to just its own id's boolean membership
+ * via `useSyncExternalStore`, which React compares by value (not
+ * reference) — only the row whose membership actually flipped
+ * re-renders.
+ */
+class SelectionStore {
+  private selected = new Set<string>();
+  private listeners = new Set<Listener>();
+
+  subscribe = (listener: Listener): (() => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  private notify() {
+    for (const listener of this.listeners) listener();
+  }
+
+  has = (id: string): boolean => this.selected.has(id);
+
+  getSelected = (): Set<string> => this.selected;
+
+  toggleRow = (id: string): void => {
+    const next = new Set(this.selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.selected = next;
+    this.notify();
+  };
+
+  toggleAll = (allIds: string[]): void => {
+    this.selected = this.selected.size === allIds.length ? new Set() : new Set(allIds);
+    this.notify();
+  };
+
+  clear = (): void => {
+    this.selected = new Set();
+    this.notify();
+  };
+}
 
 type SelectionContextValue = {
   active: boolean;
   toggleActive: () => void;
-  selected: Set<string>;
   toggleRow: (id: string) => void;
   toggleAll: () => void;
   clear: () => void;
   allIds: string[];
+  store: SelectionStore;
 };
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
 
 export function SelectionProvider({ ids, children }: { ids: string[]; children: ReactNode }) {
   const [active, setActive] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [store] = useState(() => new SelectionStore());
 
-  function toggleActive() {
+  const toggleActive = useCallback(() => {
     setActive((a) => !a);
-    setSelected(new Set());
-  }
+    store.clear();
+  }, [store]);
 
-  function toggleRow(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const toggleRow = useCallback((id: string) => store.toggleRow(id), [store]);
+  const toggleAll = useCallback(() => store.toggleAll(ids), [store, ids]);
+  const clear = useCallback(() => store.clear(), [store]);
 
-  function toggleAll() {
-    setSelected((prev) => (prev.size === ids.length ? new Set() : new Set(ids)));
-  }
-
-  function clear() {
-    setSelected(new Set());
-  }
-
-  const value = { active, toggleActive, selected, toggleRow, toggleAll, clear, allIds: ids };
+  const value = useMemo<SelectionContextValue>(
+    () => ({ active, toggleActive, toggleRow, toggleAll, clear, allIds: ids, store }),
+    [active, toggleActive, toggleRow, toggleAll, clear, ids, store],
+  );
 
   return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
 }
 
-export function useSelection() {
+function useSelectionContext() {
   const ctx = useContext(SelectionContext);
   if (!ctx) throw new Error("useSelection must be used within a SelectionProvider");
   return ctx;
 }
 
+/** Public hook — same shape as before the TECH-017 refactor. */
+export function useSelection() {
+  const { active, toggleActive, toggleRow, toggleAll, clear, allIds, store } = useSelectionContext();
+  const selected = useSyncExternalStore(store.subscribe, store.getSelected, store.getSelected);
+  return { active, toggleActive, selected, toggleRow, toggleAll, clear, allIds };
+}
+
 export function SelectModeToggle({ className }: { className?: string }) {
-  const { active, toggleActive } = useSelection();
+  const { active, toggleActive } = useSelectionContext();
   return (
     <button
       type="button"
@@ -82,13 +128,18 @@ export function SelectAllCheckbox() {
 }
 
 export function RowCheckbox({ id }: { id: string }) {
-  const { active, selected, toggleRow } = useSelection();
+  const { active, toggleRow, store } = useSelectionContext();
+  const isSelected = useSyncExternalStore(
+    store.subscribe,
+    () => store.has(id),
+    () => store.has(id),
+  );
   if (!active) return null;
   return (
     <input
       type="checkbox"
       aria-label="Выбрать строку"
-      checked={selected.has(id)}
+      checked={isSelected}
       onChange={(e) => {
         e.stopPropagation();
         toggleRow(id);

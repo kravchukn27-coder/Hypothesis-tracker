@@ -287,9 +287,16 @@ list you add to; they're something you spin off *from* a hypothesis:
   direct link into `/experiments/new?hypothesisId=...`. This is a
   suggestion, not automatic — dismissible, and only fires once per
   status change (not repeated nagging once an experiment exists).
-- Creating an experiment from a hypothesis automatically sets that
-  hypothesis's status to `IN_PROGRESS` (`createExperiment` in
-  `src/app/experiments/actions.ts` also updates the `Hypothesis` row).
+- Scheduling an experiment on the Calendar (giving it a week/date) is
+  what sets its hypothesis's status to `IN_PROGRESS` — not just
+  creating the experiment record. Both `createExperiment` (only when a
+  starting week is picked, `src/app/experiments/actions.ts`) and
+  `setExperimentWeekStage` (placing/dragging onto a Calendar week)
+  call `syncHypothesisStatusForExperiment`
+  (`src/app/experiments/actions/week-stages.ts`) to do this. An
+  undated experiment — e.g. one created via the Backlog's "Взять в
+  работу" (`takeHypothesisIntoWork`) — leaves the hypothesis at
+  `ACCEPTED` until it's actually placed on the Calendar (BUG-065).
   The inverse is also automatic: deleting the last experiment resets
   its hypothesis to `NEW`, while deleting one of several leaves its
   status unchanged — experiment presence and this lifecycle status

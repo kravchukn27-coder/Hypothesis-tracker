@@ -61,48 +61,49 @@
 
 ---
 
-## BUG-065: Backlog status flips to "In progress" too early — must wait until the experiment is actually placed on the Calendar
+## BUG-065: Backlog status never switches to "In progress" — must switch when the experiment is placed on the Calendar
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Summary:** Confirmed-correct flow today: `ACCEPTED` row → "Взять в
   работу" button → click creates an experiment that lands in the
-  Experiments table **without a date**. What's wrong: the hypothesis's
-  Backlog status should only flip to `IN_PROGRESS` once that experiment
-  is actually placed on the Calendar (given a date/week), not at the
-  "Взять в работу" click itself. User confirmed this twice (2026-08-20).
-- **Description:** Two places write `Hypothesis.status = IN_PROGRESS`
-  earlier than they should:
-  1. `takeHypothesisIntoWork` (`src/app/backlog/actions.ts:177-204`)
-     sets it directly at line 200, synchronously on button click —
-     before the new experiment has any date.
-  2. `syncHypothesisStatusForExperiment`
-     (`src/app/experiments/actions/week-stages.ts:34-53`) is also
-     called from `createExperiment` right after creation
-     (`src/app/experiments/actions.ts:195`), and its `hasActive` check
-     (line 42-44) treats an experiment with no week stages and a
-     `null` `stage` as "active" (`null !== "DONE"` is `true`), so even
-     without the direct write in (1), creating an undated experiment
-     would still push the hypothesis to `IN_PROGRESS` immediately.
-  The correct trigger is scheduling: the same function
-  (`syncHypothesisStatusForExperiment`) is already called from
-  `setExperimentWeekStage` (`src/app/experiments/actions.ts:491`),
-  which is what runs when an undated experiment is dragged from
-  "Без дат" onto a Calendar week (per `docs/PROJECT_CONTEXT.md`
-  Calendar section) — that call site is already correct and should stay
-  the single source of truth for this transition.
+  Experiments table **without a date**. What's wrong: right now the
+  hypothesis's Backlog status **never** switches to `IN_PROGRESS` at
+  all — the user needs it to switch specifically at the moment that
+  experiment is actually placed on the Calendar (given a date/week).
+  User corrected the framing 2026-08-20: this is not "switches too
+  early," it currently doesn't switch at any point.
+- **Description:** Reading the code as of 2026-08-20, the write *looks*
+  like it should already happen — `takeHypothesisIntoWork`
+  (`src/app/backlog/actions.ts:177-204`) sets `Hypothesis.status =
+  "IN_PROGRESS"` directly at line 200 on button click, and
+  `syncHypothesisStatusForExperiment`
+  (`src/app/experiments/actions/week-stages.ts:34-53`) — also called
+  from `createExperiment` (`src/app/experiments/actions.ts:195`) and
+  from `setExperimentWeekStage` (`src/app/experiments/actions.ts:491`,
+  which runs when an undated experiment is dragged from "Без дат" onto
+  a Calendar week, per `docs/PROJECT_CONTEXT.md` Calendar section) —
+  would also set it. That the user observes it never switching despite
+  this means either a live repro will reveal a real defect (e.g. a
+  `revalidatePath` gap leaving the Backlog list showing a stale value,
+  an early return before line 200 is reached, or a status guard
+  elsewhere reverting it), or the code has changed/behaves differently
+  than this read suggests — needs a live repro before writing the fix,
+  not a guess from source alone.
 - **Acceptance Criteria:**
-  - Clicking "Взять в работу" on an `ACCEPTED` row creates/reuses the
-    experiment and lands it undated in Experiments, but leaves the
-    hypothesis status at `ACCEPTED` (not `IN_PROGRESS`).
-  - `takeHypothesisIntoWork` no longer writes `Hypothesis.status`
-    directly.
-  - `hasActive` in `syncHypothesisStatusForExperiment` does not count an
-    experiment with zero week stages as active — an undated experiment
-    must not push the hypothesis to `IN_PROGRESS`.
-  - Once that experiment gets its first week entry on the Calendar
-    (via `setExperimentWeekStage`), the hypothesis's Backlog status
-    updates to `IN_PROGRESS`.
+  - Reproduce in the browser first: click "Взять в работу" on an
+    `ACCEPTED` row (status should stay `ACCEPTED`, experiment lands
+    undated in Experiments), then place that experiment on the
+    Calendar, and confirm what the Backlog list actually shows at each
+    step today.
+  - End state: the hypothesis's Backlog status shows `IN_PROGRESS`
+    specifically once its experiment has been placed on the Calendar
+    (given a date/week) — not before (an undated experiment must leave
+    it at `ACCEPTED`), and not stuck at `ACCEPTED` after scheduling.
+  - `setExperimentWeekStage` (the "placed on Calendar" trigger) is
+    confirmed to be the source of truth for this transition, and
+    whatever gap is causing today's no-op is fixed at its actual root
+    cause, not papered over with an extra redundant write.
   - Existing DONE-transition behavior of `syncHypothesisStatusForExperiment`
     (all of a hypothesis's experiments Done → hypothesis `DONE`) is
     unchanged.

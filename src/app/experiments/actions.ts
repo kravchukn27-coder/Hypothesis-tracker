@@ -192,7 +192,9 @@ export async function createExperiment(
     await recomputeExperimentDerivedFields(experiment.id);
   }
 
-  await syncHypothesisStatusForExperiment(experiment.id);
+  // BUG-065: only sync (→ IN_PROGRESS) when a week was actually picked —
+  // an undated experiment must leave the hypothesis status untouched.
+  if (data.startWeek) await syncHypothesisStatusForExperiment(experiment.id);
   await auditExperimentEvent("EXPERIMENT_CREATED", { experimentId: experiment.id, hypothesisId: data.hypothesisId });
 
   revalidatePath("/backlog");

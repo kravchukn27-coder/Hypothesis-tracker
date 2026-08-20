@@ -197,7 +197,9 @@ export async function takeHypothesisIntoWork(id: string): Promise<ActionResult<{
     const syncResult = await syncExperimentFunnelLevelsForHypothesis(id);
     if (syncResult?.error) return { ok: false, error: syncResult.error, href: "/backlog" };
   }
-    await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
+    // BUG-065: status only moves to IN_PROGRESS once the experiment is
+    // actually placed on the Calendar (setExperimentWeekStage), not at
+    // creation time — this stays ACCEPTED until then.
   } catch (error) {
     await mutationFailure("backlog.hypothesis.take_into_work.failed", error, user.id);
     return { ok: false, error: "Не удалось сохранить изменения. Попробуйте ещё раз.", href: "/backlog" };

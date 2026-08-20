@@ -31,8 +31,8 @@ export const STATUS_LABELS: Record<HypothesisStatus, string> = {
 export const STATUS_ORDER: HypothesisStatus[] = [
   "NEW",
   "PLANNED",
-  "IN_PROGRESS",
   "ACCEPTED",
+  "IN_PROGRESS",
   "HOLD",
   "DONE",
 ];

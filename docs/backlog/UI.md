@@ -153,7 +153,7 @@
 
 ## UI-061 — Swap "Accepted" and "In progress" order in the hypothesis status list
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** UI / Backlog
 - **Type:** Enhancement

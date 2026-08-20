@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, Plus } from "lucide-react";
+import { Bell, Check, Plus } from "lucide-react";
 import { completeExperimentWeek, setExperimentWeekStage } from "@/app/experiments/actions";
 import { addWeeks, formatWeekLabel, startOfWeek, toDateParam } from "@/lib/calendar";
 import { STAGE_LABELS, STAGE_ORDER } from "@/lib/experiment";
@@ -56,7 +56,7 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
   const lastWeek = new Date(`${reminder.lastWeekStartISO}T00:00:00`);
 
   return (
-    <li className="flex flex-col gap-3 border-t border-amber-200 py-4 first:border-t-0 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-3 border-t border-amber-200 py-4 first:border-t-0 first:pt-0 last:pb-0">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-zinc-900">{reminder.experimentName}</p>
         <p className="mt-0.5 text-sm text-zinc-600">
@@ -65,14 +65,14 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
         {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <button
           type="button"
           onClick={complete}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-1 rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium leading-4 text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Check className="size-4" aria-hidden />
+          <Check className="size-3.5" aria-hidden />
           Завершить этап
         </button>
         <button
@@ -80,22 +80,22 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
           onClick={() => setIsScheduling((value) => !value)}
           disabled={isPending}
           aria-expanded={isScheduling}
-          className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-1 rounded-md bg-zinc-900 px-2.5 py-1.5 text-xs font-medium leading-4 text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Plus className="size-4" aria-hidden />
+          <Plus className="size-3.5" aria-hidden />
           Запланировать следующий этап
         </button>
       </div>
 
       {isScheduling && (
-        <form onSubmit={schedule} className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-end">
+        <form onSubmit={schedule} className="grid gap-2 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs font-medium text-zinc-700">
             Стадия
             <select
               value={stage}
               onChange={(event) => setStage(event.target.value as ExperimentStage)}
               disabled={isPending}
-              className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900"
+              className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs text-zinc-900"
             >
               {STAGE_ORDER.map((option) => (
                 <option key={option} value={option}>
@@ -112,13 +112,13 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
               onChange={(event) => setDate(event.target.value)}
               required
               disabled={isPending}
-              className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900"
+              className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs text-zinc-900"
             />
           </label>
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
           >
             {isPending ? "Сохраняем…" : "Добавить"}
           </button>
@@ -129,20 +129,61 @@ function ReminderRow({ reminder }: { reminder: Reminder }) {
 }
 
 export function OverdueExperimentReminder({ reminders }: { reminders: Reminder[] }) {
+  const [open, setOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function dismiss(event: MouseEvent) {
+      if (!popoverRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    function dismissOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", dismiss);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", dismiss);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [open]);
+
   if (reminders.length === 0) return null;
 
   return (
-    <section aria-labelledby="overdue-reminders-title" className="rounded-xl border border-amber-300 bg-amber-50 p-4">
-      <div className="flex items-start gap-3">
-        <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-700" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <h2 id="overdue-reminders-title" className="text-sm font-semibold text-amber-950">
+    <div ref={popoverRef} className="relative">
+      <button
+        type="button"
+        aria-label={`Требуют внимания: ${reminders.length}`}
+        aria-controls="overdue-reminders-popover"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((current) => !current)}
+        className="relative flex size-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+      >
+        <Bell className="size-4" aria-hidden />
+        <span className="absolute -right-1.5 -top-1.5 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">
+          {reminders.length}
+        </span>
+      </button>
+
+      {open && (
+        <section
+          id="overdue-reminders-popover"
+          role="dialog"
+          aria-labelledby="overdue-reminders-title"
+          className="motion-popover-enter absolute right-0 top-full z-30 mt-2 max-h-[calc(100dvh-8rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-4 shadow-xl"
+        >
+          <h2 id="overdue-reminders-title" className="text-sm font-semibold text-zinc-900">
             Требуют внимания: {reminders.length}
           </h2>
-          <p className="mt-0.5 text-sm text-amber-900">Завершите прошлый этап или запланируйте следующий.</p>
+          <p className="mt-0.5 text-sm text-zinc-600">Завершите прошлый этап или запланируйте следующий.</p>
           <ul className="mt-4">{reminders.map((reminder) => <ReminderRow key={reminder.experimentId} reminder={reminder} />)}</ul>
-        </div>
-      </div>
-    </section>
+        </section>
+      )}
+    </div>
   );
 }

@@ -224,6 +224,7 @@ export default async function CalendarPage({
         </div>
         {!showAll && (
           <div className="flex items-center gap-2">
+            <OverdueExperimentReminder reminders={overdueReminders} />
               <Link
                 href={resetFiltersHref}
                 aria-disabled={!hasActiveFilters}
@@ -296,8 +297,6 @@ export default async function CalendarPage({
         </div>
       ) : (
         <>
-          <OverdueExperimentReminder reminders={overdueReminders} />
-
           <ViewTransition
             enter={{ "calendar-forward": "calendar-forward", "calendar-back": "calendar-back", default: "none" }}
             exit={{ "calendar-forward": "calendar-forward", "calendar-back": "calendar-back", default: "none" }}

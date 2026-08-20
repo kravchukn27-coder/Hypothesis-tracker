@@ -2,7 +2,7 @@
 
 ## UI-064 — Collapse the Calendar "Требуют внимания" banner into a bell icon with a count badge
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Calendar
 - **Type:** Enhancement

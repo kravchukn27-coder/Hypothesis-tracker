@@ -6,7 +6,7 @@
 
 ## PROD-062 — Сброс пароля пользователя ссылкой (для забывших/не могущих войти)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Product / Auth / Users
 - **Type:** Enhancement

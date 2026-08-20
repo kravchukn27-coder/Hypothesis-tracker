@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
+import { issuePasswordReset } from "@/lib/auth/invites";
+import { getRequestOrigin } from "@/lib/auth/base-url";
 import { auditEvent } from "@/lib/audit-log";
 import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
@@ -32,5 +34,20 @@ export async function deactivateUser(id: string): Promise<ActionResult> {
     }
     revalidatePath("/users");
     return actionSuccess();
+  });
+}
+
+export async function resetUserPassword(id: string): Promise<ActionResult<{ link: string }>> {
+  return runWithOperationCorrelation(async () => {
+    const actor = await requireAuthenticatedUser();
+    let rawToken: string;
+    try {
+      rawToken = await issuePasswordReset(actor.id, id);
+    } catch (error) {
+      await captureServerError({ event: "users.reset_password.failed", route: "src/app/users/actions.ts", error, userId: actor.id });
+      return actionFailure("Не удалось выпустить ссылку для сброса пароля. Попробуйте ещё раз.");
+    }
+    const origin = await getRequestOrigin();
+    return actionSuccess({ link: `${origin}/invite/${rawToken}` });
   });
 }

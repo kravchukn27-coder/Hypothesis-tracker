@@ -1,5 +1,19 @@
 # Tech Backlog
 
+## TECH-062 — Two more Server Actions still return a bespoke shape instead of `ActionResult`
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Architecture
+- **Type:** Chore
+- **Summary:** `takeHypothesisIntoWork` (`src/app/backlog/actions.ts`) returns its own one-off `{ href: string; error?: string }`, and `createHypothesisComment`/`deleteHypothesisComment` (`src/app/backlog/[id]/comments-actions.ts`) share a `CommentActionState` (`{ error?: string; success?: boolean }`) that isn't structurally the same as `HypothesisFormState`/`ExperimentFormState` (no `success` field) despite serving the identical `useActionState` role.
+- **Description:**
+  Found during an API design/consistency audit re-run (2026-08-20) — most of the return-shape inconsistency flagged in the original pass (TECH-046, closed) is now resolved via the shared `ActionResult<T>` type (`src/lib/action-result.ts`), adopted almost everywhere. These two spots are the remaining holdouts: `takeHypothesisIntoWork` needs a redirect target alongside its error, which `ActionResult<T>`'s `{ok:true} & T` shape already supports (`ActionResult<{href: string}>`); the comment actions' `CommentActionState` could likely just become `ActionResult` too, since nothing currently reads `success` as distinct from `ok`.
+- **Acceptance Criteria:**
+  - `takeHypothesisIntoWork` returns `ActionResult<{href: string}>` (or documents why a bespoke shape is still warranted here).
+  - `createHypothesisComment`/`deleteHypothesisComment` return `ActionResult` instead of the separate `CommentActionState` type, with call sites (`CommentFeed.tsx` and friends) updated accordingly.
+  - No behavior change to either flow.
+
 ## TECH-061 — Session guard (getCurrentUser + redirect to /login) copy-pasted across four files
 
 - **Status:** TODO

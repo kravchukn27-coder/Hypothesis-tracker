@@ -8,7 +8,7 @@ import { clearLoginFailures, getLoginClientIp, isLoginRateLimited, normalizeLogi
 import { verifyPassword } from "./password";
 import { getCurrentUser } from "./session";
 import { signSessionToken } from "./token";
-import { writeAuditLog } from "@/lib/audit-log";
+import { safeWriteAuditLog, writeAuditLog } from "@/lib/audit-log";
 
 function redirectToLogin(error: "credentials" | "ratelimit"): never {
   redirect(`/login?error=${error}`);
@@ -25,7 +25,7 @@ export async function loginAsUser(formData: FormData): Promise<void> {
   const ip = await getLoginClientIp();
 
   if (await isLoginRateLimited(ip, email)) {
-    await writeAuditLog({ event: "LOGIN_FAILURE", userId: null, metadata: { reason: "rate_limited", email, ip } });
+    await safeWriteAuditLog({ event: "LOGIN_FAILURE", userId: null, metadata: { reason: "rate_limited", email, ip }, route: "src/lib/auth/actions.ts" });
     redirectToLogin("ratelimit");
   }
 
@@ -38,7 +38,7 @@ export async function loginAsUser(formData: FormData): Promise<void> {
 
   if (!user || !user.isActive || !user.passwordHash || !password || !verifyPassword(password, user.passwordHash)) {
     const rateLimited = await recordLoginFailure(ip, email);
-    await writeAuditLog({ event: "LOGIN_FAILURE", userId: user?.id ?? null, metadata: { reason: "invalid_credentials", email, ip } });
+    await safeWriteAuditLog({ event: "LOGIN_FAILURE", userId: user?.id ?? null, metadata: { reason: "invalid_credentials", email, ip }, route: "src/lib/auth/actions.ts" });
     redirectToLogin(rateLimited ? "ratelimit" : "credentials");
   }
 
@@ -57,7 +57,7 @@ export async function loginAsUser(formData: FormData): Promise<void> {
     path: "/",
     maxAge: SESSION_MAX_AGE_SEC,
   });
-  await writeAuditLog({ event: "LOGIN_SUCCESS", userId: user.id, metadata: { ip } });
+  await safeWriteAuditLog({ event: "LOGIN_SUCCESS", userId: user.id, metadata: { ip }, route: "src/lib/auth/actions.ts" });
   redirect(from);
 }
 

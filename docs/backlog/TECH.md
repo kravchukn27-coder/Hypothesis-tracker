@@ -241,7 +241,7 @@
 
 ## TECH-033 — loginAsUser uses unsafe writeAuditLog instead of safeWriteAuditLog
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Observability
 - **Type:** Fix
@@ -252,6 +252,10 @@
   - `loginAsUser`'s `writeAuditLog` calls switch to `safeWriteAuditLog`.
   - A simulated audit-log DB failure during login no longer crashes the login attempt — the user still gets the normal success/failure redirect, and the audit-write failure itself produces one `ErrorEvent` row via `captureServerError`.
   - No change to `LOGIN_SUCCESS`/`LOGIN_FAILURE` event semantics or existing `AuditLog` rows on the healthy path.
+- **Resolution note:** Every `loginAsUser` audit write now uses
+  `safeWriteAuditLog` with the auth action route. Healthy audit rows retain
+  their event names and metadata; a failed write is recorded as an
+  `audit_log.write_failed` error without interrupting the login redirect.
 
 ## TECH-032 — Login brute-force protection disabled with no compensating alert
 

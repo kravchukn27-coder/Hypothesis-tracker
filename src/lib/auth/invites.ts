@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
+import { captureServerError } from "@/lib/log";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -83,10 +84,20 @@ export async function issuePasswordReset(issuerUserId: string, userId: string): 
 }
 
 export async function getInvite(rawToken: string): Promise<{ email: string } | { error: InviteTokenFailure }> {
-  const token = await prisma.passwordSetupToken.findUnique({
-    where: { tokenHash: hashToken(rawToken) },
-    include: { user: { select: { email: true, isActive: true } } },
-  });
+  let token;
+  try {
+    token = await prisma.passwordSetupToken.findUnique({
+      where: { tokenHash: hashToken(rawToken) },
+      include: { user: { select: { email: true, isActive: true } } },
+    });
+  } catch (error) {
+    await captureServerError({
+      event: "auth.invite.get.failed",
+      route: "src/lib/auth/invites.ts#getInvite",
+      error,
+    });
+    return { error: "invalid" };
+  }
   if (!token || token.invalidatedAt) return { error: "invalid" };
   if (token.usedAt) return { error: "used" };
   if (token.expiresAt <= new Date() || !token.user?.isActive) return { error: "expired" };

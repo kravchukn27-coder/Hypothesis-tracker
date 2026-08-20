@@ -112,7 +112,7 @@
 
 ## TECH-054 — getInvite: no try/catch around the public invite-token lookup
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Resilience
 - **Type:** Fix

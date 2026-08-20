@@ -325,7 +325,7 @@
 
 ## TECH-026 — Hypothesis: missing indexes on archived, funnelLevelId, status
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Data model
 - **Type:** Fix

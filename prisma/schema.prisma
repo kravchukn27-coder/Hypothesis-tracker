@@ -151,6 +151,9 @@ model Hypothesis {
   archivedAt    DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+
+  @@index([archived, status])
+  @@index([funnelLevelId, archived])
 }
 
 model HypothesisComment {

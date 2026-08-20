@@ -85,7 +85,7 @@
 
 ## TECH-056 — PasswordSetupToken.userId unindexed, filtered on every invite/reset issuance
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Data model
 - **Type:** Fix

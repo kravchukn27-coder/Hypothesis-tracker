@@ -89,6 +89,8 @@ model PasswordSetupToken {
   usedAt         DateTime?
   invalidatedAt  DateTime?
   createdAt      DateTime  @default(now())
+
+  @@index([userId, usedAt, invalidatedAt])
 }
 
 model LoginRateLimitBucket {

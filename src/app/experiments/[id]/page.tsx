@@ -19,6 +19,7 @@ import { Badge } from "@/components/Badge";
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, currentStageOf, stageLabel } from "@/lib/experiment";
+import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/hypothesis";
 import { getFunnelLevels } from "@/lib/funnelLevel";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { HideFromCalendarButton } from "../HideFromCalendarButton";
@@ -130,12 +131,24 @@ export default async function ExperimentDetailPage({
       </div>
 
       <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge color={currentStage ? STAGE_BADGE_CLASSES[currentStage] : undefined}>
-            {stageLabel(currentStage)}
-          </Badge>
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[11px] font-medium text-zinc-400">Статус эксперимента</span>
+            <Badge color={currentStage ? STAGE_BADGE_CLASSES[currentStage] : undefined}>
+              {stageLabel(currentStage)}
+            </Badge>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[11px] font-medium text-zinc-400">Статус в Backlog</span>
+            <Badge color={STATUS_BADGE_CLASSES[experiment.hypothesis.status]}>
+              {STATUS_LABELS[experiment.hypothesis.status]}
+            </Badge>
+          </div>
           {experiment.hypothesis.funnelLevel && (
-            <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{experiment.hypothesis.funnelLevel.name}</Badge>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[11px] font-medium text-zinc-400">Funnel Level</span>
+              <Badge color={FUNNEL_LEVEL_BADGE_COLOR}>{experiment.hypothesis.funnelLevel.name}</Badge>
+            </div>
           )}
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-600">

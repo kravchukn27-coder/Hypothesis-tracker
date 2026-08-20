@@ -1,5 +1,51 @@
 # UI Backlog
 
+## UI-065 — Add hypothesis Backlog status badge to the experiment detail header, with small labels over all three badges
+
+- **Status:** DONE
+- **Priority:** Low
+- **Area:** UI / Experiments
+- **Type:** Enhancement
+- **Summary:** The experiment detail page's badge row currently shows
+  two badges — experiment stage (e.g. "Experimentation") and Funnel
+  Level (e.g. "Engagement"). Add a third badge for the parent
+  hypothesis's Backlog status, and add small grey caption labels above
+  all three badges naming what each one is (e.g. "Status Exp",
+  "Status Backlog", "Funnel Level" — exact wording to be decided at
+  implementation). Screenshot attached, requested 2026-08-20.
+- **Description:** `src/app/experiments/[id]/page.tsx:132-140` renders
+  the badge row: `Badge` for `currentStage` (experiment stage,
+  `STAGE_BADGE_CLASSES`/`stageLabel`) and, if present, `Badge` for
+  `experiment.hypothesis.funnelLevel.name`
+  (`FUNNEL_LEVEL_BADGE_COLOR`). The Prisma query at line 39-53 already
+  `include`s the full `hypothesis` relation, so
+  `experiment.hypothesis.status` is already available server-side — no
+  new query is needed, just rendering a third `Badge` using the
+  existing `STATUS_BADGE_CLASSES`/`STATUS_LABELS` from
+  `src/lib/hypothesis.ts` (same source `StatusCell` on `/backlog` uses).
+  All three badges need a small grey label above them so it's clear at
+  a glance which is the experiment's own stage vs. the hypothesis's
+  Backlog status vs. the funnel tag — today's two-badge row has no such
+  labeling and relies on the reader recognizing the colors/values.
+- **Acceptance Criteria:**
+  - The badge row on `/experiments/[id]` shows three badges: experiment
+    stage (unchanged), hypothesis Backlog status (new,
+    `experiment.hypothesis.status` via `STATUS_BADGE_CLASSES`/`STATUS_LABELS`),
+    and Funnel Level (unchanged, still conditional on the hypothesis
+    having one).
+  - Each badge has a small grey caption above it identifying what it
+    represents (experiment status vs. Backlog status vs. Funnel Level).
+  - Clicking through / existing links ("Гипотеза" button, "Показать на
+    календаре") and the rest of the page are unaffected.
+  - No Prisma schema or query changes — `experiment.hypothesis.status`
+    is already fetched.
+  - Verified in the browser, including an experiment whose hypothesis
+    has no Funnel Level set (two badges + labels, no gap where the
+    third would be).
+- **Files:** `src/app/experiments/[id]/page.tsx:132-140` (badge row),
+  `src/lib/hypothesis.ts` (`STATUS_BADGE_CLASSES`/`STATUS_LABELS`,
+  reused not duplicated).
+
 ## UI-064 — Collapse the Calendar "Требуют внимания" banner into a bell icon with a count badge
 
 - **Status:** DONE

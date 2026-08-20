@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   addWeeks,
   buildTimeline,
+  compareByManualOrder,
   formatWeekLabel,
   getOverdueWeek,
   PAGE_STEP_WEEKS,
@@ -114,13 +115,7 @@ export default async function CalendarPage({
   // filter the table down to that one row, which hid every other
   // experiment and made the view harder to read in context.
   const focusedExperiment = experimentId ? experiments.find((experiment) => experiment.id === experimentId) : null;
-  const displayedExperiments = [...experiments].sort((a, b) => {
-    if (a.manualOrder === null && b.manualOrder !== null) return -1;
-    if (a.manualOrder !== null && b.manualOrder === null) return 1;
-    if (a.manualOrder !== null && b.manualOrder !== null) return a.manualOrder - b.manualOrder;
-    const startDiff = (a.startDate?.getTime() ?? Number.POSITIVE_INFINITY) - (b.startDate?.getTime() ?? Number.POSITIVE_INFINITY);
-    return startDiff || b.createdAt.getTime() - a.createdAt.getTime();
-  });
+  const displayedExperiments = [...experiments].sort(compareByManualOrder);
   const timelineExperiments = displayedExperiments.map((e) => ({
     id: e.id,
     name: e.name,

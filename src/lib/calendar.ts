@@ -44,6 +44,27 @@ export function toDateParam(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+export type ManualOrderSortable = {
+  manualOrder: number | null;
+  startDate: Date | null;
+  createdAt: Date;
+};
+
+/**
+ * PROD-036's Calendar row order: explicit `manualOrder` first (nulls
+ * last), falling back to start date then most-recently-created.
+ * Shared by the Calendar page's render sort and
+ * `reorderCalendarExperiments`'s global-order merge (BUG-018) so both
+ * sides agree on what "current order" means.
+ */
+export function compareByManualOrder(a: ManualOrderSortable, b: ManualOrderSortable): number {
+  if (a.manualOrder === null && b.manualOrder !== null) return -1;
+  if (a.manualOrder !== null && b.manualOrder === null) return 1;
+  if (a.manualOrder !== null && b.manualOrder !== null) return a.manualOrder - b.manualOrder;
+  const startDiff = (a.startDate?.getTime() ?? Number.POSITIVE_INFINITY) - (b.startDate?.getTime() ?? Number.POSITIVE_INFINITY);
+  return startDiff || b.createdAt.getTime() - a.createdAt.getTime();
+}
+
 export type WeekStageEntry = {
   weekStart: Date;
   stage: string;

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- [BUG-018] Fixed `reorderCalendarExperiments` corrupting `manualOrder`
+  across Calendar windows/filters — it used to write `0..N-1` only
+  across the currently-visible (windowed/filtered) subset of rows,
+  clobbering `manualOrder` values a previous reorder in a different
+  window/filter had assigned to a different subset. Added a shared
+  `compareByManualOrder` comparator (`src/lib/calendar.ts`), used by
+  both the Calendar page's render sort and the action, which now fetches
+  every active experiment's current global order and merges the dragged
+  subset's new relative order into it as a contiguous block, leaving
+  every other experiment's relative position untouched. Verified live:
+  reordered rows in the default window, reordered a different subset in
+  a distant week window, returned to the first window — its order
+  (including the block from the second reorder) matched the expected
+  merge exactly.
+
 - [PROD-028] No code change — `/backlog/new` already renders the full
   `HypothesisForm` (name, description, Funnel Level, Status, Impact/
   Effort/Reach/Confidence with live Score, Моделирование/Выборка/Task),

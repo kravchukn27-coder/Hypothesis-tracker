@@ -56,35 +56,6 @@
 
 ---
 
-## BUG-018: Calendar row reorder corrupts `manualOrder` across windows
-
-- **Status:** TODO
-- **Priority:** Critical
-- **Summary:** `reorderCalendarExperiments` writes `manualOrder = 0..N-1`
-  only across the experiments currently visible in the calendar's
-  windowed/filtered view (`visibleRows`), but the global sort in
-  `CalendarPage` applies `manualOrder` across *every* active experiment.
-  Found during a code audit (2026-08-20).
-- **Description:** Dragging rows in one 8-week window assigns
-  `manualOrder` 0..N-1 to just that subset. Reordering a different
-  subset later (a different week window, or a different `weekStage`/
-  `calendarAuthor` filter) resets a *different* set of experiments to
-  the same 0..N-1 range — duplicate `manualOrder` values now exist
-  across unrelated experiments. `displayedExperiments.sort()` in
-  `src/app/calendar/page.tsx:112-118` has no scoping to match, so the
-  resulting global order interleaves the two reordered groups
-  arbitrarily instead of reflecting either arrangement the user made.
-- **Acceptance Criteria:**
-  - Reordering rows in one calendar window/filter view does not corrupt
-    the relative order of experiments outside that view.
-  - Verified in the browser: reorder a few rows in one week window,
-    navigate to a different window and reorder a different set, then
-    return to the first window — its order is still what was set.
-- **Files:** `src/app/calendar/page.tsx:112-118`,
-  `src/app/experiments/actions.ts:465-493` (`reorderCalendarExperiments`).
-
----
-
 ## BUG-019: New experiments jump above manually-ordered calendar rows
 
 - **Status:** TODO

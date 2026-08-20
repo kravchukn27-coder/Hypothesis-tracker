@@ -41,7 +41,17 @@ export async function setPasswordFromInvite(
   if (password.length < 8) return { error: "Пароль должен содержать не менее 8 символов." };
   if (password !== passwordConfirm) return { error: "Пароли не совпадают." };
 
-  const result = await consumeInvite(token, name, hashPassword(password));
+  let result: Awaited<ReturnType<typeof consumeInvite>>;
+  try {
+    result = await consumeInvite(token, name, hashPassword(password));
+  } catch (error) {
+    await captureServerError({
+      event: "auth.invite.consume.failed",
+      route: "src/lib/auth/invite-actions.ts#setPasswordFromInvite",
+      error,
+    });
+    return { error: "Не удалось установить пароль. Попробуйте ещё раз." };
+  }
   if ("error" in result) {
     return {
       error:

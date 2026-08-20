@@ -71,7 +71,7 @@
 
 ## TECH-057 — setPasswordFromInvite doesn't wrap consumeInvite in try/catch
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Observability / Auth
 - **Type:** Fix

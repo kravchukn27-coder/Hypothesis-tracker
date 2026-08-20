@@ -1,9 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireActionUser } from "@/lib/auth/page-guards";
 import { issuePasswordReset } from "@/lib/auth/invites";
 import { getRequestOrigin } from "@/lib/auth/base-url";
 import { auditEvent } from "@/lib/audit-log";
@@ -12,15 +11,9 @@ import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-re
 
 const auditUsersEvent = auditEvent("src/app/users/actions.ts");
 
-async function requireAuthenticatedUser() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
-}
-
 export async function deactivateUser(id: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-    const actor = await requireAuthenticatedUser();
+    const actor = await requireActionUser();
     try {
       const target = await prisma.user.update({
         where: { id },
@@ -39,7 +32,7 @@ export async function deactivateUser(id: string): Promise<ActionResult> {
 
 export async function resetUserPassword(id: string): Promise<ActionResult<{ link: string }>> {
   return runWithOperationCorrelation(async () => {
-    const actor = await requireAuthenticatedUser();
+    const actor = await requireActionUser();
     let rawToken: string;
     let origin: string;
     try {

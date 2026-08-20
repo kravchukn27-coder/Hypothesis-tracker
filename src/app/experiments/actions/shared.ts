@@ -1,16 +1,11 @@
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireActionUser } from "@/lib/auth/page-guards";
 import { auditEvent } from "@/lib/audit-log";
 import { captureServerError } from "@/lib/log";
 import { actionFailure, type ActionResult } from "@/lib/action-result";
-import { redirect } from "next/navigation";
 
 const ACTION_ROUTE = "src/app/experiments/actions.ts";
 
-export async function requireExperimentActionUser() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
-}
+export { requireActionUser as requireExperimentActionUser };
 
 export async function experimentMutationFailure<T extends object = Record<string, never>>(
   event: string,

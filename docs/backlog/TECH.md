@@ -31,7 +31,7 @@
 
 ## TECH-061 — Session guard (getCurrentUser + redirect to /login) copy-pasted across four files
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Chore
@@ -42,6 +42,30 @@
   - One shared `requireActionUser()` (or equivalent) lives in `src/lib/auth/`, used by `backlog/actions.ts`, `users/actions.ts`, and `experiments/actions/shared.ts` instead of each defining its own copy.
   - `requireUserPage()` either reuses the same underlying check or is left as-is with a comment noting it's the page-level counterpart — a deliberate decision either way, not an untouched fourth copy.
   - No behavior change to any existing redirect/guard.
+- **Resolution note (2026-08-20):** `src/lib/auth/page-guards.ts` now
+  holds one private `requireSessionUser()` with the actual guard body,
+  exported under two names — `requireUserPage` (page-level) and the
+  new `requireActionUser` (action-level) — so both call-site contexts
+  keep their own name with zero duplicated logic (first acceptance
+  bullet's "reuses the same underlying check" option, applied to
+  `requireUserPage` too rather than leaving it as a separate copy).
+  `backlog/actions.ts` and `users/actions.ts` deleted their local
+  `requireAuthenticatedUser()` and call `requireActionUser()` directly
+  at every former call site (9 and 2, respectively); unused
+  `getCurrentUser`/`redirect` imports removed where they were only
+  used by the deleted function. `experiments/actions/shared.ts`
+  deleted its local `requireExperimentActionUser()` body and
+  re-exports the shared function under that same name (`export {
+  requireActionUser as requireExperimentActionUser }`), so its 6
+  existing call sites elsewhere in the experiments module — including
+  the already-flagged TECH-060 alias in `experiments/actions.ts` —
+  needed no changes. No behavior change. Verified live: `/users` page
+  loads (page-level guard still passes), and `resetUserPassword`
+  (action-level guard, now via `requireActionUser`) successfully
+  generated a reset link for a test user. `backlog/actions.ts` and
+  `experiments/actions/shared.ts` confirmed by code parity — identical
+  delegation to the same shared function, not separately exercised
+  live.
 
 ## TECH-060 — experiments/actions.ts keeps a same-signature alias/pass-through facade over its own consolidated helpers
 

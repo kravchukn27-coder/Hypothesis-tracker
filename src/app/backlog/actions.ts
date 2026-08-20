@@ -7,18 +7,12 @@ import { z } from "zod";
 import { shouldPromptArchiveHypothesis } from "@/lib/hypothesis";
 import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireActionUser } from "@/lib/auth/page-guards";
 import { auditEvent } from "@/lib/audit-log";
 import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 
 const auditBacklogEvent = auditEvent("src/app/backlog/actions.ts");
-
-async function requireAuthenticatedUser() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
-}
 
 async function mutationFailure<T extends object = Record<string, never>>(event: string, error: unknown, userId: string): Promise<ActionResult<T>> {
   await captureServerError({ event, route: "src/app/backlog/actions.ts", error, userId });
@@ -58,7 +52,7 @@ export async function createHypothesis(
   formData: FormData,
 ): Promise<HypothesisFormState> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
@@ -100,7 +94,7 @@ export async function updateHypothesis(
   formData: FormData,
 ): Promise<HypothesisFormState> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
@@ -158,7 +152,7 @@ const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 
 export async function updateHypothesisStatus(id: string, status: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   const parsed = statusSchema.safeParse(status);
   if (!parsed.success) return actionFailure("Некорректный статус гипотезы.");
 
@@ -182,7 +176,7 @@ export async function updateHypothesisStatus(id: string, status: string): Promis
 /** Starts the experiment workflow from an Accepted backlog row. */
 export async function takeHypothesisIntoWork(id: string): Promise<ActionResult<{ href: string }>> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   let experimentId: string | undefined;
   try {
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
@@ -215,7 +209,7 @@ export async function takeHypothesisIntoWork(id: string): Promise<ActionResult<{
 
 export async function deleteHypothesis(id: string): Promise<{ error?: string }> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   let hypothesis: { name: string; _count: { experiments: number } } | null;
   try {
     hypothesis = await prisma.hypothesis.findUnique({
@@ -242,7 +236,7 @@ export async function deleteHypothesis(id: string): Promise<{ error?: string }> 
 
 export async function archiveHypothesis(id: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   try {
     await prisma.hypothesis.update({ where: { id }, data: { archived: true, archivedAt: new Date() } });
     await auditBacklogEvent("HYPOTHESIS_ARCHIVED", { hypothesisId: id });
@@ -255,7 +249,7 @@ export async function archiveHypothesis(id: string): Promise<ActionResult> {
 
 export async function unarchiveHypothesis(id: string): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   try {
     await prisma.hypothesis.update({ where: { id }, data: { archived: false, archivedAt: null } });
     await auditBacklogEvent("HYPOTHESIS_UNARCHIVED", { hypothesisId: id });
@@ -268,7 +262,7 @@ export async function unarchiveHypothesis(id: string): Promise<ActionResult> {
 
 export async function archiveHypotheses(ids: string[]): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   if (ids.length === 0) return actionSuccess();
   try { await prisma.hypothesis.updateMany({ where: { id: { in: ids } }, data: { archived: true, archivedAt: new Date() } }); }
   catch (error) { return mutationFailure("backlog.hypotheses.archive.failed", error, user.id); }
@@ -284,7 +278,7 @@ export async function archiveHypotheses(ids: string[]): Promise<ActionResult> {
  */
 export async function deleteHypotheses(ids: string[]): Promise<ActionResult> {
   return runWithOperationCorrelation(async () => {
-  const user = await requireAuthenticatedUser();
+  const user = await requireActionUser();
   if (ids.length === 0) return actionSuccess();
   try {
   const hypotheses = await prisma.hypothesis.findMany({

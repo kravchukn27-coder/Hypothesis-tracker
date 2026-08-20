@@ -413,7 +413,7 @@
 
 ## TECH-020 — Wrap Prisma calls in mutation server actions with try/catch + captureServerError
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Resilience
 - **Type:** Chore

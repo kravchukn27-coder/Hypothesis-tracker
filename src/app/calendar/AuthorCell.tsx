@@ -9,7 +9,7 @@ export function AuthorCell({ experimentId, value, options }: { experimentId: str
     value={value ?? ""}
     disabled={pending}
     aria-label="Автор"
-    onChange={(event) => startTransition(() => updateExperimentAuthor(experimentId, event.target.value))}
+    onChange={(event) => startTransition(async () => { await updateExperimentAuthor(experimentId, event.target.value); })}
     className="w-full min-w-0 rounded border border-transparent bg-transparent px-1 py-1 text-xs text-zinc-700 outline-none hover:border-zinc-200 focus:border-zinc-300 focus:bg-white disabled:opacity-50"
   >
     <option value="">—</option>

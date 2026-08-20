@@ -102,7 +102,8 @@ export function ExperimentWeekRow({
   function persistStage(weekStartISO: string, stage: ExperimentStage) {
     startTransition(async () => {
       try {
-        const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
+        const { becameDone, error } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
+        if (error) { showToast(error, "error"); return; }
         router.refresh();
         showToast("Стадия недели обновлена.");
         if (becameDone) setShowHidePrompt(true);
@@ -200,6 +201,10 @@ export function ExperimentWeekRow({
             ? await shiftExperimentWeeks(experimentId, change.blockStartISO, change.blockEndISO, change.deltaWeeks)
             : await resizeExperimentWeeks(experimentId, change.blockStartISO, change.blockEndISO, change.deltaWeeks);
         setPendingPlanChange(null);
+        if (result.error) {
+          showToast(result.error, "error");
+          return;
+        }
         if (!result.changed) {
           showToast("Не удалось сохранить: новый диапазон пересекается с другим этапом этого эксперимента.", "error");
           return;

@@ -38,7 +38,8 @@ export function ExperimentWeekStagesEditor({
 
   function handleChange(weekStartISO: string, stage: ExperimentStage) {
     startTransition(async () => {
-      const { becameDone } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
+      const { becameDone, error } = await setExperimentWeekStage(experimentId, weekStartISO, stage);
+      if (error) return;
       router.refresh();
       if (becameDone) setShowHidePrompt(true);
     });

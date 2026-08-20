@@ -9,6 +9,7 @@ import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
+import { captureServerError } from "@/lib/log";
 
 async function auditBacklogEvent(event: string, metadata: Record<string, unknown>) {
   const user = await getCurrentUser();
@@ -19,6 +20,11 @@ async function requireAuthenticatedUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
+}
+
+async function mutationFailure(event: string, error: unknown, userId: string) {
+  await captureServerError({ event, route: "src/app/backlog/actions.ts", error, userId });
+  return { error: "Не удалось сохранить изменения. Попробуйте ещё раз." };
 }
 
 const hypothesisFormSchema = z.object({
@@ -53,15 +59,16 @@ export async function createHypothesis(
   _prevState: HypothesisFormState,
   formData: FormData,
 ): Promise<HypothesisFormState> {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
   }
   const data = parsed.data;
-  const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
-
-  const created = await prisma.hypothesis.create({
+  let created: { id: string };
+  try {
+    const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
+    created = await prisma.hypothesis.create({
     data: {
       name: data.name,
       text: data.text,
@@ -77,9 +84,11 @@ export async function createHypothesis(
       sampleSize: data.sampleSize || null,
       taskUrl: data.taskUrl || null,
     },
-  });
-
-  await auditBacklogEvent("HYPOTHESIS_CREATED", { hypothesisId: created.id });
+    });
+    await auditBacklogEvent("HYPOTHESIS_CREATED", { hypothesisId: created.id });
+  } catch (error) {
+    return mutationFailure("backlog.hypothesis.create.failed", error, user.id);
+  }
 
   revalidatePath("/backlog");
   redirect(`/backlog?saved=1&hypothesisId=${created.id}`);
@@ -90,20 +99,20 @@ export async function updateHypothesis(
   _prevState: HypothesisFormState,
   formData: FormData,
 ): Promise<HypothesisFormState> {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
   }
   const data = parsed.data;
-  const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
-
-  const before = await prisma.hypothesis.findUnique({
+  let before: { status: typeof data.status; archived: boolean } | null;
+  try {
+    const funnelLevelId = await resolveFunnelLevelId(data.funnelLevel);
+    before = await prisma.hypothesis.findUnique({
     where: { id },
     select: { status: true, archived: true },
-  });
-
-  await prisma.hypothesis.update({
+    });
+    await prisma.hypothesis.update({
     where: { id },
     data: {
       name: data.name,
@@ -120,12 +129,16 @@ export async function updateHypothesis(
       sampleSize: data.sampleSize || null,
       taskUrl: data.taskUrl || null,
     },
-  });
-  await auditBacklogEvent("HYPOTHESIS_UPDATED", { hypothesisId: id });
+    });
+    await auditBacklogEvent("HYPOTHESIS_UPDATED", { hypothesisId: id });
   // PROD-033: Funnel Level isn't independently editable on an
   // experiment — keep every experiment under this hypothesis in sync
   // whenever the hypothesis's own Funnel Level changes.
-  await syncExperimentFunnelLevelsForHypothesis(id);
+    const syncResult = await syncExperimentFunnelLevelsForHypothesis(id);
+    if (syncResult?.error) return syncResult;
+  } catch (error) {
+    return mutationFailure("backlog.hypothesis.update.failed", error, user.id);
+  }
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
@@ -146,26 +159,31 @@ const HYPOTHESIS_STATUSES = ["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD"
 const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 
 export async function updateHypothesisStatus(id: string, status: string) {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   const parsed = statusSchema.safeParse(status);
   if (!parsed.success) return;
 
-  const before = await prisma.hypothesis.findUnique({ where: { id }, select: { status: true } });
-  await prisma.hypothesis.update({
+  try {
+    const before = await prisma.hypothesis.findUnique({ where: { id }, select: { status: true } });
+    await prisma.hypothesis.update({
     where: { id },
     data: { status: parsed.data },
-  });
-  await auditBacklogEvent("HYPOTHESIS_STATUS_CHANGED", { hypothesisId: id, before: before?.status ?? null, after: parsed.data });
+    });
+    await auditBacklogEvent("HYPOTHESIS_STATUS_CHANGED", { hypothesisId: id, before: before?.status ?? null, after: parsed.data });
+  } catch (error) {
+    return mutationFailure("backlog.hypothesis.status.update.failed", error, user.id);
+  }
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
 }
 
 /** Starts the experiment workflow from an Accepted backlog row. */
-export async function takeHypothesisIntoWork(id: string): Promise<string> {
-  await requireAuthenticatedUser();
+export async function takeHypothesisIntoWork(id: string): Promise<{ href: string; error?: string }> {
+  const user = await requireAuthenticatedUser();
+  try {
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
-  if (!hypothesis || hypothesis.status !== "ACCEPTED") return "/backlog";
+  if (!hypothesis || hypothesis.status !== "ACCEPTED") return { href: "/backlog" };
   // PROD-034: a hypothesis has at most one experiment ever, not just
   // one active at a time — so this checks for any experiment, archived
   // or Done included, not only "still active" ones like before.
@@ -177,19 +195,26 @@ export async function takeHypothesisIntoWork(id: string): Promise<string> {
   if (!existing) {
     await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id } });
     // PROD-033: seed the new experiment's Funnel Level from the hypothesis.
-    await syncExperimentFunnelLevelsForHypothesis(id);
+    const syncResult = await syncExperimentFunnelLevelsForHypothesis(id);
+    if (syncResult?.error) return { href: "/backlog", error: syncResult.error };
   }
-  await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
+    await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
+  } catch (error) {
+    await mutationFailure("backlog.hypothesis.take_into_work.failed", error, user.id);
+    return { href: "/backlog", error: "Не удалось сохранить изменения. Попробуйте ещё раз." };
+  }
   revalidatePath("/backlog"); revalidatePath("/calendar");
-  return "/calendar";
+  return { href: "/calendar" };
 }
 
 export async function deleteHypothesis(id: string): Promise<{ error?: string }> {
-  await requireAuthenticatedUser();
-  const hypothesis = await prisma.hypothesis.findUnique({
-    where: { id },
-    select: { name: true, _count: { select: { experiments: true } } },
-  });
+  const user = await requireAuthenticatedUser();
+  let hypothesis: { name: string; _count: { experiments: number } } | null;
+  try {
+    hypothesis = await prisma.hypothesis.findUnique({
+      where: { id },
+      select: { name: true, _count: { select: { experiments: true } } },
+    });
   if (!hypothesis) return {};
 
   if (hypothesis._count.experiments > 0) {
@@ -198,41 +223,40 @@ export async function deleteHypothesis(id: string): Promise<{ error?: string }> 
     };
   }
 
-  await prisma.hypothesis.delete({ where: { id } });
-  await auditBacklogEvent("HYPOTHESIS_DELETED", { hypothesisId: id });
+    await prisma.hypothesis.delete({ where: { id } });
+    await auditBacklogEvent("HYPOTHESIS_DELETED", { hypothesisId: id });
+  } catch (error) {
+    return mutationFailure("backlog.hypothesis.delete.failed", error, user.id);
+  }
   revalidatePath("/backlog");
   redirect("/backlog");
 }
 
 export async function archiveHypothesis(id: string) {
-  await requireAuthenticatedUser();
-  await prisma.hypothesis.update({
-    where: { id },
-    data: { archived: true, archivedAt: new Date() },
-  });
-  await auditBacklogEvent("HYPOTHESIS_ARCHIVED", { hypothesisId: id });
+  const user = await requireAuthenticatedUser();
+  try {
+    await prisma.hypothesis.update({ where: { id }, data: { archived: true, archivedAt: new Date() } });
+    await auditBacklogEvent("HYPOTHESIS_ARCHIVED", { hypothesisId: id });
+  } catch (error) { return mutationFailure("backlog.hypothesis.archive.failed", error, user.id); }
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
 }
 
 export async function unarchiveHypothesis(id: string) {
-  await requireAuthenticatedUser();
-  await prisma.hypothesis.update({
-    where: { id },
-    data: { archived: false, archivedAt: null },
-  });
-  await auditBacklogEvent("HYPOTHESIS_UNARCHIVED", { hypothesisId: id });
+  const user = await requireAuthenticatedUser();
+  try {
+    await prisma.hypothesis.update({ where: { id }, data: { archived: false, archivedAt: null } });
+    await auditBacklogEvent("HYPOTHESIS_UNARCHIVED", { hypothesisId: id });
+  } catch (error) { return mutationFailure("backlog.hypothesis.unarchive.failed", error, user.id); }
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
 }
 
 export async function archiveHypotheses(ids: string[]): Promise<{ error?: string } | void> {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   if (ids.length === 0) return;
-  await prisma.hypothesis.updateMany({
-    where: { id: { in: ids } },
-    data: { archived: true, archivedAt: new Date() },
-  });
+  try { await prisma.hypothesis.updateMany({ where: { id: { in: ids } }, data: { archived: true, archivedAt: new Date() } }); }
+  catch (error) { return mutationFailure("backlog.hypotheses.archive.failed", error, user.id); }
   revalidatePath("/backlog");
 }
 
@@ -242,8 +266,9 @@ export async function archiveHypotheses(ids: string[]): Promise<{ error?: string
  * the rest, reporting the skip count instead of failing the batch.
  */
 export async function deleteHypotheses(ids: string[]): Promise<{ error?: string } | void> {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   if (ids.length === 0) return;
+  try {
   const hypotheses = await prisma.hypothesis.findMany({
     where: { id: { in: ids } },
     select: { id: true, _count: { select: { experiments: true } } },
@@ -261,4 +286,5 @@ export async function deleteHypotheses(ids: string[]): Promise<{ error?: string 
       error: `Удален${deletable.length === 1 ? "а" : deletable.length === 0 ? "" : "о"} ${deletable.length}. Пропущен${blocked === 1 ? "а" : "о"} ${blocked} — с ${blocked === 1 ? "ней" : "ними"} связаны эксперименты, сначала удали их.`,
     };
   }
+  } catch (error) { return mutationFailure("backlog.hypotheses.delete.failed", error, user.id); }
 }

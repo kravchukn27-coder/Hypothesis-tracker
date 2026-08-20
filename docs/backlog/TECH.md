@@ -2,7 +2,7 @@
 
 ## TECH-050 — No catalog of the Server Action surface or its side effects
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Architecture
 - **Type:** Chore
@@ -146,13 +146,13 @@
 
 ## TECH-041 — pg / @types/pg declared as direct deps but never imported directly
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Dependencies
 - **Type:** Chore
-- **Summary:** `pg` and `@types/pg` are direct dependencies in `package.json`, but nothing in `src/` or `prisma/` imports `pg` directly — only `@prisma/adapter-pg` is imported (`prisma/seed.ts`, `src/lib/prisma.ts`), and that package already bundles its own `pg`/`@types/pg`.
+- **Summary:** `pg` and `@types/pg` are intentionally direct dependencies: `src/lib/database-config.ts` imports `PoolConfig`, and `scripts/verify-db-timeout.ts` instantiates `Pool`.
 - **Description:**
-  Found during a dependency audit (2026-08-20). Duplicating them at the top level risks version drift between the app's pinned versions and what `@prisma/adapter-pg` actually resolves/expects, for no functional benefit today.
+  Revalidated during TECH-041 (2026-08-20). The direct dependencies are required by application and verification code; npm resolves the same deduped versions for `@prisma/adapter-pg`, so there is no duplicate installed package or version drift.
 - **Acceptance Criteria:**
   - Confirm whether `pg`/`@types/pg` are pinned deliberately (e.g. to control the connection-pool version independent of the adapter); if so, leave a comment explaining why.
   - Otherwise, remove both from `package.json` and confirm `npm install` + `npm run build` still succeed with `@prisma/adapter-pg` supplying its own `pg`.

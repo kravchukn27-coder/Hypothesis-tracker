@@ -415,7 +415,7 @@
 
 ## TECH-023 — No connection/statement timeout on the Prisma/pg adapter
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Resilience
 - **Type:** Fix
@@ -426,6 +426,10 @@
   - The pg pool passed to `PrismaPg` sets an explicit `connectionTimeoutMillis` (and a statement timeout if the driver/DB supports one cleanly).
   - A deliberately unreachable/blackholed DB connection fails within the configured timeout instead of hanging indefinitely.
   - No behavior change for the normal (DB healthy) path.
+- **Resolution note:** Runtime and seed Prisma adapters share a 5-second pg
+  connection and statement timeout. `npm run verify:db-timeout` probes an
+  unreachable local PostgreSQL endpoint and asserts that it fails within the
+  configured bound.
 
 ## TECH-022 — setExperimentWeekStage: wrap its 4-step write sequence in a transaction
 

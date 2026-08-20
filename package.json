@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "jiti prisma/seed.ts",
+    "verify:db-timeout": "jiti scripts/verify-db-timeout.ts",
     "verify:auth": "jiti scripts/verify-auth-core.ts",
     "test": "vitest run"
   },

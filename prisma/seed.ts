@@ -2,6 +2,7 @@ import "dotenv/config";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { createPgPoolConfig } from "../src/lib/database-config";
 
 const requiredEnvironmentVariables = [
   "BOOTSTRAP_NAME",
@@ -15,7 +16,7 @@ for (const variableName of requiredEnvironmentVariables) {
   }
 }
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(createPgPoolConfig());
 const prisma = new PrismaClient({ adapter });
 
 function hashPassword(plain: string): string {

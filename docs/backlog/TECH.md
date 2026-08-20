@@ -292,7 +292,7 @@
 
 ## TECH-031 — HypothesisComment: consolidate three single-column indexes into one composite
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Data model
 - **Type:** Fix
@@ -303,6 +303,10 @@
   - `@@index([hypothesisId])` and `@@index([createdAt])` replaced with `@@index([hypothesisId, createdAt])`.
   - `@@index([authorUserId])` kept only if a concrete near-term use is identified; otherwise dropped.
   - `npx prisma db push` applied cleanly against the local dev DB.
+- **Resolution note:** Replaced the three single-column indexes with
+  `[hypothesisId, createdAt]`, matching the only comment read path. No current
+  query filters by `authorUserId`, so its unused index was removed. Applied
+  successfully with `prisma db push` to the local database.
 
 ## TECH-030 — User.invitedBy: nullable self-relation defaults to Restrict instead of SetNull
 

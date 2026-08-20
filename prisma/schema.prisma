@@ -169,9 +169,7 @@ model HypothesisComment {
   hypothesis   Hypothesis @relation(fields: [hypothesisId], references: [id], onDelete: Cascade)
   authorUser   User       @relation(fields: [authorUserId], references: [id])
 
-  @@index([hypothesisId])
-  @@index([authorUserId])
-  @@index([createdAt])
+  @@index([hypothesisId, createdAt])
 }
 
 model Experiment {

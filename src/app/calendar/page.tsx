@@ -330,7 +330,7 @@ export default async function CalendarPage({
             <div className="min-w-0 flex-1 rounded-xl border border-zinc-200">
               <div className={TABLE_CONTENT_WIDTH}>
                 <div className="sticky top-0 z-20 flex border-b border-zinc-200 bg-zinc-50 text-xs font-medium text-zinc-500">
-                <div className="sticky left-0 z-30 grid w-[24rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
+                <div className="sticky left-0 z-30 grid w-[22.5rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-zinc-50">
                   <div aria-hidden />
                   <div className="flex items-center justify-center px-3 py-2 text-center font-bold">Эксперимент</div>
                   <div className="flex items-center justify-center px-2 py-2 text-center font-bold"><HeaderMultiFilter name="calendarAuthor" label="Автор" options={authorOptions} iconPosition="end" /></div>
@@ -365,7 +365,7 @@ export default async function CalendarPage({
                   data-highlighted={isFocused || undefined}
                   className="highlight-calendar-row flex border-b border-zinc-100 transition-[transform,box-shadow,background-color] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] last:border-b-0 hover:bg-zinc-50"
                 >
-                  <div className="highlight-calendar-sticky sticky left-0 z-10 grid w-[24rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-white">
+                  <div className="highlight-calendar-sticky sticky left-0 z-10 grid w-[22.5rem] shrink-0 grid-cols-[1.75rem_minmax(8.25rem,1fr)_4.5rem_minmax(7rem,1fr)] bg-white">
                     <div className="flex items-start justify-center pt-2"><CalendarRowReorderHandle experimentName={e.name} /></div>
                     <div className="min-w-0 py-2 pr-3 text-sm"><Link
                       href={`/experiments/${e.id}`}

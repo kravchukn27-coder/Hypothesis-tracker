@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSessionSecret, SESSION_COOKIE_NAME } from "./config";
 import { hasCurrentSessionVersion } from "./session-version";
@@ -6,7 +7,7 @@ import { verifySessionToken } from "./token";
 import type { SessionUser } from "./types";
 import { captureServerError } from "@/lib/log";
 
-export async function getCurrentUser(): Promise<SessionUser | null> {
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   let secret: string;
   try {
     secret = getSessionSecret();
@@ -35,4 +36,4 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   if (!user || !hasCurrentSessionVersion(payload, user.sessionVersion)) return null;
 
   return { id: user.id, name: user.name };
-}
+});

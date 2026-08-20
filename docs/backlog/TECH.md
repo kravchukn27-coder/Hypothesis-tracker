@@ -478,7 +478,7 @@
 
 ## TECH-016 — Memoize getCurrentUser() per request
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Performance
 - **Type:** Fix

@@ -54,36 +54,6 @@
 
 ---
 
----
-
-## BUG-019: New experiments jump above manually-ordered calendar rows
-
-- **Status:** TODO
-- **Priority:** High
-- **Summary:** In the calendar's row comparator, experiments with
-  `manualOrder === null` sort *before* experiments with an explicit
-  `manualOrder` — the opposite of the intended precedence. Found during
-  a code audit (2026-08-20).
-- **Description:** `src/app/calendar/page.tsx:113-114`:
-  ```ts
-  if (a.manualOrder === null && b.manualOrder !== null) return -1;
-  if (a.manualOrder !== null && b.manualOrder === null) return 1;
-  ```
-  A brand-new experiment always starts with `manualOrder: null`, so
-  under this comparator it jumps above every experiment the user has
-  manually arranged (PROD-036) — defeating the "persist explicit row
-  order" feature the first time a new experiment is created after any
-  reorder.
-- **Acceptance Criteria:**
-  - Experiments with an explicit `manualOrder` sort before
-    `manualOrder === null` experiments, not after.
-  - Verified in the browser: manually reorder a few calendar rows,
-    create a new experiment, confirm it does not appear above the
-    manually-ordered rows.
-- **Files:** `src/app/calendar/page.tsx:112-118`.
-
----
-
 ## BUG-020: `resizeExperimentWeeks` never clears the stale calendar-hidden flag
 
 - **Status:** TODO

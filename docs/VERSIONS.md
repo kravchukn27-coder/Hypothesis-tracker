@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- [BUG-019] Fixed `compareByManualOrder` (`src/lib/calendar.ts`) sorting
+  `manualOrder === null` experiments *before* explicit `manualOrder`
+  ones instead of after — a brand-new experiment (always born with
+  `manualOrder: null`) used to jump above every manually-ordered
+  Calendar row. Swapped the two branches' return values. Verified live:
+  reordered rows in the default window, created a fresh experiment
+  scheduled into the same window, confirmed it landed after every
+  explicitly-ordered row rather than above them.
+
 - [BUG-018] Fixed `reorderCalendarExperiments` corrupting `manualOrder`
   across Calendar windows/filters — it used to write `0..N-1` only
   across the currently-visible (windowed/filtered) subset of rows,

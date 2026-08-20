@@ -58,8 +58,8 @@ export type ManualOrderSortable = {
  * sides agree on what "current order" means.
  */
 export function compareByManualOrder(a: ManualOrderSortable, b: ManualOrderSortable): number {
-  if (a.manualOrder === null && b.manualOrder !== null) return -1;
-  if (a.manualOrder !== null && b.manualOrder === null) return 1;
+  if (a.manualOrder === null && b.manualOrder !== null) return 1;
+  if (a.manualOrder !== null && b.manualOrder === null) return -1;
   if (a.manualOrder !== null && b.manualOrder !== null) return a.manualOrder - b.manualOrder;
   const startDiff = (a.startDate?.getTime() ?? Number.POSITIVE_INFINITY) - (b.startDate?.getTime() ?? Number.POSITIVE_INFINITY);
   return startDiff || b.createdAt.getTime() - a.createdAt.getTime();

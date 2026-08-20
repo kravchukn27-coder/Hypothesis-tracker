@@ -346,7 +346,7 @@
 
 ## TECH-025 — Stand up a test runner and cover critical business logic with minimal unit tests
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Testing
 - **Type:** Chore

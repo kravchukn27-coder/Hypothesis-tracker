@@ -395,7 +395,7 @@
 
 ## TECH-021 — Root error.tsx / global-error.tsx for unhandled route failures
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Resilience
 - **Type:** Fix

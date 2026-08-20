@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportRouteError } from "../error-actions";
 
 export default function CalendarError({
   error,
@@ -10,7 +11,7 @@ export default function CalendarError({
   retry: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    void reportRouteError(error, "src/app/calendar/error.tsx");
   }, [error]);
 
   return (

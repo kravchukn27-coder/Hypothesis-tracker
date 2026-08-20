@@ -232,7 +232,7 @@
 
 ## TECH-035 — PrismaClient has no `log` config for query/error/warn visibility
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Observability
 - **Type:** Chore

@@ -481,6 +481,10 @@ be committed or changed casually, since changing it invalidates every session.
 - `docs/PROJECT_CONTEXT.md` (this file) — project map, read first.
 - `docs/backlog/` — active work, split by area. See
   `docs/backlog/WORKFLOW.md` for the rules.
+- `docs/SERVER_ACTIONS.md` — catalog of every Server Action across
+  `backlog/`, `experiments/`, `comments-actions.ts`, and `lib/auth/`:
+  what it does, what `revalidatePath`/cross-entity syncs it triggers,
+  and what auth it expects (TECH-050).
 - `docs/VERSIONS.md` — release/change log.
 - `CLAUDE.md` (repo root) — working rules for Claude Code in this repo.
 

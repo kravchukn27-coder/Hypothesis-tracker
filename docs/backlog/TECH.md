@@ -1,5 +1,46 @@
 # Tech Backlog
 
+## TECH-059 — logout() still uses unsafe writeAuditLog instead of safeWriteAuditLog
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Observability
+- **Type:** Fix
+- **Summary:** `logout()` (`src/lib/auth/actions.ts:66`) calls the unsafe `writeAuditLog` for the `LOGOUT` event — the same class of issue already fixed for `LOGIN_SUCCESS`/`LOGIN_FAILURE` in this same file (TECH-033) was not applied here.
+- **Description:**
+  Found during an observability audit re-run (2026-08-20). A transient DB blip during logout throws unhandled instead of still clearing the session cookie and redirecting — a user trying to log out during a DB hiccup gets stuck with an unhandled error instead of a clean logout, and the failure itself isn't captured via `captureServerError` since `writeAuditLog` has no catch of its own.
+- **Acceptance Criteria:**
+  - `logout()`'s `writeAuditLog` call switches to `safeWriteAuditLog`, matching `loginAsUser` in the same file.
+  - A simulated audit-log DB failure during logout no longer crashes the action — the cookie still clears and the redirect to `/login` still happens.
+  - No change to `LOGOUT` event semantics on the healthy path.
+
+## TECH-058 — reportRouteError buckets every boundary-caught error under one generic event/route
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Observability
+- **Type:** Chore
+- **Summary:** `reportRouteError` (`src/app/error-actions.ts`) logs every error caught by any `error.tsx`/`global-error.tsx` boundary under the fixed event name `app.route_error.failed`, with `route` set to the boundary file itself rather than the action/module that actually failed — unlike every explicit try/catch site in the app, which uses a `<domain>.<action>.failed` event name and the real file as `route`.
+- **Description:**
+  Found during an observability audit re-run (2026-08-20). This degrades `ErrorEvent` signature dedup and Telegram alerting for anything that falls through to a boundary instead of being caught locally: two unrelated failures with similar error messages can end up bucketed together by message text alone, since the route component of the signature is always the same boundary file. Lower priority than the try/catch gaps this surfaces (see TECH-057) — this is a quality-of-signal issue, not a missing-coverage one, since the boundary itself does still call `captureServerError` today.
+- **Acceptance Criteria:**
+  - Where feasible, callers of the error boundary pass along a more specific origin (e.g. the failing action's name/route) so `reportRouteError` can forward a meaningful `route`/`event` instead of the boundary's own file — or, if not practically threadable from a client error boundary, this card is closed as "accepted as a last-resort bucket" with a one-line note in the description explaining why, rather than left open indefinitely.
+  - No regression to the boundary's existing retry UI or its guarantee that every uncaught error still produces exactly one `ErrorEvent` row.
+
+## TECH-057 — setPasswordFromInvite doesn't wrap consumeInvite in try/catch
+
+- **Status:** TODO
+- **Priority:** Medium
+- **Area:** Observability / Auth
+- **Type:** Fix
+- **Summary:** `setPasswordFromInvite` (`src/lib/auth/invite-actions.ts:44`) calls `consumeInvite` (a `$transaction` with 4 writes) with no try/catch, unlike `createInvite` in the same file, which already does this correctly.
+- **Description:**
+  Found during an observability audit re-run (2026-08-20). A DB failure during password-set — covering both new-user onboarding and the newer PROD-062 password-reset-for-existing-users flow — currently falls through to the generic root `error.tsx` boundary (see TECH-058) instead of getting the domain-specific event name and route every other mutation in the app uses. This is the last server action still inconsistent with the try/catch + `captureServerError` pattern the rest of the codebase already follows on this security-critical path.
+- **Acceptance Criteria:**
+  - `setPasswordFromInvite`'s call to `consumeInvite` is wrapped in try/catch.
+  - On failure, it calls `captureServerError` with a distinct event (e.g. `auth.invite.consume.failed`) and the real route, then returns the existing generic user-facing error state instead of throwing.
+  - Existing success/error-state behavior (`used`/`expired`/`invalid` token cases, validation errors) is unchanged.
+
 ## TECH-056 — PasswordSetupToken.userId unindexed, filtered on every invite/reset issuance
 
 - **Status:** TODO

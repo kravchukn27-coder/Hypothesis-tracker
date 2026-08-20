@@ -10,6 +10,7 @@ import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions"
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
 import { captureServerError } from "@/lib/log";
+import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 
 async function auditBacklogEvent(event: string, metadata: Record<string, unknown>) {
   const user = await getCurrentUser();
@@ -22,9 +23,9 @@ async function requireAuthenticatedUser() {
   return user;
 }
 
-async function mutationFailure(event: string, error: unknown, userId: string) {
+async function mutationFailure<T extends object = Record<string, never>>(event: string, error: unknown, userId: string): Promise<ActionResult<T>> {
   await captureServerError({ event, route: "src/app/backlog/actions.ts", error, userId });
-  return { error: "Не удалось сохранить изменения. Попробуйте ещё раз." };
+  return actionFailure<T>("Не удалось сохранить изменения. Попробуйте ещё раз.");
 }
 
 const hypothesisFormSchema = z.object({
@@ -158,10 +159,10 @@ export async function getFunnelLevels() {
 const HYPOTHESIS_STATUSES = ["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD", "DONE"] as const;
 const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 
-export async function updateHypothesisStatus(id: string, status: string) {
+export async function updateHypothesisStatus(id: string, status: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   const parsed = statusSchema.safeParse(status);
-  if (!parsed.success) return { error: "Некорректный статус гипотезы." };
+  if (!parsed.success) return actionFailure("Некорректный статус гипотезы.");
 
   try {
     const before = await prisma.hypothesis.findUnique({ where: { id }, select: { status: true } });
@@ -176,6 +177,7 @@ export async function updateHypothesisStatus(id: string, status: string) {
 
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
+  return actionSuccess();
 }
 
 /** Starts the experiment workflow from an Accepted backlog row. */
@@ -232,7 +234,7 @@ export async function deleteHypothesis(id: string): Promise<{ error?: string }> 
   redirect("/backlog");
 }
 
-export async function archiveHypothesis(id: string) {
+export async function archiveHypothesis(id: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try {
     await prisma.hypothesis.update({ where: { id }, data: { archived: true, archivedAt: new Date() } });
@@ -240,9 +242,10 @@ export async function archiveHypothesis(id: string) {
   } catch (error) { return mutationFailure("backlog.hypothesis.archive.failed", error, user.id); }
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
+  return actionSuccess();
 }
 
-export async function unarchiveHypothesis(id: string) {
+export async function unarchiveHypothesis(id: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try {
     await prisma.hypothesis.update({ where: { id }, data: { archived: false, archivedAt: null } });
@@ -250,14 +253,16 @@ export async function unarchiveHypothesis(id: string) {
   } catch (error) { return mutationFailure("backlog.hypothesis.unarchive.failed", error, user.id); }
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
+  return actionSuccess();
 }
 
-export async function archiveHypotheses(ids: string[]): Promise<{ error?: string } | void> {
+export async function archiveHypotheses(ids: string[]): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
-  if (ids.length === 0) return;
+  if (ids.length === 0) return actionSuccess();
   try { await prisma.hypothesis.updateMany({ where: { id: { in: ids } }, data: { archived: true, archivedAt: new Date() } }); }
   catch (error) { return mutationFailure("backlog.hypotheses.archive.failed", error, user.id); }
   revalidatePath("/backlog");
+  return actionSuccess();
 }
 
 /**
@@ -265,9 +270,9 @@ export async function archiveHypotheses(ids: string[]): Promise<{ error?: string
  * hypothesis that still has experiments) — skips those and deletes
  * the rest, reporting the skip count instead of failing the batch.
  */
-export async function deleteHypotheses(ids: string[]): Promise<{ error?: string } | void> {
+export async function deleteHypotheses(ids: string[]): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
-  if (ids.length === 0) return;
+  if (ids.length === 0) return actionSuccess();
   try {
   const hypotheses = await prisma.hypothesis.findMany({
     where: { id: { in: ids } },
@@ -282,9 +287,8 @@ export async function deleteHypotheses(ids: string[]): Promise<{ error?: string 
   }
 
   if (blocked > 0) {
-    return {
-      error: `Удален${deletable.length === 1 ? "а" : deletable.length === 0 ? "" : "о"} ${deletable.length}. Пропущен${blocked === 1 ? "а" : "о"} ${blocked} — с ${blocked === 1 ? "ней" : "ними"} связаны эксперименты, сначала удали их.`,
-    };
+    return actionFailure(`Удален${deletable.length === 1 ? "а" : deletable.length === 0 ? "" : "о"} ${deletable.length}. Пропущен${blocked === 1 ? "а" : "о"} ${blocked} — с ${blocked === 1 ? "ней" : "ними"} связаны эксперименты, сначала удали их.`);
   }
   } catch (error) { return mutationFailure("backlog.hypotheses.delete.failed", error, user.id); }
+  return actionSuccess();
 }

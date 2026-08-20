@@ -10,6 +10,7 @@ import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
 import { captureServerError } from "@/lib/log";
+import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 
 async function auditExperimentEvent(event: string, metadata: Record<string, unknown>) {
   const user = await getCurrentUser();
@@ -22,9 +23,9 @@ async function requireAuthenticatedUser() {
   return user;
 }
 
-async function mutationFailure(event: string, error: unknown, userId: string) {
+async function mutationFailure<T extends object = Record<string, never>>(event: string, error: unknown, userId: string): Promise<ActionResult<T>> {
   await captureServerError({ event, route: "src/app/experiments/actions.ts", error, userId });
-  return { error: "Не удалось сохранить изменения. Попробуйте ещё раз." };
+  return actionFailure<T>("Не удалось сохранить изменения. Попробуйте ещё раз.");
 }
 
 // TECH-005: "no status" (the Status field's "—" option) submits the
@@ -200,7 +201,7 @@ async function resolveExperimentTagIds(data: {
  * never accumulates more than the one level its hypothesis currently
  * has).
  */
-export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: string): Promise<{ error?: string } | void> {
+export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try {
   const [hypothesis, experiments] = await Promise.all([
@@ -218,6 +219,7 @@ export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: stri
   );
   revalidatePath("/backlog");
   experiments.forEach((experiment) => revalidatePath(`/experiments/${experiment.id}`));
+  return actionSuccess();
   } catch (error) { return mutationFailure("experiments.funnel_levels.sync.failed", error, user.id); }
 }
 
@@ -412,10 +414,10 @@ async function clearHiddenFlagIfNoLongerDone(experimentId: string) {
 // (shared with the always-required per-week actions).
 const stageOrNoneSchema = z.union([stageSchema, z.literal("NONE")]);
 
-export async function updateExperimentStage(id: string, stage: string) {
+export async function updateExperimentStage(id: string, stage: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   const parsed = stageOrNoneSchema.safeParse(stage);
-  if (!parsed.success) return { error: "Некорректный этап эксперимента." };
+  if (!parsed.success) return actionFailure("Некорректный этап эксперимента.");
   try {
 
   // BUG-005 follow-up #2: confirmed with the user — the list's Status
@@ -429,13 +431,13 @@ export async function updateExperimentStage(id: string, stage: string) {
   if (parsed.data === "NONE") {
     // Can't unset a specific week's stage from this cell — deleting
     // the week is the way to do that (Calendar/detail card).
-    if (hasWeeks) return;
+    if (hasWeeks) return actionSuccess();
     await prisma.experiment.update({ where: { id }, data: { stage: null } });
     await auditExperimentEvent("EXPERIMENT_STAGE_CHANGED", { experimentId: id, after: null });
     revalidatePath(`/experiments/${id}`);
     revalidatePath("/calendar");
     await syncHypothesisStatusForExperiment(id);
-    return;
+    return actionSuccess();
   }
 
   if (hasWeeks) {
@@ -458,6 +460,7 @@ export async function updateExperimentStage(id: string, stage: string) {
   revalidatePath("/calendar");
   await syncHypothesisStatusForExperiment(id);
   await auditExperimentEvent("EXPERIMENT_STAGE_CHANGED", { experimentId: id, after: parsed.data });
+  return actionSuccess();
   } catch (error) { return mutationFailure("experiments.stage.update.failed", error, user.id); }
 }
 
@@ -465,10 +468,10 @@ export async function updateExperimentDates(
   id: string,
   startDate: string | null,
   endDate: string | null,
-) {
+): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try {
-    if (await hasWeekStages(id)) return;
+    if (await hasWeekStages(id)) return actionSuccess();
     await prisma.experiment.update({
     where: { id },
     data: { startDate: toDate(startDate ?? undefined), endDate: toDate(endDate ?? undefined) },
@@ -476,22 +479,25 @@ export async function updateExperimentDates(
   } catch (error) { return mutationFailure("experiments.dates.update.failed", error, user.id); }
 
   revalidatePath(`/experiments/${id}`);
+  return actionSuccess();
 }
 
-export async function updateExperimentRollout(id: string, rollout: string) {
+export async function updateExperimentRollout(id: string, rollout: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try { await prisma.experiment.update({ where: { id }, data: { rollout: rollout.trim() || null } }); }
   catch (error) { return mutationFailure("experiments.rollout.update.failed", error, user.id); }
   revalidatePath("/calendar");
   revalidatePath(`/experiments/${id}`);
+  return actionSuccess();
 }
 
-export async function updateExperimentAuthor(id: string, author: string) {
+export async function updateExperimentAuthor(id: string, author: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try { await prisma.experiment.update({ where: { id }, data: { author: author.trim() || null } }); }
   catch (error) { return mutationFailure("experiments.author.update.failed", error, user.id); }
   revalidatePath("/calendar");
   revalidatePath(`/experiments/${id}`);
+  return actionSuccess();
 }
 
 /**
@@ -511,12 +517,12 @@ export async function updateExperimentAuthor(id: string, author: string) {
  * the subset is reinserted as a contiguous block at the position its
  * first member used to occupy.
  */
-export async function reorderCalendarExperiments(orderedExperimentIds: string[]): Promise<{ error?: string }> {
+export async function reorderCalendarExperiments(orderedExperimentIds: string[]): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { error: "Сессия истекла. Обновите страницу и войдите снова." };
+  if (!user) return actionFailure("Сессия истекла. Обновите страницу и войдите снова.");
   const parsed = z.array(z.string().trim().min(1)).min(1).max(500).safeParse(orderedExperimentIds);
   if (!parsed.success || new Set(parsed.data).size !== parsed.data.length) {
-    return { error: "Некорректный порядок экспериментов." };
+    return actionFailure("Некорректный порядок экспериментов.");
   }
 
   try {
@@ -526,7 +532,7 @@ export async function reorderCalendarExperiments(orderedExperimentIds: string[])
   });
   const activeIds = new Set(allActive.map((e) => e.id));
   if (!parsed.data.every((id) => activeIds.has(id))) {
-    return { error: "Часть экспериментов больше недоступна. Обновите страницу." };
+    return actionFailure("Часть экспериментов больше недоступна. Обновите страницу.");
   }
 
   const subsetIds = new Set(parsed.data);
@@ -557,7 +563,7 @@ export async function reorderCalendarExperiments(orderedExperimentIds: string[])
     metadata: { experimentIds: parsed.data },
     route: "src/app/experiments/actions.ts",
   });
-  return {};
+  return actionSuccess();
   } catch (error) { return mutationFailure("experiments.calendar.reorder.failed", error, user.id); }
 }
 
@@ -571,10 +577,10 @@ export async function setExperimentWeekStage(
   experimentId: string,
   weekStartISO: string,
   stage: string,
-): Promise<{ becameDone: boolean; error?: string }> {
+): Promise<ActionResult<{ becameDone: boolean }>> {
   const user = await requireAuthenticatedUser();
   const parsedStage = stageSchema.safeParse(stage);
-  if (!parsedStage.success) return { becameDone: false };
+  if (!parsedStage.success) return actionFailure("Некорректный этап эксперимента.");
   try {
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
 
@@ -596,15 +602,15 @@ export async function setExperimentWeekStage(
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
 
-    return { becameDone };
+    return actionSuccess({ becameDone });
   } catch (error) {
     const result = await mutationFailure("experiments.week_stage.set.failed", error, user.id);
-    return { becameDone: false, error: result.error };
+    return actionFailure<{ becameDone: boolean }>(result.error!);
   }
 }
 
 /** PROD-025: completes only the dangling weekly stage from the Calendar reminder. */
-export async function completeExperimentWeek(experimentId: string, weekStartISO: string) {
+export async function completeExperimentWeek(experimentId: string, weekStartISO: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
   try { await prisma.experimentWeekStage.updateMany({
@@ -614,6 +620,7 @@ export async function completeExperimentWeek(experimentId: string, weekStartISO:
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
 /**
@@ -625,7 +632,7 @@ export async function completeExperimentWeek(experimentId: string, weekStartISO:
  * existing gap-tolerant drag/resize behavior. No-ops if the week
  * doesn't exist (already deleted, e.g. a stale double-click).
  */
-export async function deleteExperimentWeek(experimentId: string, weekStartISO: string) {
+export async function deleteExperimentWeek(experimentId: string, weekStartISO: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
   try {
@@ -639,6 +646,7 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
 /**
@@ -646,18 +654,20 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
  * prompt shown when a week's stage newly makes the experiment's
  * derived stage Done (see `setExperimentWeekStage`'s `becameDone`).
  */
-export async function hideExperimentFromCalendar(experimentId: string) {
+export async function hideExperimentFromCalendar(experimentId: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try { await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: true } }); }
   catch (error) { return mutationFailure("experiments.calendar.hide.failed", error, user.id); }
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
-export async function showExperimentOnCalendarWhenDone(experimentId: string) {
+export async function showExperimentOnCalendarWhenDone(experimentId: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try { await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: false } }); }
   catch (error) { return mutationFailure("experiments.calendar.show.failed", error, user.id); }
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
 /**
@@ -665,7 +675,7 @@ export async function showExperimentOnCalendarWhenDone(experimentId: string) {
  * entry (or the current week if it has none yet), defaulting to the
  * last entry's stage — the detail card's "+ Добавить неделю" button.
  */
-export async function addNextExperimentWeek(experimentId: string) {
+export async function addNextExperimentWeek(experimentId: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try {
     const last = await prisma.experimentWeekStage.findFirst({
@@ -688,6 +698,7 @@ export async function addNextExperimentWeek(experimentId: string) {
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
 function parseISODate(iso: string): Date {
@@ -738,13 +749,13 @@ export async function shiftExperimentWeeks(
   blockStartISO: string,
   blockEndISO: string,
   deltaWeeks: number,
-) : Promise<{ changed: boolean; error?: string }> {
+) : Promise<ActionResult<{ changed: boolean }>> {
   const user = await requireAuthenticatedUser();
-  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return { changed: false };
+  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return actionSuccess({ changed: false });
   try {
 
   const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
-  if (entries.length === 0) return { changed: false };
+  if (entries.length === 0) return actionSuccess({ changed: false });
 
   const newStart = new Date(parseISODate(blockStartISO).getTime() + deltaWeeks * 7 * MS_PER_DAY);
   const newEnd = new Date(parseISODate(blockEndISO).getTime() + deltaWeeks * 7 * MS_PER_DAY);
@@ -758,7 +769,7 @@ export async function shiftExperimentWeeks(
     },
     select: { id: true },
   });
-  if (collisionEntries.length > 0) return { changed: false }; // would land on another block — no-op
+  if (collisionEntries.length > 0) return actionSuccess({ changed: false }); // would land on another block — no-op
 
   await prisma.$transaction([
     prisma.experimentWeekStage.deleteMany({
@@ -780,8 +791,8 @@ export async function shiftExperimentWeeks(
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
-  return { changed: true };
-  } catch (error) { const result = await mutationFailure("experiments.weeks.shift.failed", error, user.id); return { changed: false, error: result.error }; }
+  return actionSuccess({ changed: true });
+  } catch (error) { return mutationFailure<{ changed: boolean }>("experiments.weeks.shift.failed", error, user.id); }
 }
 
 /**
@@ -797,19 +808,19 @@ export async function resizeExperimentWeeks(
   blockStartISO: string,
   blockEndISO: string,
   deltaWeeks: number,
-) : Promise<{ changed: boolean; error?: string }> {
+) : Promise<ActionResult<{ changed: boolean }>> {
   const user = await requireAuthenticatedUser();
-  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return { changed: false };
+  if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return actionSuccess({ changed: false });
   try {
 
   const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
-  if (entries.length === 0) return { changed: false };
+  if (entries.length === 0) return actionSuccess({ changed: false });
 
   if (deltaWeeks > 0) {
     const last = entries[entries.length - 1];
     const rangeStart = new Date(last.weekStart.getTime() + MS_PER_DAY * 7);
     const rangeEnd = new Date(last.weekStart.getTime() + deltaWeeks * 7 * MS_PER_DAY);
-    if (await hasEntriesInRange(experimentId, rangeStart, rangeEnd)) return { changed: false }; // would reach another block — no-op
+    if (await hasEntriesInRange(experimentId, rangeStart, rangeEnd)) return actionSuccess({ changed: false }); // would reach another block — no-op
 
     const additions = Array.from({ length: deltaWeeks }, (_, i) => ({
       experimentId,
@@ -831,8 +842,8 @@ export async function resizeExperimentWeeks(
 
   revalidatePath(`/experiments/${experimentId}`);
   revalidatePath("/calendar");
-  return { changed: true };
-  } catch (error) { const result = await mutationFailure("experiments.weeks.resize.failed", error, user.id); return { changed: false, error: result.error }; }
+  return actionSuccess({ changed: true });
+  } catch (error) { return mutationFailure<{ changed: boolean }>("experiments.weeks.resize.failed", error, user.id); }
 }
 
 export async function getFunnelLevels() {
@@ -897,7 +908,7 @@ export async function deleteExperiment(id: string): Promise<{ error?: string }> 
   redirect("/calendar");
 }
 
-export async function archiveExperiment(id: string) {
+export async function archiveExperiment(id: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try { await prisma.experiment.update({
     where: { id },
@@ -906,9 +917,10 @@ export async function archiveExperiment(id: string) {
   catch (error) { return mutationFailure("experiments.experiment.archive.failed", error, user.id); }
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
-export async function unarchiveExperiment(id: string) {
+export async function unarchiveExperiment(id: string): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
   try { await prisma.experiment.update({
     where: { id },
@@ -917,21 +929,23 @@ export async function unarchiveExperiment(id: string) {
   catch (error) { return mutationFailure("experiments.experiment.unarchive.failed", error, user.id); }
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
-export async function archiveExperiments(ids: string[]): Promise<{ error?: string } | void> {
+export async function archiveExperiments(ids: string[]): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
-  if (ids.length === 0) return;
+  if (ids.length === 0) return actionSuccess();
   try { await prisma.experiment.updateMany({
     where: { id: { in: ids } },
     data: { archived: true, archivedAt: new Date() },
   }); } catch (error) { return mutationFailure("experiments.experiments.archive.failed", error, user.id); }
   revalidatePath("/calendar");
+  return actionSuccess();
 }
 
-export async function deleteExperiments(ids: string[]): Promise<{ error?: string } | void> {
+export async function deleteExperiments(ids: string[]): Promise<ActionResult> {
   const user = await requireAuthenticatedUser();
-  if (ids.length === 0) return;
+  if (ids.length === 0) return actionSuccess();
   try {
   const experiments = await prisma.experiment.findMany({
     where: { id: { in: ids } },
@@ -946,4 +960,5 @@ export async function deleteExperiments(ids: string[]): Promise<{ error?: string
     revalidatePath(`/backlog/${hypothesisId}`);
   }
   } catch (error) { return mutationFailure("experiments.experiments.delete.failed", error, user.id); }
+  return actionSuccess();
 }

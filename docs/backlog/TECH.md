@@ -54,7 +54,7 @@
 
 ## TECH-046 — Server Action return-value contract has no shared shape
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Architecture
 - **Type:** Chore

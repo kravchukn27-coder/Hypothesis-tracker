@@ -93,8 +93,7 @@ Stop only when: **PASS** (ready for review) or **blocked/FAIL** (clear reason, s
 ## Backlog And Docs Update
 
 Update only after self-audit PASS, and only the current task's card:
-- Mark status per `docs/backlog/WORKFLOW.md`.
-- On DONE: add a note to `docs/VERSIONS.md` and remove the card from its backlog file (this project's workflow closes cards out of the backlog files, unlike repos that just flip a status field — see `docs/backlog/WORKFLOW.md` → Lifecycle).
+- On DONE (or CANCELLED/WONTDO): flip the status field on the same card and leave it in place — don't remove it from the backlog file and don't duplicate it into `docs/VERSIONS.md` (see `docs/backlog/WORKFLOW.md` → Lifecycle).
 - Don't touch other backlog cards or `docs/PROJECT_CONTEXT.md` unless the task changed architecture/data model/screens.
 
 ---

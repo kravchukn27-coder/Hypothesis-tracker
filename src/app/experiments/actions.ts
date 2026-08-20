@@ -776,6 +776,7 @@ export async function shiftExperimentWeeks(
     ),
   ]);
   await recomputeExperimentDerivedFields(experimentId);
+  await clearHiddenFlagIfNoLongerDone(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
 
   revalidatePath(`/experiments/${experimentId}`);
@@ -827,6 +828,7 @@ export async function resizeExperimentWeeks(
     }
   }
   await recomputeExperimentDerivedFields(experimentId);
+  await clearHiddenFlagIfNoLongerDone(experimentId);
   await syncHypothesisStatusForExperiment(experimentId);
 
   revalidatePath(`/experiments/${experimentId}`);

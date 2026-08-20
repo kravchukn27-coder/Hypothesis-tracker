@@ -29,16 +29,17 @@ this project's chat history are not the backlog.
 ## Statuses
 
 Active: `TODO`, `IN PROGRESS`, `BLOCKED`, `REVIEW`
-Closed: `DONE`, `CANCELLED`, `WONTDO` — move closed tasks out of the
-active files into a short note in `docs/VERSIONS.md` when they ship;
-don't leave closed tasks sitting in the backlog files.
+Closed: `DONE`, `CANCELLED`, `WONTDO` — flip the status on the same
+card and leave it in place. Don't remove closed cards from the backlog
+files and don't duplicate them into `docs/VERSIONS.md` — the status
+field is the record.
 
 ## Lifecycle
 
 1. New task → add to the correct file in `docs/backlog/`.
 2. Work starts → update status on the same card, don't duplicate it.
-3. Work completes → mark closed, note it in `docs/VERSIONS.md`, remove
-   the card from the backlog file.
+3. Work completes → flip status to `DONE` (or `CANCELLED`/`WONTDO`) on
+   the same card. Nothing else to move.
 
 ## Hard rules (mirrors Battery Pricing App's AGENTS.md, simplified)
 

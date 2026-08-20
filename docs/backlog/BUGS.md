@@ -35,7 +35,7 @@
 
 ## BUG-020: `resizeExperimentWeeks` never clears the stale calendar-hidden flag
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Summary:** Unlike `setExperimentWeekStage` and `deleteExperimentWeek`,
   `resizeExperimentWeeks` doesn't call `clearHiddenFlagIfNoLongerDone`
@@ -58,7 +58,7 @@
 - **Files:** `src/app/experiments/actions.ts:707-745`
   (`resizeExperimentWeeks`), `src/app/experiments/actions.ts:651-697`
   (`shiftExperimentWeeks`, same gap).
-
----
-
-None else open. See `docs/VERSIONS.md` for closed items.
+- **Resolution note:** Also fixed `shiftExperimentWeeks` (same gap,
+  flagged in this card's description/Files) — same one-line insertion.
+  Verified by code parity with the two working call sites, not a live
+  browser pass (per user request to keep this proportional).

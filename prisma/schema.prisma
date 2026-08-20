@@ -70,7 +70,7 @@ model User {
   isActive            Boolean              @default(true)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
-  invitedBy           User?                @relation("Invites", fields: [invitedById], references: [id])
+  invitedBy           User?                @relation("Invites", fields: [invitedById], references: [id], onDelete: SetNull)
   invitedById         String?
   invitedUsers        User[]               @relation("Invites")
   passwordSetupTokens PasswordSetupToken[] @relation("PasswordSetupTokens")

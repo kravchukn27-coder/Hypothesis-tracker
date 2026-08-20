@@ -302,10 +302,11 @@
 - **Type:** Fix
 - **Summary:** `AuditLog` has zero indexes, but the Activity page filters by `userId`, does substring search on `event`, and always runs `orderBy: createdAt desc, take: 100`.
 - **Description:**
-  Found during a data/schema audit (2026-08-20). This table is append-only and grows forever — every backlog/experiment action writes an audit row across dozens of call sites — and is never pruned. Sorting 100 rows out of an ever-growing unindexed table means a full scan + sort on every Activity page view, and it only gets worse over the project's life.
+  Found during a data/schema audit (2026-08-20) — a duplicate of the same finding from an earlier performance audit the same day was merged into this card (was TECH-018) rather than tracked twice. This table is append-only and grows forever — every backlog/experiment action writes an audit row across dozens of call sites — and is never pruned. Sorting 100 rows out of an ever-growing unindexed table means a full scan + sort on every Activity page view, and it only gets worse over the project's life. `event` is filtered via `contains` (case-insensitive substring), which a plain btree index can't serve — leave that column as-is unless full-text search becomes a real need. This is a `prisma/schema.prisma` change, so it falls under this project's "don't change the schema outside a task that explicitly calls for it" rule — this card is that explicit call.
 - **Acceptance Criteria:**
   - Add `@@index([createdAt])` at minimum; consider `@@index([userId, createdAt])` given `userId` is a common filter.
   - `npx prisma db push` applied cleanly against the local dev DB.
+  - `/activity` still filters/sorts/paginates identically — no behavior change, only the query plan improves.
   - (Retention/pruning policy is a separate concern, not required for this card.)
 
 ## TECH-027 — Experiment: missing indexes on hypothesisId, archived, startDate
@@ -440,25 +441,6 @@
   - On a DB failure, `getCurrentUser` returns `null` (safe default — treated as "no session") rather than throwing.
   - The failure is logged via `captureServerError` (or equivalent) rather than silently swallowed.
   - Existing session-revocation behavior (mismatched `sessionVersion`, expired/tampered token, inactive user) is unchanged for the DB-healthy path.
-
-## TECH-018 — Add indexes to AuditLog for /activity's filter/sort columns
-
-- **Status:** TODO
-- **Priority:** Medium
-- **Area:** Performance
-- **Type:** Chore
-- **Summary:** `AuditLog` (`prisma/schema.prisma`) has no `@@index` at all, despite `src/app/activity/page.tsx` filtering by `userId`/`event` and sorting by `createdAt desc` (`take: 100`) on every load of `/activity`.
-- **Description:**
-  Found during a performance audit (2026-08-20). Every `/activity` request — filtered or not — forces a full sequential scan + sort of the whole `AuditLog` table to return its top 100 rows, and the table only grows (every audited mutation writes to it).
-
-  Add `@@index([createdAt])` at minimum — covers the unfiltered default sort plus the `take: 100`. Consider `@@index([userId])` too if user-filtering turns out to be common in practice. `event` uses `contains` (case-insensitive substring), which a plain btree index can't serve — leave it as-is unless full-text search becomes a real need.
-
-  This is a `prisma/schema.prisma` change, so it falls under this project's "don't change the schema outside a task that explicitly calls for it" rule — this card is that explicit call.
-- **Acceptance Criteria:**
-  - `AuditLog` has `@@index([createdAt])` (and `@@index([userId])` if implemented).
-  - `npx prisma db push` applies cleanly against the local dev DB.
-  - `/activity` still filters/sorts/paginates identically — no behavior change, only the query plan improves.
-  - No other model or column touched.
 
 ## TECH-017 — Backlog/AllExperimentsTable: selection context re-renders every row checkbox on any toggle
 

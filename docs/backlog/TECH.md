@@ -58,13 +58,15 @@
 
 ## TECH-058 — reportRouteError buckets every boundary-caught error under one generic event/route
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Observability
 - **Type:** Chore
 - **Summary:** `reportRouteError` (`src/app/error-actions.ts`) logs every error caught by any `error.tsx`/`global-error.tsx` boundary under the fixed event name `app.route_error.failed`, with `route` set to the boundary file itself rather than the action/module that actually failed — unlike every explicit try/catch site in the app, which uses a `<domain>.<action>.failed` event name and the real file as `route`.
 - **Description:**
   Found during an observability audit re-run (2026-08-20). This degrades `ErrorEvent` signature dedup and Telegram alerting for anything that falls through to a boundary instead of being caught locally: two unrelated failures with similar error messages can end up bucketed together by message text alone, since the route component of the signature is always the same boundary file. Lower priority than the try/catch gaps this surfaces (see TECH-057) — this is a quality-of-signal issue, not a missing-coverage one, since the boundary itself does still call `captureServerError` today.
+
+  **Resolution (2026-08-20):** Accepted as the last-resort bucket: a production Next.js client `error.tsx` receives only a generic server-error message and `digest`, not the failing Server Component/Action origin. Threading a made-up origin would reduce signal or risk duplicate events; specific failures remain the responsibility of their local `try/catch` logging paths.
 - **Acceptance Criteria:**
   - Where feasible, callers of the error boundary pass along a more specific origin (e.g. the failing action's name/route) so `reportRouteError` can forward a meaningful `route`/`event` instead of the boundary's own file — or, if not practically threadable from a client error boundary, this card is closed as "accepted as a last-resort bucket" with a one-line note in the description explaining why, rather than left open indefinitely.
   - No regression to the boundary's existing retry UI or its guarantee that every uncaught error still produces exactly one `ErrorEvent` row.

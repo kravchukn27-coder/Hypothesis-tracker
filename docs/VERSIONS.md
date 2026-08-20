@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- [BUG-017] Re-enabled login rate limiting —
+  `LOGIN_RATE_LIMIT_ENABLED` (`src/lib/auth/login-rate-limit.ts`) was a
+  temporary `false` switch left in from earlier work; the bucket
+  implementation (IP + email scoped, 10 failures / 15 min → 15 min
+  cooldown) was already fully built and already wired into
+  `loginAsUser` — flipping the flag is the only change needed. Verified
+  by code: `isLoginRateLimited`/`recordLoginFailure` gate on the flag
+  and `src/lib/auth/actions.ts` already calls them correctly around
+  login (checked before, recorded on failure, cleared on success); ran
+  `npm run verify:auth` (passes) rather than exercising it live in the
+  browser for a one-line flag flip.
+
 - [BUG-019] Fixed `compareByManualOrder` (`src/lib/calendar.ts`) sorting
   `manualOrder === null` experiments *before* explicit `manualOrder`
   ones instead of after — a brand-new experiment (always born with

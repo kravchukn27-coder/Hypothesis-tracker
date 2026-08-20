@@ -33,27 +33,6 @@
 
 ---
 
-## BUG-017: Login rate limiting is disabled
-
-- **Status:** TODO
-- **Priority:** Medium
-- **Summary:** `LOGIN_RATE_LIMIT_ENABLED = false` in
-  `src/lib/auth/login-rate-limit.ts` makes `loginAsUser` unthrottled —
-  `isLoginRateLimited`/`recordLoginFailure` are no-ops. Found during a
-  security audit (2026-08-20).
-- **Description:** The rate-limit bucket implementation (IP + email
-  scoped, cooldown-based) is fully built and only switched off by this
-  flag, per the comment "Temporary switch: retain the rate-limit
-  implementation, but do not block logins." Re-enabling it restores
-  brute-force protection on `/login` without any other code change.
-- **Acceptance Criteria:**
-  - `LOGIN_RATE_LIMIT_ENABLED` is `true` (or the flag is removed and the
-    limiter always runs).
-  - Verified in the browser: repeated failed logins from the same
-    IP/email trip the cooldown and return the `ratelimit` error.
-
----
-
 ## BUG-020: `resizeExperimentWeeks` never clears the stale calendar-hidden flag
 
 - **Status:** TODO

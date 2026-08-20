@@ -2,8 +2,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export const LOGIN_RATE_LIMIT_MAX_FAILURES = 10;
-// Temporary switch: retain the rate-limit implementation, but do not block logins.
-export const LOGIN_RATE_LIMIT_ENABLED = false;
+export const LOGIN_RATE_LIMIT_ENABLED = true;
 const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_RATE_LIMIT_COOLDOWN_MS = 15 * 60 * 1000;
 

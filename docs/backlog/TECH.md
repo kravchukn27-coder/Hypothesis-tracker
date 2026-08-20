@@ -28,7 +28,7 @@
 
 ## TECH-048 — No local existence/ownership check before mutating by id in several actions — relies on Prisma's uncaught throw
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Fix

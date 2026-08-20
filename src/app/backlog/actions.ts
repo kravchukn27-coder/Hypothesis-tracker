@@ -180,13 +180,13 @@ export async function updateHypothesisStatus(id: string, status: string): Promis
 }
 
 /** Starts the experiment workflow from an Accepted backlog row. */
-export async function takeHypothesisIntoWork(id: string): Promise<{ href: string; error?: string }> {
+export async function takeHypothesisIntoWork(id: string): Promise<ActionResult<{ href: string }>> {
   return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   let experimentId: string | undefined;
   try {
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
-  if (!hypothesis || hypothesis.status !== "ACCEPTED") return { href: "/backlog" };
+  if (!hypothesis || hypothesis.status !== "ACCEPTED") return actionSuccess({ href: "/backlog" });
   // PROD-034: a hypothesis has at most one experiment ever, not just
   // one active at a time — so this checks for any experiment, archived
   // or Done included, not only "still active" ones like before.
@@ -201,15 +201,15 @@ export async function takeHypothesisIntoWork(id: string): Promise<{ href: string
     experimentId = experiment.id;
     // PROD-033: seed the new experiment's Funnel Level from the hypothesis.
     const syncResult = await syncExperimentFunnelLevelsForHypothesis(id);
-    if (syncResult?.error) return { href: "/backlog", error: syncResult.error };
+    if (syncResult?.error) return { ok: false, error: syncResult.error, href: "/backlog" };
   }
     await prisma.hypothesis.update({ where: { id }, data: { status: "IN_PROGRESS" } });
   } catch (error) {
     await mutationFailure("backlog.hypothesis.take_into_work.failed", error, user.id);
-    return { href: "/backlog", error: "Не удалось сохранить изменения. Попробуйте ещё раз." };
+    return { ok: false, error: "Не удалось сохранить изменения. Попробуйте ещё раз.", href: "/backlog" };
   }
   revalidatePath("/backlog"); revalidatePath("/calendar");
-  return { href: experimentId ? `/calendar?experimentId=${experimentId}` : "/calendar" };
+  return actionSuccess({ href: experimentId ? `/calendar?experimentId=${experimentId}` : "/calendar" });
   });
 }
 

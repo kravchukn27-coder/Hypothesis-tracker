@@ -3,10 +3,11 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/Input";
-import { createHypothesisComment, deleteHypothesisComment, type CommentActionState } from "./comments-actions";
+import { createHypothesisComment, deleteHypothesisComment } from "./comments-actions";
+import type { ActionResult } from "@/lib/action-result";
 
 type Comment = { id: string; authorUserId: string; authorName: string; message: string; createdAt: string };
-const initialState: CommentActionState = {};
+const initialState = {} as ActionResult;
 
 export function CommentFeed({ hypothesisId, currentUserId, comments }: { hypothesisId: string; currentUserId: string; comments: Comment[] }) {
   const router = useRouter();
@@ -16,7 +17,7 @@ export function CommentFeed({ hypothesisId, currentUserId, comments }: { hypothe
   const [deleting, startDeleting] = useTransition();
 
   useEffect(() => {
-    if (!state.success) return;
+    if (!state.ok) return;
     formRef.current?.reset();
     router.refresh();
   }, [router, state]);

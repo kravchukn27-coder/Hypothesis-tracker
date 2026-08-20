@@ -2,7 +2,7 @@
 
 ## TECH-062 — Two more Server Actions still return a bespoke shape instead of `ActionResult`
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Architecture
 - **Type:** Chore
@@ -13,6 +13,21 @@
   - `takeHypothesisIntoWork` returns `ActionResult<{href: string}>` (or documents why a bespoke shape is still warranted here).
   - `createHypothesisComment`/`deleteHypothesisComment` return `ActionResult` instead of the separate `CommentActionState` type, with call sites (`CommentFeed.tsx` and friends) updated accordingly.
   - No behavior change to either flow.
+- **Resolution note (2026-08-20):** `takeHypothesisIntoWork` now returns
+  `ActionResult<{ href: string }>` — the two early-return/error paths
+  build the failure shape directly (`{ ok: false, error, href }`) so
+  `href` stays populated even on failure, since `TakeInWorkButton`
+  unconditionally navigates via `result.href` today (falls back to
+  `"/backlog"` for the type-only case where `href` is absent).
+  `createHypothesisComment`/`deleteHypothesisComment` return
+  `ActionResult` directly; `CommentActionState` removed.
+  `CommentFeed.tsx` updated (`state.success` → `state.ok`, initial
+  state cast to `ActionResult`). No behavior change. Verified live:
+  added and deleted a comment on a hypothesis detail page, confirmed
+  success path (list update + form reset) and delete path both work.
+  `takeHypothesisIntoWork` confirmed by code parity — same
+  `ActionResult` pattern, not exercised live to avoid mutating a
+  hypothesis's status/experiment in the shared dev DB.
 
 ## TECH-061 — Session guard (getCurrentUser + redirect to /login) copy-pasted across four files
 

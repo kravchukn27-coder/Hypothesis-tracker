@@ -301,7 +301,7 @@
 
 ## TECH-029 — ErrorEvent.lastUserId unindexed despite being filtered on the Activity page
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Data model
 - **Type:** Fix
@@ -311,6 +311,9 @@
 - **Acceptance Criteria:**
   - Add `@@index([lastUserId])`, or a composite `@@index([lastUserId, lastSeenAt])` covering both the filter and the sort used by the Activity page query.
   - `npx prisma db push` applied cleanly against the local dev DB.
+- **Resolution note:** Added the composite `[lastUserId, lastSeenAt]` index to
+  match Activity's optional user filter and descending time order. Applied
+  successfully with `prisma db push` to the local database.
 
 ## TECH-028 — AuditLog has no indexes despite being filtered/sorted on every Activity page load
 

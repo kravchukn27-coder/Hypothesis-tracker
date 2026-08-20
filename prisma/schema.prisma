@@ -129,6 +129,7 @@ model ErrorEvent {
   lastMetadata  Json?
 
   @@index([lastSeenAt])
+  @@index([lastUserId, lastSeenAt])
   @@index([route])
 }
 

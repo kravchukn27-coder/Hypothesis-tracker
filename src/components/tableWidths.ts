@@ -26,7 +26,10 @@
 // In Experiments, the wider Segment column absorbs the same released
 // width so the Dates column stays in its existing position.
 export const NAME_COL = "w-56";
-export const STATUS_COL = "w-36";
+// UI-062: `In progress` needs enough room for its icon, label, and
+// chevron. Comment gives back the same 16px, preserving the fixed
+// Backlog table width.
+export const STATUS_COL = "w-40";
 export const META_COL = "w-28";
 export const LONG_TEXT_COL = "w-52";
 // Backlog's Funnel Level column (UI-015) — sized for its `Badge`
@@ -40,7 +43,7 @@ export const FUNNEL_LEVEL_COL = "w-40";
 // Widened (was w-60) to absorb the width freed by narrowing
 // FUNNEL_LEVEL_COL and Backlog's local SCORE_COL — Comment is the
 // one genuinely long-form column, it should get the spare room.
-export const COMMENT_COL = "w-72";
+export const COMMENT_COL = "w-68";
 // UI-018: was `w-72` (288px) for the old side-by-side date inputs —
 // its replacement (a short week-range label, e.g. "32–35 нед.") needs
 // far less room.

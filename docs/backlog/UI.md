@@ -107,7 +107,7 @@
 
 ## UI-062 — Backlog Status pill truncates "In progress" — widen STATUS_COL without changing the table's total width
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** UI / Backlog
 - **Type:** Bug (visual)

@@ -59,4 +59,23 @@ describe("setExperimentWeekStage transaction", () => {
     expect(mocks.audit).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
+
+  it("puts an experiment scheduled from the undated panel first in Calendar order", async () => {
+    const update = vi.fn();
+    mocks.transaction.mockImplementationOnce(async (callback) => callback({
+      experiment: {
+        aggregate: vi.fn(async () => ({ _min: { manualOrder: -4 } })),
+        findUnique: vi.fn()
+          .mockResolvedValueOnce({ stage: "DISCOVERY" })
+          .mockResolvedValueOnce({ stage: "DISCOVERY", hypothesisId: "hypothesis-1" }),
+        update,
+      },
+      experimentWeekStage: { upsert: vi.fn() },
+    }));
+
+    const result = await setExperimentWeekStage("experiment-1", "2026-08-17", "DISCOVERY", true);
+
+    expect(result.ok).toBe(true);
+    expect(update).toHaveBeenCalledWith({ where: { id: "experiment-1" }, data: { manualOrder: -5 } });
+  });
 });

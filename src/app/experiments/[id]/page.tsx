@@ -57,6 +57,11 @@ export default async function ExperimentDetailPage({
   const action = updateExperiment.bind(null, experiment.id);
   const currentStage = currentStageOf(experiment);
   const isHiddenFromCalendar = currentStage === "DONE" && experiment.calendarHiddenOnDone === true;
+  // `Experiment.stage` is the derived endpoint of a week plan and is
+  // also what triggers the Calendar's Done prompt. Keep its persistent
+  // "hide from Calendar" action available from the detail card even
+  // while the current week is still at an earlier stage.
+  const canHideFromCalendar = experiment.stage === "DONE" && experiment.calendarHiddenOnDone !== true;
   const calendarStart = experiment.weekStages[0]?.weekStart ?? experiment.startDate;
   const calendarHref = calendarStart
     ? `/calendar?experimentId=${experiment.id}&start=${toDateParam(calendarStart)}`
@@ -136,7 +141,7 @@ export default async function ExperimentDetailPage({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-600">
           <p>Гипотеза: {experiment.hypothesis.name}</p>
           <div className="flex items-center gap-2">
-            {currentStage === "DONE" && !isHiddenFromCalendar && (
+            {canHideFromCalendar && (
               <HideFromCalendarButton experimentId={experiment.id} experimentName={experiment.name} />
             )}
             {calendarHref && !isHiddenFromCalendar && (

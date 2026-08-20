@@ -183,6 +183,7 @@ export async function updateHypothesisStatus(id: string, status: string): Promis
 export async function takeHypothesisIntoWork(id: string): Promise<{ href: string; error?: string }> {
   return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
+  let experimentId: string | undefined;
   try {
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
   if (!hypothesis || hypothesis.status !== "ACCEPTED") return { href: "/backlog" };
@@ -194,8 +195,10 @@ export async function takeHypothesisIntoWork(id: string): Promise<{ href: string
     select: { id: true },
     orderBy: { createdAt: "desc" },
   });
+  experimentId = existing?.id;
   if (!existing) {
-    await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id } });
+    const experiment = await prisma.experiment.create({ data: { name: hypothesis.name, hypothesisId: id }, select: { id: true } });
+    experimentId = experiment.id;
     // PROD-033: seed the new experiment's Funnel Level from the hypothesis.
     const syncResult = await syncExperimentFunnelLevelsForHypothesis(id);
     if (syncResult?.error) return { href: "/backlog", error: syncResult.error };
@@ -206,7 +209,7 @@ export async function takeHypothesisIntoWork(id: string): Promise<{ href: string
     return { href: "/backlog", error: "Не удалось сохранить изменения. Попробуйте ещё раз." };
   }
   revalidatePath("/backlog"); revalidatePath("/calendar");
-  return { href: "/calendar" };
+  return { href: experimentId ? `/calendar?experimentId=${experimentId}` : "/calendar" };
   });
 }
 

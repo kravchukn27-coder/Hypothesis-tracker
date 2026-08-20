@@ -51,7 +51,7 @@ export function WeekHeaderCell({
         if (!experimentId || isPending) return;
         startTransition(async () => {
           try {
-            await setExperimentWeekStage(experimentId, weekStartISO, "DISCOVERY");
+            await setExperimentWeekStage(experimentId, weekStartISO, "DISCOVERY", true);
             setIsSettled(true);
             router.refresh();
             showToast("Эксперимент запланирован на эту неделю.");

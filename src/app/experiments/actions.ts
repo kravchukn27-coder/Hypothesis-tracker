@@ -476,6 +476,7 @@ export async function setExperimentWeekStage(
   experimentId: string,
   weekStartISO: string,
   stage: string,
+  moveToCalendarTop = false,
 ): Promise<ActionResult<{ becameDone: boolean }>> {
   return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
@@ -490,6 +491,16 @@ export async function setExperimentWeekStage(
       update: { stage: parsedStage.data },
       create: { experimentId, weekStart, stage: parsedStage.data },
     });
+    if (moveToCalendarTop) {
+      const { _min } = await tx.experiment.aggregate({
+        where: { archived: false },
+        _min: { manualOrder: true },
+      });
+      await tx.experiment.update({
+        where: { id: experimentId },
+        data: { manualOrder: (_min.manualOrder ?? 0) - 1 },
+      });
+    }
     await recomputeExperimentDerivedFields(experimentId, tx);
     await clearHiddenFlagIfNoLongerDone(experimentId, tx);
     await syncHypothesisStatusForExperiment(experimentId, tx, false);

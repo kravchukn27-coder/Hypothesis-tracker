@@ -9,12 +9,14 @@ import {
   getSegments,
 } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
+import { requireUserPage } from "@/lib/auth/page-guards";
 
 export default async function NewExperimentPage({
   searchParams,
 }: {
   searchParams: Promise<{ hypothesisId?: string }>;
 }) {
+  await requireUserPage();
   const { hypothesisId } = await searchParams;
   if (!hypothesisId) redirect("/backlog");
 

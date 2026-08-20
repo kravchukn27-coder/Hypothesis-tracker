@@ -14,6 +14,12 @@ async function auditExperimentEvent(event: string, metadata: Record<string, unkn
   await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: "src/app/experiments/actions.ts" });
 }
 
+async function requireAuthenticatedUser() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  return user;
+}
+
 // TECH-005: "no status" (the Status field's "—" option) submits the
 // "NONE" sentinel from StageField — normalized to `undefined` here so
 // an unset stage means the field is simply absent, not a seventh enum
@@ -188,6 +194,7 @@ async function resolveExperimentTagIds(data: {
  * has).
  */
 export async function syncExperimentFunnelLevelsForHypothesis(hypothesisId: string) {
+  await requireAuthenticatedUser();
   const [hypothesis, experiments] = await Promise.all([
     prisma.hypothesis.findUnique({ where: { id: hypothesisId }, select: { funnelLevelId: true } }),
     prisma.experiment.findMany({ where: { hypothesisId }, select: { id: true } }),
@@ -231,6 +238,7 @@ export async function createExperiment(
   _prevState: ExperimentFormState,
   formData: FormData,
 ): Promise<ExperimentFormState> {
+  await requireAuthenticatedUser();
   const raw = Object.fromEntries(formData.entries());
   const parsed = createExperimentSchema.safeParse(raw);
   if (!parsed.success) {
@@ -293,6 +301,7 @@ export async function updateExperiment(
   _prevState: ExperimentFormState,
   formData: FormData,
 ): Promise<ExperimentFormState> {
+  await requireAuthenticatedUser();
   const raw = Object.fromEntries(formData.entries());
   const parsed = updateExperimentSchema.safeParse(raw);
   if (!parsed.success) {
@@ -389,6 +398,7 @@ async function clearHiddenFlagIfNoLongerDone(experimentId: string) {
 const stageOrNoneSchema = z.union([stageSchema, z.literal("NONE")]);
 
 export async function updateExperimentStage(id: string, stage: string) {
+  await requireAuthenticatedUser();
   const parsed = stageOrNoneSchema.safeParse(stage);
   if (!parsed.success) return;
 
@@ -439,6 +449,7 @@ export async function updateExperimentDates(
   startDate: string | null,
   endDate: string | null,
 ) {
+  await requireAuthenticatedUser();
   if (await hasWeekStages(id)) return;
 
   await prisma.experiment.update({
@@ -450,12 +461,14 @@ export async function updateExperimentDates(
 }
 
 export async function updateExperimentRollout(id: string, rollout: string) {
+  await requireAuthenticatedUser();
   await prisma.experiment.update({ where: { id }, data: { rollout: rollout.trim() || null } });
   revalidatePath("/calendar");
   revalidatePath(`/experiments/${id}`);
 }
 
 export async function updateExperimentAuthor(id: string, author: string) {
+  await requireAuthenticatedUser();
   await prisma.experiment.update({ where: { id }, data: { author: author.trim() || null } });
   revalidatePath("/calendar");
   revalidatePath(`/experiments/${id}`);
@@ -463,13 +476,12 @@ export async function updateExperimentAuthor(id: string, author: string) {
 
 /** PROD-036: persists the Calendar timeline's explicit row order. */
 export async function reorderCalendarExperiments(orderedExperimentIds: string[]): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Сессия истекла. Обновите страницу и войдите снова." };
   const parsed = z.array(z.string().trim().min(1)).min(1).max(500).safeParse(orderedExperimentIds);
   if (!parsed.success || new Set(parsed.data).size !== parsed.data.length) {
     return { error: "Некорректный порядок экспериментов." };
   }
-
-  const user = await getCurrentUser();
-  if (!user) return { error: "Сессия истекла. Обновите страницу и войдите снова." };
 
   const activeExperiments = await prisma.experiment.findMany({
     where: { id: { in: parsed.data }, archived: false },
@@ -502,6 +514,7 @@ export async function setExperimentWeekStage(
   weekStartISO: string,
   stage: string,
 ): Promise<{ becameDone: boolean }> {
+  await requireAuthenticatedUser();
   const parsedStage = stageSchema.safeParse(stage);
   if (!parsedStage.success) return { becameDone: false };
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
@@ -529,6 +542,7 @@ export async function setExperimentWeekStage(
 
 /** PROD-025: completes only the dangling weekly stage from the Calendar reminder. */
 export async function completeExperimentWeek(experimentId: string, weekStartISO: string) {
+  await requireAuthenticatedUser();
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
   await prisma.experimentWeekStage.updateMany({
     where: { experimentId, weekStart },
@@ -549,6 +563,7 @@ export async function completeExperimentWeek(experimentId: string, weekStartISO:
  * doesn't exist (already deleted, e.g. a stale double-click).
  */
 export async function deleteExperimentWeek(experimentId: string, weekStartISO: string) {
+  await requireAuthenticatedUser();
   const weekStart = startOfWeek(new Date(`${weekStartISO}T00:00:00`));
 
   await prisma.experimentWeekStage.deleteMany({
@@ -568,11 +583,13 @@ export async function deleteExperimentWeek(experimentId: string, weekStartISO: s
  * derived stage Done (see `setExperimentWeekStage`'s `becameDone`).
  */
 export async function hideExperimentFromCalendar(experimentId: string) {
+  await requireAuthenticatedUser();
   await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: true } });
   revalidatePath("/calendar");
 }
 
 export async function showExperimentOnCalendarWhenDone(experimentId: string) {
+  await requireAuthenticatedUser();
   await prisma.experiment.update({ where: { id: experimentId }, data: { calendarHiddenOnDone: false } });
   revalidatePath("/calendar");
 }
@@ -583,6 +600,7 @@ export async function showExperimentOnCalendarWhenDone(experimentId: string) {
  * last entry's stage — the detail card's "+ Добавить неделю" button.
  */
 export async function addNextExperimentWeek(experimentId: string) {
+  await requireAuthenticatedUser();
   const last = await prisma.experimentWeekStage.findFirst({
     where: { experimentId },
     orderBy: { weekStart: "desc" },
@@ -653,6 +671,7 @@ export async function shiftExperimentWeeks(
   blockEndISO: string,
   deltaWeeks: number,
 ) : Promise<{ changed: boolean }> {
+  await requireAuthenticatedUser();
   if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return { changed: false };
 
   const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
@@ -709,6 +728,7 @@ export async function resizeExperimentWeeks(
   blockEndISO: string,
   deltaWeeks: number,
 ) : Promise<{ changed: boolean }> {
+  await requireAuthenticatedUser();
   if (!Number.isInteger(deltaWeeks) || deltaWeeks === 0) return { changed: false };
 
   const entries = await getBlockEntries(experimentId, blockStartISO, blockEndISO);
@@ -788,6 +808,7 @@ async function resetEmptyHypotheses(hypothesisIds: string[]) {
 }
 
 export async function deleteExperiment(id: string): Promise<{ error?: string }> {
+  await requireAuthenticatedUser();
   const experiment = await prisma.experiment.findUnique({
     where: { id },
     select: { hypothesisId: true },
@@ -804,6 +825,7 @@ export async function deleteExperiment(id: string): Promise<{ error?: string }> 
 }
 
 export async function archiveExperiment(id: string) {
+  await requireAuthenticatedUser();
   await prisma.experiment.update({
     where: { id },
     data: { archived: true, archivedAt: new Date() },
@@ -814,6 +836,7 @@ export async function archiveExperiment(id: string) {
 }
 
 export async function unarchiveExperiment(id: string) {
+  await requireAuthenticatedUser();
   await prisma.experiment.update({
     where: { id },
     data: { archived: false, archivedAt: null },
@@ -824,6 +847,7 @@ export async function unarchiveExperiment(id: string) {
 }
 
 export async function archiveExperiments(ids: string[]): Promise<{ error?: string } | void> {
+  await requireAuthenticatedUser();
   if (ids.length === 0) return;
   await prisma.experiment.updateMany({
     where: { id: { in: ids } },
@@ -833,6 +857,7 @@ export async function archiveExperiments(ids: string[]): Promise<{ error?: strin
 }
 
 export async function deleteExperiments(ids: string[]): Promise<{ error?: string } | void> {
+  await requireAuthenticatedUser();
   if (ids.length === 0) return;
   const experiments = await prisma.experiment.findMany({
     where: { id: { in: ids } },

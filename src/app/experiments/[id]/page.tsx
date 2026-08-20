@@ -22,6 +22,7 @@ import { toDateParam } from "@/lib/calendar";
 import { STAGE_BADGE_CLASSES, currentStageOf, stageLabel } from "@/lib/experiment";
 import { FUNNEL_LEVEL_BADGE_COLOR } from "@/lib/tags";
 import { HideFromCalendarButton } from "../HideFromCalendarButton";
+import { requireUserPage } from "@/lib/auth/page-guards";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -33,6 +34,7 @@ export default async function ExperimentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireUserPage();
   const { id } = await params;
   const [experiment, authors, funnelLevels, products, segments] = await Promise.all([
     prisma.experiment.findUnique({

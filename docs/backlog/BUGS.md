@@ -4,7 +4,7 @@
 
 ## BUG-016: Core backlog/experiment pages and mutations have no auth check
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Critical
 - **Summary:** `/backlog`, `/calendar`, `/experiments/[id]`, `/backlog/new`,
   `/experiments/new` render with no session check, and nearly every

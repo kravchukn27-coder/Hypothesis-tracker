@@ -25,6 +25,7 @@ import {
 import { SavedToastGate } from "@/components/toast/SavedToastGate";
 import { ScrollToHighlighted } from "@/components/ScrollToHighlighted";
 import type { HypothesisStatus } from "@/generated/prisma/enums";
+import { requireUserPage } from "@/lib/auth/page-guards";
 
 // Local override, not the shared META_COL — that constant also sizes
 // Experiments' Author column (avatar + name), which needs real room.
@@ -49,6 +50,7 @@ export default async function BacklogPage({
     hypothesisId?: string;
   }>;
 }) {
+  await requireUserPage();
   const { sort = "score", dir, funnelLevel, status, q, view, hypothesisId } = await searchParams;
   const funnelLevelsFilter = Array.isArray(funnelLevel) ? funnelLevel : funnelLevel ? [funnelLevel] : [];
   const statuses = Array.isArray(status) ? status : status ? [status] : [];

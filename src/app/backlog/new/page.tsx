@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createHypothesis, getFunnelLevels } from "../actions";
 import { HypothesisForm } from "../HypothesisForm";
+import { requireUserPage } from "@/lib/auth/page-guards";
 
 export default async function NewHypothesisPage() {
+  await requireUserPage();
   const funnelLevels = await getFunnelLevels();
 
   return (

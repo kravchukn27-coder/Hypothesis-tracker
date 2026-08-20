@@ -23,6 +23,7 @@ import { RolloutCell } from "./RolloutCell";
 import { AuthorCell } from "./AuthorCell";
 import { AllExperimentsTable } from "./AllExperimentsTable";
 import { CalendarRowReorderHandle } from "./CalendarRowReorderHandle";
+import { requireUserPage } from "@/lib/auth/page-guards";
 
 // UI-051: the default (no `?start=`) window anchors 2 weeks before the
 // current one, not on it — so "Сегодня" shows 2 past weeks, the current
@@ -60,6 +61,7 @@ export default async function CalendarPage({
     dir?: string;
   }>;
 }) {
+  await requireUserPage();
   const params = await searchParams;
   const { start, weekStage, experimentId, calendarAuthor, calendarView } = params;
   const showAll = calendarView === "all";

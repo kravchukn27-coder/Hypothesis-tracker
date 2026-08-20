@@ -15,6 +15,12 @@ async function auditBacklogEvent(event: string, metadata: Record<string, unknown
   await safeWriteAuditLog({ event, userId: user?.id ?? null, metadata, route: "src/app/backlog/actions.ts" });
 }
 
+async function requireAuthenticatedUser() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  return user;
+}
+
 const hypothesisFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно"),
   text: z.string().trim().min(1, "Текст гипотезы обязателен"),
@@ -47,6 +53,7 @@ export async function createHypothesis(
   _prevState: HypothesisFormState,
   formData: FormData,
 ): Promise<HypothesisFormState> {
+  await requireAuthenticatedUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
@@ -83,6 +90,7 @@ export async function updateHypothesis(
   _prevState: HypothesisFormState,
   formData: FormData,
 ): Promise<HypothesisFormState> {
+  await requireAuthenticatedUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { error: "Проверь поля формы", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string> };
@@ -138,6 +146,7 @@ const HYPOTHESIS_STATUSES = ["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD"
 const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 
 export async function updateHypothesisStatus(id: string, status: string) {
+  await requireAuthenticatedUser();
   const parsed = statusSchema.safeParse(status);
   if (!parsed.success) return;
 
@@ -154,6 +163,7 @@ export async function updateHypothesisStatus(id: string, status: string) {
 
 /** Starts the experiment workflow from an Accepted backlog row. */
 export async function takeHypothesisIntoWork(id: string): Promise<string> {
+  await requireAuthenticatedUser();
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
   if (!hypothesis || hypothesis.status !== "ACCEPTED") return "/backlog";
   // PROD-034: a hypothesis has at most one experiment ever, not just
@@ -175,6 +185,7 @@ export async function takeHypothesisIntoWork(id: string): Promise<string> {
 }
 
 export async function deleteHypothesis(id: string): Promise<{ error?: string }> {
+  await requireAuthenticatedUser();
   const hypothesis = await prisma.hypothesis.findUnique({
     where: { id },
     select: { name: true, _count: { select: { experiments: true } } },
@@ -194,6 +205,7 @@ export async function deleteHypothesis(id: string): Promise<{ error?: string }> 
 }
 
 export async function archiveHypothesis(id: string) {
+  await requireAuthenticatedUser();
   await prisma.hypothesis.update({
     where: { id },
     data: { archived: true, archivedAt: new Date() },
@@ -204,6 +216,7 @@ export async function archiveHypothesis(id: string) {
 }
 
 export async function unarchiveHypothesis(id: string) {
+  await requireAuthenticatedUser();
   await prisma.hypothesis.update({
     where: { id },
     data: { archived: false, archivedAt: null },
@@ -214,6 +227,7 @@ export async function unarchiveHypothesis(id: string) {
 }
 
 export async function archiveHypotheses(ids: string[]): Promise<{ error?: string } | void> {
+  await requireAuthenticatedUser();
   if (ids.length === 0) return;
   await prisma.hypothesis.updateMany({
     where: { id: { in: ids } },
@@ -228,6 +242,7 @@ export async function archiveHypotheses(ids: string[]): Promise<{ error?: string
  * the rest, reporting the skip count instead of failing the batch.
  */
 export async function deleteHypotheses(ids: string[]): Promise<{ error?: string } | void> {
+  await requireAuthenticatedUser();
   if (ids.length === 0) return;
   const hypotheses = await prisma.hypothesis.findMany({
     where: { id: { in: ids } },

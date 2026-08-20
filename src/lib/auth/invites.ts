@@ -19,10 +19,9 @@ export function normalizeInviteEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-export async function issueInvite(issuerUserId: string, name: string, email: string): Promise<string> {
-  const normalizedName = name.trim();
+export async function issueInvite(issuerUserId: string, email: string): Promise<string> {
   const normalizedEmail = normalizeInviteEmail(email);
-  if (!normalizedName || !normalizedEmail) throw new Error("Введите имя и email.");
+  if (!normalizedEmail) throw new Error("Введите email.");
   if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw new Error("Введите корректный email.");
 
   const rawToken = createRawToken();
@@ -40,8 +39,10 @@ export async function issueInvite(issuerUserId: string, name: string, email: str
 
     const invitedUser =
       existingUser ??
+      // Placeholder until the invitee sets their own name in consumeInvite —
+      // User.name is required and can't be left blank at this stage.
       (await tx.user.create({
-        data: { name: normalizedName, email: normalizedEmail, invitedById: issuerUserId },
+        data: { name: normalizedEmail, email: normalizedEmail, invitedById: issuerUserId },
         select: { id: true },
       }));
 
@@ -75,8 +76,9 @@ export async function getInvite(rawToken: string): Promise<{ email: string } | {
   return { email: token.user.email };
 }
 
-export async function consumeInvite(rawToken: string, passwordHash: string): Promise<{ ok: true } | { error: InviteTokenFailure }> {
+export async function consumeInvite(rawToken: string, name: string, passwordHash: string): Promise<{ ok: true } | { error: InviteTokenFailure }> {
   const now = new Date();
+  const normalizedName = name.trim();
 
   return prisma.$transaction(async (tx) => {
     const token = await tx.passwordSetupToken.findUnique({
@@ -89,7 +91,7 @@ export async function consumeInvite(rawToken: string, passwordHash: string): Pro
 
     await tx.user.update({
       where: { id: token.user.id },
-      data: { passwordHash, sessionVersion: { increment: 1 } },
+      data: { name: normalizedName, passwordHash, sessionVersion: { increment: 1 } },
     });
     await tx.passwordSetupToken.updateMany({
       where: { userId: token.user.id, usedAt: null, invalidatedAt: null },

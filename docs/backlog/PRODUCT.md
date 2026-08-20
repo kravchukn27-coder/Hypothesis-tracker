@@ -31,7 +31,7 @@
 
 ## PROD-038 — Приглашённый сам задаёт своё имя при установке пароля
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Product / Auth / Users
 - **Type:** Enhancement

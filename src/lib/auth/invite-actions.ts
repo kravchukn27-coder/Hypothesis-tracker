@@ -14,7 +14,7 @@ export async function createInvite(_previousState: InviteActionState, formData: 
   if (!issuer) return { error: "Сессия истекла. Войдите снова." };
 
   try {
-    const token = await issueInvite(issuer.id, String(formData.get("name") ?? ""), String(formData.get("email") ?? ""));
+    const token = await issueInvite(issuer.id, String(formData.get("email") ?? ""));
     const origin = await getRequestOrigin();
     return { link: `${origin}/invite/${token}` };
   } catch (error) {
@@ -34,12 +34,14 @@ export async function setPasswordFromInvite(
   formData: FormData,
 ): Promise<SetPasswordActionState> {
   const token = String(formData.get("token") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+  if (!name) return { error: "Введите имя." };
   if (password.length < 8) return { error: "Пароль должен содержать не менее 8 символов." };
   if (password !== passwordConfirm) return { error: "Пароли не совпадают." };
 
-  const result = await consumeInvite(token, hashPassword(password));
+  const result = await consumeInvite(token, name, hashPassword(password));
   if ("error" in result) {
     return {
       error:

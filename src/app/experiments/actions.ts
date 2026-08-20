@@ -837,9 +837,7 @@ export async function resizeExperimentWeeks(
   } catch (error) { return mutationFailure<{ changed: boolean }>("experiments.weeks.resize.failed", error, user.id); }
 }
 
-export async function getFunnelLevels() {
-  return prisma.funnelLevel.findMany({ orderBy: { name: "asc" } });
-}
+export { getFunnelLevels } from "@/lib/funnelLevel";
 
 export async function getProducts() {
   return prisma.product.findMany({ orderBy: { name: "asc" } });

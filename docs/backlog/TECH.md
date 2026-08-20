@@ -68,7 +68,7 @@
 
 ## TECH-045 — Duplicate `getFunnelLevels()` defined in two files
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Fix

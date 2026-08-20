@@ -323,6 +323,20 @@ user triggered them.
 - `session-version.ts` lets a session be invalidated server-side
   (e.g. on password change) without needing `SESSION_SECRET` rotated
   for everyone.
+- **Server Action authorization rule (TECH-043, 2026-08-20):** every
+  mutating Server Action in `backlog/actions.ts`, `experiments/actions.ts`,
+  and `backlog/[id]/comments-actions.ts` calls `getCurrentUser()`
+  (directly, or via each file's local `requireAuthenticatedUser()`
+  wrapper, which redirects to `/login` when absent) before touching
+  Prisma — landed by BUG-016. This is deliberate defense-in-depth, not
+  redundant with `src/proxy.ts`: the middleware gates by *route*, so an
+  action is only as protected as the page it happens to be bound to;
+  calling `getCurrentUser()` inside the action itself gates by
+  *action*, regardless of what route it's invoked from. It also
+  supplies the identity every mutation needs to attribute its
+  `AuditLog`/error-event row to a user. Read-only lookup helpers with no
+  state to protect and nothing to attribute (`getFunnelLevels`,
+  `getProducts`, `getSegments`, `getAuthors`) are the only exceptions.
 
 ### Logging & Monitoring
 

@@ -94,7 +94,7 @@
 
 ## TECH-043 — Authorization checks present in only a few Server Actions, no stated rule for which need it
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Chore
@@ -104,6 +104,13 @@
 - **Acceptance Criteria:**
   - Document the intended rule (e.g. "actions rely on proxy middleware for gatekeeping; `getCurrentUser()` is only called when the action needs the *identity*, not just permission — audit log attribution, comment ownership") in `docs/PROJECT_CONTEXT.md` or `docs/CANONICAL_RULES.md`.
   - No code change required to close this card if the current split matches that rule once stated.
+- **Resolution note:** The premise changed since this audit — BUG-016
+  (landed separately) made every mutating action call
+  `getCurrentUser()`/`requireAuthenticatedUser()`, so the asymmetry
+  this card flagged no longer exists. Documented the resulting rule
+  (defense-in-depth per-action gating + audit identity, not just
+  proxy-middleware gating) in `docs/PROJECT_CONTEXT.md` → Auth &
+  Logging → Authentication. No code change needed.
 
 ## TECH-042 — typescript/@types/node/eslint pinned several majors behind latest
 

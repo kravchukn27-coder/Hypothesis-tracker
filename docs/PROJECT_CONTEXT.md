@@ -337,6 +337,30 @@ user triggered them.
   `AuditLog`/error-event row to a user. Read-only lookup helpers with no
   state to protect and nothing to attribute (`getFunnelLevels`,
   `getProducts`, `getSegments`, `getAuthors`) are the only exceptions.
+- **Server Action validation rule (TECH-044, 2026-08-20):** whether an
+  action gets a full zod schema depends on what kind of boundary its
+  input crosses, not on the field count. Full schemas
+  (`hypothesisFormSchema`, `createExperimentSchema`,
+  `updateExperimentSchema`) sit on `createHypothesis`/`updateHypothesis`/
+  `createExperiment`/`updateExperiment` because their input is raw
+  `FormData` — an untyped `Record<string, unknown>` that needs real
+  shape/type validation before it can be trusted. `reorderCalendarExperiments`
+  also gets a schema (`z.array(z.string()...).min(1).max(500)`) for the
+  same reason from a different angle: its array of ids is client-supplied
+  and needs a size bound and dedup check, not just a type check.
+  Single-value status/stage actions (`updateHypothesisStatus`,
+  `updateExperimentStage`) use a lightweight `safeParse` against a small
+  `z.enum(...)`, since the value must be one of a fixed set and an
+  invalid one needs to become a handled `ActionResult` failure (TECH-047)
+  instead of reaching Prisma. Actions taking a single free-text field or
+  bare id (`updateExperimentRollout`, `updateExperimentAuthor`,
+  `archiveHypothesis`, `deleteHypothesis`, `hideExperimentFromCalendar`,
+  and similar) skip a schema on purpose: they're called directly with a
+  typed TS parameter from a typed client component, not from raw
+  `FormData`, so there's no untyped boundary to validate — TypeScript's
+  parameter typing plus Prisma's own type checking and the existence
+  checks added by TECH-048 are the actual boundary for those. No code
+  change from this audit — the existing split already matches this rule.
 
 ### Logging & Monitoring
 

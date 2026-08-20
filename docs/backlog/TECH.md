@@ -266,7 +266,7 @@
 
 ## TECH-044 — Validation approach inconsistent across mutations (zod vs. none)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Architecture
 - **Type:** Chore
@@ -276,6 +276,14 @@
 - **Acceptance Criteria:**
   - Document (here or in `docs/PROJECT_CONTEXT.md`) the intended rule for when an action needs a zod schema vs. lightweight inline validation.
   - No code change required to close this card if the answer is "current split is intentional" — documenting the reasoning is sufficient, matching TECH-042's precedent.
+- **Resolution note:** Confirmed the existing split is intentional, not
+  accidental: the deciding factor is what kind of boundary the input
+  crosses (untyped `FormData` / client-supplied array → full zod
+  schema; constrained enum value → lightweight `safeParse`; single
+  typed scalar from a typed caller → no schema, TS + Prisma +
+  TECH-048's existence checks are the boundary), not field count.
+  Documented in `docs/PROJECT_CONTEXT.md` → Auth & Logging →
+  Authentication (Server Action validation rule). No code change.
 
 ## TECH-043 — Authorization checks present in only a few Server Actions, no stated rule for which need it
 

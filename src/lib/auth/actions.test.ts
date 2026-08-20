@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   clearLoginFailures: vi.fn(),
   cookies: vi.fn(),
   findFirst: vi.fn(),
+  getCurrentUser: vi.fn(),
   getLoginClientIp: vi.fn(),
   getSessionSecret: vi.fn(),
   isLoginRateLimited: vi.fn(),
@@ -33,7 +34,7 @@ vi.mock("./login-rate-limit", () => ({
   recordLoginFailure: mocks.recordLoginFailure,
 }));
 vi.mock("./password", () => ({ verifyPassword: mocks.verifyPassword }));
-vi.mock("./session", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("./session", () => ({ getCurrentUser: mocks.getCurrentUser }));
 vi.mock("./token", () => ({ signSessionToken: mocks.signSessionToken }));
 vi.mock("@/lib/audit-log", () => ({ safeWriteAuditLog: mocks.safeWriteAuditLog, writeAuditLog: vi.fn() }));
 vi.mock("@/lib/log", () => ({
@@ -41,7 +42,7 @@ vi.mock("@/lib/log", () => ({
   runWithOperationCorrelation: <T>(fn: () => Promise<T>) => fn(),
 }));
 
-import { loginAsUser } from "./actions";
+import { loginAsUser, logout } from "./actions";
 
 function loginForm(): FormData {
   const formData = new FormData();
@@ -104,5 +105,32 @@ describe("loginAsUser", () => {
       error: databaseError,
       metadata: { email: "person@example.com" },
     });
+  });
+});
+
+describe("logout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.safeWriteAuditLog.mockResolvedValue(undefined);
+    mocks.cookies.mockResolvedValue({ set: vi.fn() });
+  });
+
+  it("writes the LOGOUT event via safeWriteAuditLog, clears the cookie, and redirects to /login", async () => {
+    mocks.getCurrentUser.mockResolvedValue({ id: "user-1" });
+    const setCookie = vi.fn();
+    mocks.cookies.mockResolvedValue({ set: setCookie });
+
+    await expect(logout()).rejects.toThrow("REDIRECT:/login");
+
+    expect(mocks.safeWriteAuditLog).toHaveBeenCalledWith({ event: "LOGOUT", userId: "user-1", route: "src/lib/auth/actions.ts" });
+    expect(setCookie).toHaveBeenCalledWith("session", "", expect.objectContaining({ maxAge: 0 }));
+  });
+
+  it("skips the audit write and still redirects when there is no current session", async () => {
+    mocks.getCurrentUser.mockResolvedValue(null);
+
+    await expect(logout()).rejects.toThrow("REDIRECT:/login");
+
+    expect(mocks.safeWriteAuditLog).not.toHaveBeenCalled();
   });
 });

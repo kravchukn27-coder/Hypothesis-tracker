@@ -8,7 +8,7 @@ import { clearLoginFailures, getLoginClientIp, isLoginRateLimited, normalizeLogi
 import { verifyPassword } from "./password";
 import { getCurrentUser } from "./session";
 import { signSessionToken } from "./token";
-import { safeWriteAuditLog, writeAuditLog } from "@/lib/audit-log";
+import { safeWriteAuditLog } from "@/lib/audit-log";
 import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 
 type LoginError = "credentials" | "ratelimit" | "unavailable";
@@ -86,7 +86,7 @@ export async function loginAsUser(formData: FormData): Promise<void> {
 
 export async function logout(): Promise<void> {
   const user = await getCurrentUser();
-  if (user) await writeAuditLog({ event: "LOGOUT", userId: user.id });
+  if (user) await safeWriteAuditLog({ event: "LOGOUT", userId: user.id, route: "src/lib/auth/actions.ts" });
 
   (await cookies()).set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,

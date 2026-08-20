@@ -83,7 +83,7 @@
 
 ## TECH-059 — logout() still uses unsafe writeAuditLog instead of safeWriteAuditLog
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Observability
 - **Type:** Fix
@@ -94,6 +94,23 @@
   - `logout()`'s `writeAuditLog` call switches to `safeWriteAuditLog`, matching `loginAsUser` in the same file.
   - A simulated audit-log DB failure during logout no longer crashes the action — the cookie still clears and the redirect to `/login` still happens.
   - No change to `LOGOUT` event semantics on the healthy path.
+- **Resolution note (2026-08-20):** `logout()` now calls
+  `safeWriteAuditLog({ event: "LOGOUT", userId, route:
+  "src/lib/auth/actions.ts" })`, matching `loginAsUser`'s calls in the
+  same file; the now-unused `writeAuditLog` import was removed. The
+  "doesn't crash on a DB failure" guarantee comes from
+  `safeWriteAuditLog`'s own internal try/catch (already covered by
+  `audit-log.test.ts`'s `auditEvent` failure-path test) — `logout()`
+  itself doesn't need its own try/catch, same as every other
+  `auditEvent`-style call site in the app. Added two tests to
+  `actions.test.ts`'s new `describe("logout", ...)` block: the
+  healthy path (user present → `safeWriteAuditLog` called with the
+  right event/route, cookie cleared with `maxAge: 0`, redirect to
+  `/login`) and the no-session path (audit write skipped, cookie still
+  clears, still redirects) — both pass, confirming no behavior change.
+  `npm test` green (53/53). Verified live: logged out via the
+  burger-menu "Выйти" action, landed on `/login`, then logged back in
+  to leave the session as found.
 
 ## TECH-058 — reportRouteError buckets every boundary-caught error under one generic event/route
 

@@ -9,7 +9,7 @@ import { resolveFunnelLevelId } from "@/lib/funnelLevel";
 import { syncExperimentFunnelLevelsForHypothesis } from "../experiments/actions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { safeWriteAuditLog } from "@/lib/audit-log";
-import { captureServerError } from "@/lib/log";
+import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 
 async function auditBacklogEvent(event: string, metadata: Record<string, unknown>) {
@@ -60,6 +60,7 @@ export async function createHypothesis(
   _prevState: HypothesisFormState,
   formData: FormData,
 ): Promise<HypothesisFormState> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
@@ -93,6 +94,7 @@ export async function createHypothesis(
 
   revalidatePath("/backlog");
   redirect(`/backlog?saved=1&hypothesisId=${created.id}`);
+  });
 }
 
 export async function updateHypothesis(
@@ -100,6 +102,7 @@ export async function updateHypothesis(
   _prevState: HypothesisFormState,
   formData: FormData,
 ): Promise<HypothesisFormState> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   const parsed = parseForm(formData);
   if (!parsed.success) {
@@ -150,12 +153,14 @@ export async function updateHypothesis(
 
   if (shouldPromptArchive) redirect(`/backlog/${id}?promptArchive=1&saved=1`);
   redirect("/backlog?saved=1");
+  });
 }
 
 const HYPOTHESIS_STATUSES = ["NEW", "PLANNED", "IN_PROGRESS", "ACCEPTED", "HOLD", "DONE"] as const;
 const statusSchema = z.enum(HYPOTHESIS_STATUSES);
 
 export async function updateHypothesisStatus(id: string, status: string): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   const parsed = statusSchema.safeParse(status);
   if (!parsed.success) return actionFailure("Некорректный статус гипотезы.");
@@ -174,10 +179,12 @@ export async function updateHypothesisStatus(id: string, status: string): Promis
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
   return actionSuccess();
+  });
 }
 
 /** Starts the experiment workflow from an Accepted backlog row. */
 export async function takeHypothesisIntoWork(id: string): Promise<{ href: string; error?: string }> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   try {
   const hypothesis = await prisma.hypothesis.findUnique({ where: { id }, select: { id: true, name: true, status: true } });
@@ -203,9 +210,11 @@ export async function takeHypothesisIntoWork(id: string): Promise<{ href: string
   }
   revalidatePath("/backlog"); revalidatePath("/calendar");
   return { href: "/calendar" };
+  });
 }
 
 export async function deleteHypothesis(id: string): Promise<{ error?: string }> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   let hypothesis: { name: string; _count: { experiments: number } } | null;
   try {
@@ -228,9 +237,11 @@ export async function deleteHypothesis(id: string): Promise<{ error?: string }> 
   }
   revalidatePath("/backlog");
   redirect("/backlog");
+  });
 }
 
 export async function archiveHypothesis(id: string): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   try {
     await prisma.hypothesis.update({ where: { id }, data: { archived: true, archivedAt: new Date() } });
@@ -239,9 +250,11 @@ export async function archiveHypothesis(id: string): Promise<ActionResult> {
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
   return actionSuccess();
+  });
 }
 
 export async function unarchiveHypothesis(id: string): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   try {
     await prisma.hypothesis.update({ where: { id }, data: { archived: false, archivedAt: null } });
@@ -250,15 +263,18 @@ export async function unarchiveHypothesis(id: string): Promise<ActionResult> {
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${id}`);
   return actionSuccess();
+  });
 }
 
 export async function archiveHypotheses(ids: string[]): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   if (ids.length === 0) return actionSuccess();
   try { await prisma.hypothesis.updateMany({ where: { id: { in: ids } }, data: { archived: true, archivedAt: new Date() } }); }
   catch (error) { return mutationFailure("backlog.hypotheses.archive.failed", error, user.id); }
   revalidatePath("/backlog");
   return actionSuccess();
+  });
 }
 
 /**
@@ -267,6 +283,7 @@ export async function archiveHypotheses(ids: string[]): Promise<ActionResult> {
  * the rest, reporting the skip count instead of failing the batch.
  */
 export async function deleteHypotheses(ids: string[]): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireAuthenticatedUser();
   if (ids.length === 0) return actionSuccess();
   try {
@@ -287,4 +304,5 @@ export async function deleteHypotheses(ids: string[]): Promise<ActionResult> {
   }
   } catch (error) { return mutationFailure("backlog.hypotheses.delete.failed", error, user.id); }
   return actionSuccess();
+  });
 }

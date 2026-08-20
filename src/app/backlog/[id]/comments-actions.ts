@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { captureServerError } from "@/lib/log";
+import { captureServerError, runWithOperationCorrelation } from "@/lib/log";
 
 export type CommentActionState = { error?: string; success?: boolean };
 
@@ -12,6 +12,7 @@ export async function createHypothesisComment(
   _previousState: CommentActionState,
   formData: FormData,
 ): Promise<CommentActionState> {
+  return runWithOperationCorrelation(async () => {
   const user = await getCurrentUser();
   if (!user) return { error: "Сессия истекла. Войдите снова." };
 
@@ -30,9 +31,11 @@ export async function createHypothesisComment(
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${hypothesisId}`);
   return { success: true };
+  });
 }
 
 export async function deleteHypothesisComment(commentId: string): Promise<CommentActionState> {
+  return runWithOperationCorrelation(async () => {
   const user = await getCurrentUser();
   if (!user) return { error: "Сессия истекла. Войдите снова." };
 
@@ -51,4 +54,5 @@ export async function deleteHypothesisComment(commentId: string): Promise<Commen
   revalidatePath("/backlog");
   revalidatePath(`/backlog/${comment.hypothesisId}`);
   return { success: true };
+  });
 }

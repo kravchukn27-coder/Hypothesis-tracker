@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { redactSensitiveAuditMetadata, type AuditJsonValue } from "@/lib/audit-metadata-redaction";
 import { recordErrorEvent } from "@/lib/error-events";
 import { sendTelegramAlert } from "@/lib/telegram-alert";
@@ -12,6 +13,29 @@ export function createOperationCorrelationId(): string {
 
 export function withOperationCorrelation(correlationId: string, meta: LogMeta = {}): LogMeta {
   return { correlationId, ...meta };
+}
+
+// TECH-034: one correlation ID per server action invocation, threaded
+// automatically through every log/audit call made during it via
+// AsyncLocalStorage — logInfo/logWarn/logError and writeAuditLog all
+// read the current id (if any) instead of every call site having to
+// pass it through by hand.
+const correlationStorage = new AsyncLocalStorage<string>();
+
+export function getCurrentOperationCorrelationId(): string | undefined {
+  return correlationStorage.getStore();
+}
+
+/**
+ * Idempotent: an action that internally calls another already-wrapped
+ * action (e.g. createExperiment → syncExperimentFunnelLevelsForHypothesis)
+ * reuses the outer correlation id instead of starting a fresh nested one,
+ * so every log/audit line from one logical request still joins.
+ */
+export function runWithOperationCorrelation<T>(fn: () => Promise<T>): Promise<T> {
+  const existing = correlationStorage.getStore();
+  if (existing) return fn();
+  return correlationStorage.run(createOperationCorrelationId(), fn);
 }
 
 export type LogPayload = {
@@ -44,8 +68,20 @@ function sanitizeLogMetadata(meta?: LogMeta): LogMeta {
   return redactSensitiveAuditMetadata(JSON.parse(JSON.stringify(meta)) as AuditJsonValue) as LogMeta;
 }
 
+function withCurrentCorrelation(meta: LogMeta): LogMeta {
+  if (meta.correlationId) return meta;
+  const correlationId = getCurrentOperationCorrelationId();
+  return correlationId ? withOperationCorrelation(correlationId, meta) : meta;
+}
+
 export function buildLogPayload(level: LogLevel, event: string, meta?: LogMeta, error?: unknown): LogPayload {
-  return { level, event, ts: new Date().toISOString(), metadata: sanitizeLogMetadata(meta), ...normalizeError(error) };
+  return {
+    level,
+    event,
+    ts: new Date().toISOString(),
+    metadata: withCurrentCorrelation(sanitizeLogMetadata(meta)),
+    ...normalizeError(error),
+  };
 }
 
 export function logInfo(event: string, meta?: LogMeta): void {

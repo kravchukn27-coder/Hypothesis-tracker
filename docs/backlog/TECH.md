@@ -246,7 +246,7 @@
 
 ## TECH-034 — Correlation ID helpers exist but are never called
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Observability
 - **Type:** Chore

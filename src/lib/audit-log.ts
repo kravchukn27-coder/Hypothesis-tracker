@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { redactSensitiveAuditMetadata } from "@/lib/audit-metadata-redaction";
-import { captureServerError } from "@/lib/log";
+import { captureServerError, getCurrentOperationCorrelationId, withOperationCorrelation } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
 
 type AuditTarget = {
@@ -10,8 +10,14 @@ type AuditTarget = {
 type AuditLogInput = { event: string; userId: string | null; metadata?: Record<string, unknown> };
 
 function sanitizeMetadata(metadata?: Record<string, unknown>): Prisma.InputJsonValue | undefined {
-  if (!metadata) return undefined;
-  return redactSensitiveAuditMetadata(JSON.parse(JSON.stringify(metadata)) as Prisma.JsonValue) as Prisma.InputJsonValue;
+  // TECH-034: audit rows carry the same correlation id as any log lines
+  // from the same server action invocation, so they can be joined.
+  const correlationId = getCurrentOperationCorrelationId();
+  const withCorrelation = correlationId
+    ? withOperationCorrelation(correlationId, metadata ?? {})
+    : metadata;
+  if (!withCorrelation) return undefined;
+  return redactSensitiveAuditMetadata(JSON.parse(JSON.stringify(withCorrelation)) as Prisma.JsonValue) as Prisma.InputJsonValue;
 }
 
 export async function writeAuditLog(input: AuditLogInput, target: AuditTarget = prisma): Promise<void> {

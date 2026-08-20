@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { actionSuccess, type ActionResult } from "@/lib/action-result";
+import { runWithOperationCorrelation } from "@/lib/log";
 import { auditExperimentEvent, experimentMutationFailure, requireExperimentActionUser } from "./shared";
 
 export async function getProductsAction() {
@@ -35,6 +36,7 @@ async function resetEmptyHypotheses(hypothesisIds: string[]) {
 }
 
 export async function deleteExperimentAction(id: string): Promise<{ error?: string }> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireExperimentActionUser();
   try {
     const experiment = await prisma.experiment.findUnique({ where: { id }, select: { hypothesisId: true } });
@@ -48,9 +50,11 @@ export async function deleteExperimentAction(id: string): Promise<{ error?: stri
   }
   revalidatePath("/calendar");
   redirect("/calendar");
+  });
 }
 
 export async function archiveExperimentAction(id: string): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireExperimentActionUser();
   try {
     await prisma.experiment.update({ where: { id }, data: { archived: true, archivedAt: new Date() } });
@@ -61,9 +65,11 @@ export async function archiveExperimentAction(id: string): Promise<ActionResult>
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
   return actionSuccess();
+  });
 }
 
 export async function unarchiveExperimentAction(id: string): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireExperimentActionUser();
   try {
     await prisma.experiment.update({ where: { id }, data: { archived: false, archivedAt: null } });
@@ -74,9 +80,11 @@ export async function unarchiveExperimentAction(id: string): Promise<ActionResul
   revalidatePath(`/experiments/${id}`);
   revalidatePath("/calendar");
   return actionSuccess();
+  });
 }
 
 export async function archiveExperimentsAction(ids: string[]): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireExperimentActionUser();
   if (ids.length === 0) return actionSuccess();
   try {
@@ -86,9 +94,11 @@ export async function archiveExperimentsAction(ids: string[]): Promise<ActionRes
   }
   revalidatePath("/calendar");
   return actionSuccess();
+  });
 }
 
 export async function deleteExperimentsAction(ids: string[]): Promise<ActionResult> {
+  return runWithOperationCorrelation(async () => {
   const user = await requireExperimentActionUser();
   if (ids.length === 0) return actionSuccess();
   try {
@@ -103,4 +113,5 @@ export async function deleteExperimentsAction(ids: string[]): Promise<ActionResu
     return experimentMutationFailure("experiments.experiments.delete.failed", error, user.id);
   }
   return actionSuccess();
+  });
 }

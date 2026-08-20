@@ -2,7 +2,7 @@
 
 ## UI-057 — Переключаемый вид «по неделям» в карточке эксперимента: список vs лента стадий
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Experiment card (ExperimentWeekStagesEditor)
 - **Type:** Enhancement

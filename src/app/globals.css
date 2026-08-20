@@ -53,6 +53,65 @@ body {
 .motion-toast-enter { animation: motion-toast-in var(--motion-default) var(--motion-ease) both; }
 .motion-toast-exit { animation: motion-toast-out 160ms ease-in both; }
 
+.motion-plan-source {
+  box-shadow: 0 10px 24px rgb(24 24 27 / 18%);
+  filter: saturate(0.85);
+  opacity: 0.48;
+  transform: translateY(-2px) scale(0.98);
+}
+
+.motion-plan-target {
+  background-color: rgb(24 24 27 / 4%);
+  box-shadow: inset 0 0 0 1px rgb(24 24 27 / 12%);
+}
+
+.motion-plan-preview {
+  animation: motion-plan-preview-in var(--motion-feedback) var(--motion-ease) both;
+  box-shadow: 0 10px 22px rgb(24 24 27 / 16%);
+}
+
+.motion-plan-trim {
+  opacity: 0.24;
+  transform: scale(0.96);
+}
+
+.motion-plan-settled {
+  animation: motion-plan-settle 520ms var(--motion-ease) both;
+}
+
+.motion-drop-target {
+  background-color: rgb(24 24 27 / 7%);
+  box-shadow: inset 0 0 0 1px rgb(24 24 27 / 18%);
+}
+
+.motion-undated-dragging {
+  box-shadow: 0 12px 28px rgb(146 64 14 / 18%);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.highlight-table-row[data-highlighted="true"] {
+  background-color: var(--color-amber-50);
+}
+
+.highlight-calendar-row[data-highlighted="true"] {
+  background-color: rgb(255 251 235 / 60%);
+}
+
+.highlight-calendar-row[data-highlighted="true"] .highlight-calendar-sticky {
+  background-color: var(--color-amber-50);
+}
+
+.highlight-calendar-row[data-highlighted="true"] .highlight-calendar-stage {
+  box-shadow: 0 0 0 2px var(--color-amber-500), 0 0 0 3px white;
+}
+
+.highlight-calendar-card[data-highlighted="true"] {
+  border-color: var(--color-amber-400);
+  background-color: var(--color-amber-200);
+  color: var(--color-amber-950);
+  box-shadow: 0 0 0 2px var(--color-amber-500), 0 0 0 4px white;
+}
+
 @keyframes motion-popover-in {
   from { opacity: 0; transform: translateY(-4px) scale(0.985); filter: blur(3px); }
   to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
@@ -70,9 +129,19 @@ body {
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 @keyframes motion-toast-out { to { opacity: 0; transform: translateY(6px); filter: blur(2px); } }
+@keyframes motion-plan-preview-in {
+  from { opacity: 0; transform: translateY(3px) scale(0.97); filter: blur(2px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes motion-plan-settle {
+  0% { box-shadow: 0 0 0 0 rgb(24 24 27 / 22%); }
+  40% { box-shadow: 0 0 0 4px rgb(24 24 27 / 8%); }
+  100% { box-shadow: 0 0 0 0 rgb(24 24 27 / 0%); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .motion-status-control { transition-duration: 1ms; }
   .motion-popover-enter, .motion-popover-exit, .motion-dialog-backdrop-enter, .motion-dialog-backdrop-exit,
-  .motion-dialog-panel-enter, .motion-dialog-panel-exit, .motion-toast-enter, .motion-toast-exit { animation-duration: 1ms; }
+  .motion-dialog-panel-enter, .motion-dialog-panel-exit, .motion-toast-enter, .motion-toast-exit,
+  .motion-plan-preview, .motion-plan-settled { animation-duration: 1ms; }
 }

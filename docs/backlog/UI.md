@@ -20,7 +20,7 @@
 
 ## UI-059 — Пространственная обратная связь для переноса и изменения недельного плана Calendar
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Calendar
 - **Type:** Enhancement

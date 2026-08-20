@@ -32,6 +32,7 @@ export function UndatedRow({
 
   return (
     <li
+      data-highlighted={highlighted || undefined}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", experimentId);
@@ -41,12 +42,10 @@ export function UndatedRow({
       onDragEnd={() => setDragging(false)}
       onClick={() => router.push(`/experiments/${experimentId}`)}
       title={`${name} — перетащите на нужную неделю или нажмите, чтобы открыть`}
-      className={`group flex w-full cursor-grab items-start gap-1.5 rounded-md border py-1.5 pl-1.5 pr-3 text-[13px] font-medium leading-tight transition-all duration-150 active:cursor-grabbing ${
+      className={`highlight-calendar-card group flex w-full cursor-grab items-start gap-1.5 rounded-md border border-amber-200/80 bg-amber-50 py-1.5 pl-1.5 pr-3 text-[13px] font-medium leading-tight text-amber-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 active:cursor-grabbing hover:-translate-y-px hover:border-amber-300 hover:bg-amber-100/70 hover:shadow-sm ${
         dragging
-          ? "border-amber-300 bg-amber-100/70 opacity-50"
-          : highlighted
-            ? "border-amber-400 bg-amber-200 text-amber-950 shadow-sm ring-2 ring-amber-500 ring-offset-2"
-            : "border-amber-200/80 bg-amber-50 text-amber-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:border-amber-300 hover:bg-amber-100/70 hover:shadow-sm"
+          ? "motion-undated-dragging border-amber-300 bg-amber-100/80 opacity-75"
+          : ""
       }`}
     >
       <GripVertical

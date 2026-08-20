@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setExperimentWeekStage } from "@/app/experiments/actions";
 import { useToast } from "@/components/toast/ToastProvider";
@@ -29,6 +29,13 @@ export function WeekHeaderCell({
   const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isSettled, setIsSettled] = useState(false);
+
+  useEffect(() => {
+    if (!isSettled) return;
+    const timer = window.setTimeout(() => setIsSettled(false), 520);
+    return () => window.clearTimeout(timer);
+  }, [isSettled]);
 
   return (
     <div
@@ -45,6 +52,7 @@ export function WeekHeaderCell({
         startTransition(async () => {
           try {
             await setExperimentWeekStage(experimentId, weekStartISO, "DISCOVERY");
+            setIsSettled(true);
             router.refresh();
             showToast("Эксперимент запланирован на эту неделю.");
           } catch {
@@ -53,9 +61,9 @@ export function WeekHeaderCell({
         });
       }}
       aria-busy={isPending}
-      className={`min-w-0 overflow-hidden border-l border-zinc-100 px-1 py-2 text-center leading-tight transition-opacity ${
-        isDragOver ? "bg-zinc-900/10" : isToday ? "bg-indigo-100 font-semibold text-indigo-700" : ""
-      } ${isPending ? "opacity-60" : ""}`}
+      className={`motion-status-control min-w-0 overflow-hidden border-l border-zinc-100 px-1 py-2 text-center leading-tight ${
+        isDragOver ? "motion-drop-target" : isToday ? "bg-indigo-100 font-semibold text-indigo-700" : ""
+      } ${isPending ? "opacity-60" : ""} ${isSettled ? "motion-plan-settled" : ""}`}
     >
       <div className={isToday ? "text-sm" : ""}>{children}</div>
       <WeekStageFilter weekStartISO={weekStartISO} value={stageFilter} options={stageOptions} />

@@ -15,12 +15,14 @@ export function MotionDialog({
   pending = false,
   labelledBy,
   describedBy,
+  panelClassName,
 }: {
   children: (controls: { dismiss: (force?: boolean) => void; closing: boolean }) => React.ReactNode;
   onDismiss: () => void;
   pending?: boolean;
   labelledBy: string;
   describedBy?: string;
+  panelClassName?: string;
 }) {
   const [closing, setClosing] = useState(false);
 
@@ -57,7 +59,7 @@ export function MotionDialog({
         aria-modal="true"
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
-        className={`motion-dialog-panel w-full max-w-sm rounded-xl border border-white/70 bg-white/92 p-6 shadow-[0_18px_45px_rgba(24,24,27,0.18)] backdrop-blur-md ${
+        className={`motion-dialog-panel ${panelClassName ?? "w-full max-w-sm rounded-xl border border-white/70 bg-white/92 p-6 shadow-[0_18px_45px_rgba(24,24,27,0.18)] backdrop-blur-md"} ${
           closing ? "motion-dialog-panel-exit" : "motion-dialog-panel-enter"
         }`}
         onClick={(event) => event.stopPropagation()}

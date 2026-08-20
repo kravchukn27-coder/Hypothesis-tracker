@@ -13,6 +13,7 @@ import { RowCheckbox, SelectAllCheckbox, SelectionProvider } from "@/components/
 import { FilterBar } from "@/components/FilterBar";
 import { HeaderMultiFilter } from "@/components/HeaderMultiFilter";
 import { TakeInWorkButton } from "./TakeInWorkButton";
+import { NewHypothesisModal } from "./NewHypothesisModal";
 import { SortableHeader, SortIcon, type SortDir } from "@/components/SortableHeader";
 import {
   CHECKBOX_COL,
@@ -155,12 +156,7 @@ export default async function BacklogPage({
           >
             Сбросить фильтр
           </Link>
-          <Link
-            href="/backlog/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-          >
-            + Новая гипотеза
-          </Link>
+          <NewHypothesisModal funnelLevels={funnelLevels} />
         </div>
       </div>
 
@@ -199,12 +195,7 @@ export default async function BacklogPage({
               Сбросить фильтр
             </Link>
           ) : (
-            <Link
-              href="/backlog/new"
-              className="text-sm font-medium text-zinc-900 underline underline-offset-4"
-            >
-              Добавить первую
-            </Link>
+            <NewHypothesisModal funnelLevels={funnelLevels} />
           )}
         </div>
       ) : (

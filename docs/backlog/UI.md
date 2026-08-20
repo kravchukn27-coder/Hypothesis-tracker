@@ -54,7 +54,7 @@
 
 ## UI-063 — Open "Новая гипотеза" as an overlay modal instead of a separate page
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** UI / Backlog
 - **Type:** Enhancement

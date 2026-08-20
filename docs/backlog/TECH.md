@@ -1,5 +1,34 @@
 # Tech Backlog
 
+## TECH-054 — getInvite: no try/catch around the public invite-token lookup
+
+- **Status:** TODO
+- **Priority:** Low
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** `getInvite` (`src/lib/auth/invites.ts:85-95`), used by the public `/invite/[token]` page to validate a link before showing the set-password form, has no try/catch around its `prisma.passwordSetupToken.findUnique` call.
+- **Description:**
+  Found during a re-run of the backend resilience audit (2026-08-20), after verifying TECH-019–024's fixes. Lower severity than the rest of this batch since the app now has a root `error.tsx`/`global-error.tsx` (TECH-021) that catches the unhandled throw gracefully — but it's still an unauthenticated, public-facing route, so a DB blip currently shows the generic error boundary instead of a clean "link invalid, try again" state, and the failure isn't logged via `captureServerError` the way the rest of the invite flow (`issueInvite`, `issuePasswordReset`, `consumeInvite`) already is.
+- **Acceptance Criteria:**
+  - `getInvite`'s DB call is wrapped in try/catch, logs via `captureServerError`, and returns its existing `{ error: "invalid" }` shape (or a new distinct case, implementer's call) on failure rather than throwing.
+  - `/invite/[token]` shows a clean message on a DB failure rather than the generic root error boundary.
+  - No change to the token-validity logic (invalid/used/expired checks) for the DB-healthy path.
+
+## TECH-053 — loginAsUser: no try/catch around the login flow's DB calls
+
+- **Status:** TODO
+- **Priority:** High
+- **Area:** Resilience
+- **Type:** Fix
+- **Summary:** `loginAsUser` (`src/lib/auth/actions.ts`) — the one path every unauthenticated visitor must go through — has zero try/catch around `isLoginRateLimited`, `prisma.user.findFirst`, `recordLoginFailure`, or `clearLoginFailures`, unlike every other server action in the codebase after the TECH-019–024/TECH-050 hardening pass.
+- **Description:**
+  Found during a re-run of the backend resilience audit (2026-08-20). This action appears to have been missed by the systematic try/catch + `captureServerError` pass that fixed every other mutation surface (`experiments/actions/*`, `backlog/actions.ts`, `comments-actions.ts`, `users/actions.ts`) — it doesn't even call `runWithOperationCorrelation` like its siblings do. The gap is more consequential than it was at the time of the original audit (TECH-019 era) because `LOGIN_RATE_LIMIT_ENABLED` is now `true` (`src/lib/auth/login-rate-limit.ts:5`, was `false` when first audited) — every login attempt now does 2+ extra unguarded `LoginRateLimitBucket` round-trips (`getBucket`/`saveBucket`) on top of the `User` lookup. A DB failure at any of these points throws unhandled: with TECH-021's root `error.tsx` in place it no longer crashes ugly, but nobody can log in during a DB blip and the failure is never sent through `captureServerError`/the Telegram alert pipeline the rest of the app already relies on to notice this class of problem.
+- **Acceptance Criteria:**
+  - `loginAsUser`'s body is wrapped in try/catch (or broken into a `try`-guarded core following the `mutationFailure` pattern used elsewhere).
+  - On a DB failure, the user is redirected to `/login` with a clear, generic error (not the raw crash / generic error boundary) and the failure is logged via `captureServerError`.
+  - Successful login, wrong-credentials, and rate-limited flows are all unchanged for the DB-healthy path.
+  - `logout()` in the same file is in scope too if a quick pass finds it worth the same treatment, but it's lower risk (session-cookie clear only, one optional audit-log write) — implementer's call whether it needs its own try/catch or can stay as-is.
+
 ## TECH-052 — Clear npm audit advisories in build tooling (nanoid, deepmerge-ts)
 
 - **Status:** TODO

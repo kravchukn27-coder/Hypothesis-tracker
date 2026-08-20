@@ -55,7 +55,7 @@
 
 ## PROD-037 — Удаление пользователя (soft delete) с аудит-логом
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Product / Auth / Users
 - **Type:** Enhancement

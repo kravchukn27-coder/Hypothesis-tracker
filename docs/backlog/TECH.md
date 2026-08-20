@@ -114,7 +114,7 @@
 
 ## TECH-042 — typescript/@types/node/eslint pinned several majors behind latest
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Low
 - **Area:** Dependencies
 - **Type:** Chore
@@ -124,6 +124,25 @@
 - **Acceptance Criteria:**
   - Decide and record (here or in `docs/VERSIONS.md`) whether these are deliberately capped and why, or schedule an upgrade pass.
   - No dependency version changes required to close this card if the decision is "stay capped for now" — documenting the reasoning is sufficient.
+- **Resolution note:** Checked each package's actual constraint instead of
+  leaving the "unconfirmed" guess:
+  - `typescript` — genuinely blocked, not just unconfirmed.
+    `typescript-eslint@8.67.0` (pulled in transitively by
+    `eslint-config-next@16.3.0`) declares a peer range of
+    `typescript: '>=4.8.4 <6.1.0'`; `typescript@7.x` violates that and
+    would likely break type-aware linting. Stays capped at `^5` until
+    `typescript-eslint` raises its ceiling — re-check next time
+    `eslint-config-next` is bumped.
+  - `eslint` — no found blocker for `9 → 10`.
+    `typescript-eslint@8.56.0+` already supports `eslint: ^10.0.0`, and
+    eslint 10's Node engine requirement
+    (`^20.19.0 || ^22.13.0 || >=24`) is satisfied by the project's
+    runtime. Left at `^9` for now since a version bump deserves its own
+    verification pass, not a drive-by in a decide-and-record card — but
+    it's schedulable whenever, not blocked.
+  - `@types/node` — low-risk, types-only; no `engines.node` pinned in
+    `package.json` to justify staying on a specific major. Fine to bump
+    to `^26` opportunistically, not required.
 
 ## TECH-041 — pg / @types/pg declared as direct deps but never imported directly
 
@@ -287,7 +306,7 @@
 
 ## TECH-030 — User.invitedBy: nullable self-relation defaults to Restrict instead of SetNull
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** Medium
 - **Area:** Data model
 - **Type:** Fix
@@ -298,6 +317,9 @@
   - `invitedBy` relation gets `onDelete: SetNull`.
   - `npx prisma db push` applied cleanly against the local dev DB.
   - No behavior change to any existing screen (nothing deletes users today).
+- **Resolution note:** Declared `onDelete: SetNull` on the nullable `Invites`
+  self-relation. The local database was already in sync, and no user-facing
+  deletion workflow was changed.
 
 ## TECH-029 — ErrorEvent.lastUserId unindexed despite being filtered on the Activity page
 

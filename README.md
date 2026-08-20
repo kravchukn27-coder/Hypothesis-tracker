@@ -54,6 +54,13 @@ invariants. Active work lives in [`docs/backlog/`](docs/backlog/).
    MONITOR_TELEGRAM_CHAT_ID=...
    ```
 
+   Optional, logs every Prisma query as a `prisma.query` line (noisy —
+   leave unset day-to-day):
+
+   ```
+   PRISMA_QUERY_LOG_ENABLED=true
+   ```
+
 3. Sync the schema: `npx prisma db push` (not `prisma migrate dev` —
    see [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) → Local
    Development for why).
@@ -62,19 +69,82 @@ invariants. Active work lives in [`docs/backlog/`](docs/backlog/).
 5. `npm run dev` and open [http://localhost:3000](http://localhost:3000).
 
 Every page other than `/login` and one-time `/invite/[token]` links
-requires a signed session cookie (`src/proxy.ts`). Any authenticated
-user can invite another from `/users` — the app sends no email, so
-share the invite link manually.
+requires a signed session cookie (`src/proxy.ts`) — see Authentication
+below for how accounts past the bootstrap user get created.
+
+## Moving Local Data to Production
+
+The local `npx prisma dev` database lives only on your machine — it's
+not part of the repo, and it has no automatic link to whatever
+database gets provisioned for a production deploy. Data entered
+locally does **not** show up on the server just because the code gets
+deployed there.
+
+- **If a production/staging Postgres instance doesn't exist yet**
+  (the current situation): keep working against the local database as
+  usual, then hand off a dump when the server is ready:
+
+  ```bash
+  pg_dump --format=custom --file=hypothesis-tracker.dump "$DATABASE_URL"
+  ```
+
+  Once the developer has a production `DATABASE_URL` (and has run
+  `npx prisma db push` against it so the schema exists), restore into
+  it:
+
+  ```bash
+  pg_restore --clean --if-exists --no-owner --dbname="$PROD_DATABASE_URL" hypothesis-tracker.dump
+  ```
+
+- **If a production/staging Postgres instance is already provisioned
+  and reachable** from your machine, it's simpler to skip the dump/
+  restore step entirely: point your local `.env`'s `DATABASE_URL` (and
+  `APP_BASE_URL`, so invite links use the right domain) at it directly
+  and enter data straight into the real database from the start.
+
+Either way, treat this as a manual, one-time step to hand off — there
+is no scripted export/import in this repo.
 
 ## Authentication
 
-- Local email/password accounts, no third-party auth provider.
+- Local email/password accounts, no third-party auth provider
+  (scrypt hashing, `src/lib/auth/password.ts`).
+- **No self-service signup.** Every account starts as an invite —
+  there is no public registration form.
 - Sessions are a signed cookie (`SESSION_SECRET`), 7-day expiry,
-  verified on every request by `src/proxy.ts`.
-- `/login` is rate-limited per account/IP (`src/lib/auth/login-rate-limit.ts`).
-- Invites are one-time tokens (`src/lib/auth/invites.ts`) — any signed-in
-  user can issue one from `/users`; the recipient sets their own
-  password at `/invite/[token]`.
+  verified on every request by `src/proxy.ts` (Next.js middleware),
+  except on `/login`, `/invite/*`, `_next/`, and `api/`.
+- `/login` is rate-limited per account/IP (`src/lib/auth/login-rate-limit.ts`,
+  backed by the `LoginRateLimitBucket` table).
+
+### Registration flow (invite → account)
+
+1. Any already signed-in user opens `/users` and submits an email in
+   the invite form → `createInvite` (`src/lib/auth/invite-actions.ts`).
+2. `issueInvite` (`src/lib/auth/invites.ts`) creates the `User` row
+   right away (placeholder `name`, no `passwordHash` yet) plus a
+   single-use `PasswordSetupToken`, and returns a link:
+   `{APP_BASE_URL}/invite/{token}`. **The app sends no email** — the
+   inviter copies the link and shares it manually (Slack, etc.). Until
+   the link is used, `/users` shows the account as "Ожидает пароля"
+   (`passwordHash` is still `null`).
+3. The invitee opens the link and submits name + password at
+   `/invite/[token]` → `setPasswordFromInvite`, which calls
+   `consumeInvite`. This sets `name`/`passwordHash`, marks the token
+   used, and invalidates any other outstanding tokens for that user —
+   all in one transaction, so the token can't be replayed.
+4. The invitee is redirected to `/login` and signs in normally →
+   `loginAsUser` (`src/lib/auth/actions.ts`) verifies the password,
+   sets the session cookie, and writes an `AuditLog` entry
+   (`LOGIN_SUCCESS`/`LOGIN_FAILURE`).
+
+Password resets reuse the same token mechanism (`issuePasswordReset` →
+same `/invite/[token]` UI) — there's no separate "forgot password"
+flow; a teammate issues a fresh token for the account instead. Invite/
+reset tokens expire after 24h (`INVITE_TTL_MS`). Every mutating Server
+Action also re-checks `getCurrentUser()` itself rather than relying
+only on the middleware — see `docs/PROJECT_CONTEXT.md` → "Auth &
+Logging" for the full rationale.
 
 ## Logging & Monitoring
 
@@ -100,7 +170,12 @@ share the invite link manually.
 ## Verification
 
 - `npm run lint` / `tsc --noEmit` before committing.
-- `npm run verify:auth` — scripted check of the auth core
-  (`scripts/verify-auth-core.ts`).
+- `npm test` — Vitest unit tests (co-located `*.test.ts` files, mainly
+  under `src/lib/`).
+- `npm run verify:auth` — scripted smoke check of the auth core
+  (`scripts/verify-auth-core.ts`); run after touching anything under
+  `src/lib/auth/`.
+- `npm run verify:db-timeout` — confirms `DATABASE_URL` connection
+  failures time out instead of hanging (`scripts/verify-db-timeout.ts`).
 - UI-facing changes should be checked against a running dev server —
   see `CLAUDE.md` for the project's task workflow.

@@ -311,7 +311,7 @@
 
 ## TECH-027 — Experiment: missing indexes on hypothesisId, archived, startDate
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** High
 - **Area:** Data model
 - **Type:** Fix

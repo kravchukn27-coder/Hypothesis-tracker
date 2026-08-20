@@ -209,6 +209,9 @@ model Experiment {
   manualOrder  Int?
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
+
+  @@index([hypothesisId])
+  @@index([archived, startDate])
 }
 
 /**

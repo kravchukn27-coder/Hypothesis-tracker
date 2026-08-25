@@ -18,6 +18,16 @@ project map (data model, screen behavior, origin-data mapping) and
 [`docs/CANONICAL_RULES.md`](docs/CANONICAL_RULES.md) for domain
 invariants. Active work lives in [`docs/backlog/`](docs/backlog/).
 
+## First run (new team / fresh handoff)
+
+This repo ships with no data and no accounts — the database was wiped
+before handoff. There is no default login. Follow "Getting Started"
+below in order: step 2 is where you pick your own
+`BOOTSTRAP_EMAIL`/`BOOTSTRAP_PASSWORD` (any values — they just need to
+match between `.env` and what you type into `/login`), and step 4
+creates that account. After logging in, invite teammates from
+`/users` — see "Registration flow" further down.
+
 ## Tech Stack
 
 - Next.js (App Router), TypeScript

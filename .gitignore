@@ -47,3 +47,11 @@ next-env.d.ts
 
 # local agent settings (machine-specific, not project config)
 .claude/settings.local.json
+
+# vendored AI-agent tooling (skills, launch configs, design critiques) —
+# personal/editor setup, not part of the app
+/.agents/
+/.claude/skills/
+/.claude/launch.json
+/.windsurf/
+/.impeccable/

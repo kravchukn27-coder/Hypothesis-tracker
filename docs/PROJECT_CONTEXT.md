@@ -26,10 +26,13 @@ details on both — they shipped together and share the same redaction layer.
 
 1. **Backlog** ✅ — list/create/edit hypotheses, auto-computed Score,
    status. `/backlog`, `/backlog/new`, `/backlog/[id]`.
-2. **Experiments** ✅ — list/edit experiments (status/stage — one merged
-   field, see Core Data Rules — author, targeting, segment, dates).
-   `/experiments`, `/experiments/[id]`.
-   No standalone "create" entry point on this screen — `/experiments/new`
+2. **Experiments** ✅ — edit experiments (status/stage — one merged
+   field, see Core Data Rules — author, targeting, segment, dates) at
+   `/experiments/[id]`. There is no standalone `/experiments` list
+   route or nav entry (PROD-031 removed it) — the old list's
+   table/filter/sort/bulk-actions live inside Calendar as the
+   "Показать все эксперименты" mode instead (`?calendarView=all`,
+   `AllExperimentsTable.tsx`). `/experiments/new`
    requires a `?hypothesisId=` query param and redirects to `/backlog`
    without one; see "Hypothesis ↔ Experiment workflow" below. Experiment
    name in the list opens the experiment's own detail/edit page
@@ -75,7 +78,9 @@ phase" below.
 
 ### List filter/sort (PROD-004, PROD-007, PROD-008)
 
-Both `/backlog` and `/experiments` read filter/sort state from **URL
+Both `/backlog` and Calendar's "Показать все эксперименты" table
+(`?calendarView=all`, the successor to the removed `/experiments` list
+— see PROD-031 above) read filter/sort state from **URL
 query params**, not client state — shareable/bookmarkable links, and
 the list itself is still a Server Component doing a normal Prisma
 query (filters) + in-memory `.sort()` (sort) with the params folded
@@ -234,7 +239,12 @@ changes shape things.
   user over the single-FK alternative) via Prisma implicit
   many-to-many, edited through the new `TagMultiSelect` component
   (chips + select-existing/add-new, one per category, each in its own
-  badge color — see `src/lib/tags.ts`). Existing `targeting` free-text
+  badge color — see `src/lib/tags.ts`).
+  **Since superseded:** PROD-035 dropped `Platform`/`Channel`/`Market`
+  entirely (unused, confirmed by the user) — `Experiment` targeting is
+  now just `funnelLevels`/`products`/`segments`, three relations, not
+  five; `prisma/schema.prisma` has no `Platform`/`Channel`/`Market`
+  models anymore. Existing `targeting` free-text
   values were **not** backfilled into the new fields (confirmed
   data-loss tradeoff, no automatic mapping was possible from free text
   to structured tags) — existing experiments start with all 5 fields
@@ -265,7 +275,7 @@ list you add to; they're something you spin off *from* a hypothesis:
   to the new hypothesis's detail page — the list is the home base.
 - Status is edited **inline in the Backlog list** (a dropdown right in
   the row, `StatusCell`), not only via the full edit form.
-- There is no "+ New experiment" button on `/experiments` at all.
+- There is no "+ New experiment" button anywhere in the UI.
   `/experiments/new` only works with a `?hypothesisId=` query param
   (redirects to `/backlog` otherwise) and the hypothesis is fixed in
   that form (shown as a link, submitted as a hidden field) — not a
@@ -273,14 +283,14 @@ list you add to; they're something you spin off *from* a hypothesis:
   hypothesis's `/backlog/[id]` page, and the status-change prompt
   below.
 - Backlog row action (PROD-011, 2026-08-06) is conditional on whether
-  the hypothesis already has experiments: none yet → "Создать
-  эксперимент" link into the create flow above; has experiments →
-  "→ Эксперимент" link into `/experiments?hypothesisId=...`, which
-  highlights (amber background, `data-highlighted="true"`) **every**
-  experiment belonging to that hypothesis (not just one — a hypothesis
-  can have several, see PROD-006) and auto-scrolls the first one into
-  view (`ScrollToHighlighted` client component). No filtering — the
-  full list stays visible, just visually pointing at the relevant rows.
+  the hypothesis already has an experiment: none yet → "Создать
+  эксперимент" link into the create flow above; has one → "Показать на
+  календаре" link into `/calendar?experimentId=...` (BUG-012), which
+  highlights that experiment on the Calendar timeline (or in the
+  "Без дат" panel if it's undated) and auto-scrolls it into view. Since
+  PROD-034, a hypothesis has **at most one** experiment — a resubmitted
+  create form redirects to the existing one instead of creating a
+  second, so this is never a multi-row highlight anymore.
 - Whenever a hypothesis's status changes via the list's inline
   dropdown, and that hypothesis has **no experiments yet**, and the new
   status isn't `NEW`, a modal prompts "Перевести в эксперимент?" with a
@@ -422,7 +432,7 @@ user triggered them.
 | Score | *(derived, not stored)* | `impact * confidence * reach / effort` |
 | ToDo status | `status` | enum, default `NEW` (source default was "New") |
 | Result | `result` | free text |
-| Comment | `comment` | |
+| Comment | *(none — dropped)* | TECH-010 removed this flat field and replaced it with a `HypothesisComment` feed (one-to-many, author + timestamp per message, `src/app/backlog/[id]/comments-actions.ts` + `CommentFeed.tsx`); the Backlog list shows the latest comment per hypothesis |
 | Моделирование | `modeling` | |
 | Выборка (users) | `sampleSize` | |
 | Task | `taskUrl` | Linear link |
@@ -440,15 +450,19 @@ user triggered them.
   named `funnelLevel` either way — the server action's upsert-by-name
   logic didn't need to change.
 - **Free text:** Name (short), Hypothesis text (long/textarea), Result,
-  Comment, Моделирование, Выборка, Task URL.
+  Моделирование, Выборка, Task URL. Comment is not a form field — it's
+  the separate `HypothesisComment` feed on `/backlog/[id]`
+  (`CommentFeed.tsx`), see the Origin Data Model table above.
 - **Free number:** Reach (%), Confidence (%).
 - **Computed, read-only:** Score.
 
 ### Backlog screen layout
 
 - List view: table sorted by Score desc. Columns: **Name, Status
-  (inline-editable), Score, Comment**, plus a "→ Эксперимент" row
-  action. See "Hypothesis ↔ Experiment workflow" above.
+  (inline-editable), Score, Comment** (latest `HypothesisComment`
+  message, not a form field), plus a "Создать эксперимент" /
+  "Показать на календаре" row action (BUG-012). See "Hypothesis ↔
+  Experiment workflow" above.
 - Clicking a row's Name navigates (full page, not a panel) to
   `/backlog/[id]`, a detail view laid out close to the original Excel
   row — all fields visible and labeled, not redesigned into a minimal
@@ -464,10 +478,10 @@ user triggered them.
 
 | Excel column | Prisma field | Notes |
 |---|---|---|
-| Эксперимент | `name` | auto-generated on create (PROD-006, 2026-08-06): hypothesis name, +" N" for the Nth+1 experiment off the same hypothesis; editable afterward on `/experiments/[id]` |
+| Эксперимент | `name` | auto-generated on create (PROD-006, 2026-08-06): exactly the hypothesis's name — no numbering suffix, since PROD-034 caps a hypothesis at one experiment; editable afterward on `/experiments/[id]` |
 | Статус | `stage` | merged with the week-column stage into one field, see Core Data Rules (TECH-002) |
 | Автор | `author` | |
-| Таргетинг | `funnelLevels`/`platforms`/`channels`/`markets`/`products` | originally one free-text field; split into 5 many-to-many tag relations (TECH-003, 2026-08-07), see Core Data Rules |
+| Таргетинг | `funnelLevels`/`products` | originally one free-text field; split into 5 many-to-many tag relations (TECH-003, 2026-08-07, see Core Data Rules), then reduced to these 2 when PROD-035 dropped `Platform`/`Channel`/`Market` entirely |
 | Segment | `segments` | originally free text; converted to a many-to-many tag relation with backfill (2026-08-07 follow-up to TECH-003), see Core Data Rules |
 | (week columns F..AF, stage as cell value) | `startDate`, `endDate`, `stage` | dates replace the week columns; stage cell value merged into the same `stage` field as the old `Статус` column, see Core Data Rules |
 | *(none — added)* | `hypothesisId` (required) | every experiment must belong to a hypothesis; see Core Data Rules |

@@ -6,9 +6,12 @@ stages. Replaces a Google Sheet that was the previous source of truth.
 
 - **Backlog** — `/backlog` — hypotheses with an auto-computed Score
   (`impact × confidence × reach ÷ effort`, never stored).
-- **Experiments** — `/experiments` — spun off from a hypothesis, one
-  merged status/stage field, tag-based targeting (Funnel Level,
-  Platform, Channel, Market, Product, Segment).
+- **Experiments** — `/experiments/[id]` — spun off from a hypothesis
+  (one per hypothesis, at most), one merged status/stage field,
+  tag-based targeting (Funnel Level, Product, Segment — Platform/
+  Channel/Market existed briefly and were removed, PROD-035). No
+  standalone list route — reachable from a Backlog row or Calendar's
+  "Показать все эксперименты" table.
 - **Calendar** — `/calendar` — week-granularity grid of experiment
   stages, drag to move/resize.
 - **Users** — `/users` — list of active accounts and an invite form.
